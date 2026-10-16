@@ -96,24 +96,3 @@
 	</footer>
 </div>
 </cfoutput>
-
-<style>
-@media print {
-	.no-print, nav, .sidebar, .app-header, .page-header, .page-header-actions, .site-header {
-		display: none !important;
-	}
-	body {
-		background: #ffffff !important;
-		color: #000000 !important;
-		margin: 0 !important;
-		padding: 0 !important;
-	}
-	.press-document-sheet {
-		border: none !important;
-		box-shadow: none !important;
-		max-width: 100% !important;
-		padding: 0 !important;
-		margin: 0 !important;
-	}
-}
-</style>
