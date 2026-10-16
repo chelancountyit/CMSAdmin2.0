@@ -9,14 +9,12 @@
 		<div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
 			<h1 class="page-title" style="margin:0;">#(isNew ? "New Press Release" : "Edit Press Release: " & EncodeForHTML(release.title ?: ""))#</h1>
 			<cfif !isNew>
-				<cfif (release.status ?: "") eq "released">
-					<span class="badge badge-success" style="font-size:0.75rem;">Released Live</span>
-				<cfelseif (release.status ?: "") eq "embargoed" or ((release.is_embargoed ?: false) and IsDate(release.embargo_until ?: "") and (release.embargo_until ?: Now()) gt Now())>
-					<span class="badge badge-danger" style="font-size:0.75rem;">Embargoed</span>
-				<cfelseif (release.status ?: "") eq "draft">
-					<span class="badge badge-warning" style="font-size:0.75rem;">Draft</span>
+				<cfif listFindNoCase("active,released", (release.status ?: ""))>
+					<span class="badge badge-success" style="font-size:0.75rem;">Active</span>
+				<cfelseif listFindNoCase("archive,archived", (release.status ?: ""))>
+					<span class="badge badge-neutral" style="font-size:0.75rem;">Archive</span>
 				<cfelse>
-					<span class="badge badge-neutral" style="font-size:0.75rem;">#release.status ?: ""#</span>
+					<span class="badge badge-warning" style="font-size:0.75rem;">InActive</span>
 				</cfif>
 			</cfif>
 		</div>
@@ -120,63 +118,25 @@
 						Status
 					</label>
 					<select id="releaseStatus" name="status" class="form-control">
-						<option value="released" <cfif (release.status ?: "") eq "released">selected</cfif>>Released Live</option>
-						<option value="embargoed" <cfif (release.status ?: "") eq "embargoed">selected</cfif>>Hold Under Embargo</option>
-						<option value="draft" <cfif (release.status ?: "") eq "draft">selected</cfif>>Internal Draft</option>
-						<option value="archived" <cfif (release.status ?: "") eq "archived">selected</cfif>>Archived</option>
+						<option value="active" <cfif listFindNoCase("active,released", (release.status ?: ""))>selected</cfif>>Active</option>
+						<option value="inactive" <cfif listFindNoCase("inactive,draft,embargoed", (release.status ?: ""))>selected</cfif>>InActive</option>
+						<option value="archive" <cfif listFindNoCase("archive,archived", (release.status ?: ""))>selected</cfif>>Archive</option>
 					</select>
 				</div>
 
-				<div style="margin-bottom:1rem;">
+				<div style="margin-bottom:1.25rem;">
 					<label for="releasedAt" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.3rem; color:var(--admin-text-muted);">
 						Release Date &amp; Time
 					</label>
 					<input type="datetime-local" id="releasedAt" name="released_at" class="form-control" value="#DateFormat(release.released_at ?: Now(), 'yyyy-mm-dd')#T#TimeFormat(release.released_at ?: Now(), 'HH:mm')#">
 				</div>
 
-				<div style="margin-bottom:1.25rem;">
-					<label for="siteid" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.3rem; color:var(--admin-text-muted);">
-						Workspace Scope
-					</label>
-					<select id="siteid" name="siteid" class="form-control">
-						<option value="global" <cfif (release.siteid ?: "global") eq "global">selected</cfif>>Global (County-Wide Rollup)</option>
-						<cfloop array="#accessibleWorkspaces#" index="ws">
-							<cfif ws.id neq "all" and ws.id neq "global">
-								<option value="#ws.id#" <cfif (release.siteid ?: "") eq ws.id>selected</cfif>>#EncodeForHTML(ws.name)#</option>
-							</cfif>
-						</cfloop>
-					</select>
-				</div>
+				<input type="hidden" id="siteid" name="siteid" value="#EncodeForHTMLAttribute(release.siteid ?: 'global')#">
 
 				<button type="button" class="btn btn-primary" style="width:100%; justify-content:center; padding:0.6rem;" onclick="saveReleaseForm()" id="btnSaveSidebar">
 					#svgIcon(name="check-circle", size=15)#
 					<span>Save Press Release</span>
 				</button>
-			</div>
-
-			<!--- Embargo Settings Card --->
-			<div class="admin-card" style="padding:1.25rem; border-left:4px solid ##dc2626;">
-				<h3 style="margin:0 0 0.75rem; font-size:0.95rem; font-weight:700; color:var(--admin-text-main); border-bottom:1px solid var(--admin-border-subtle); padding-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;">
-					#svgIcon(name="clock", size=16)#
-					<span>Embargo Controls</span>
-				</h3>
-
-				<div style="margin-bottom:0.75rem;">
-					<label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:600; font-size:0.85rem; color:var(--admin-text-main);">
-						<input type="checkbox" id="isEmbargoed" name="is_embargoed" value="1" <cfif (release.is_embargoed ?: false)>checked</cfif> onchange="toggleEmbargoField(this.checked)">
-						Hold Under Media Embargo
-					</label>
-				</div>
-
-				<div id="embargoUntilWrap" style="<cfif !(release.is_embargoed ?: false)>display:none;</cfif>">
-					<label for="embargoUntil" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.25rem; color:var(--admin-danger, ##dc2626);">
-						Embargo Until Date &amp; Time
-					</label>
-					<input type="datetime-local" id="embargoUntil" name="embargo_until" class="form-control" value="<cfif IsDate(release.embargo_until ?: '')>#DateFormat(release.embargo_until, 'yyyy-mm-dd')#T#TimeFormat(release.embargo_until, 'HH:mm')#</cfif>">
-					<p style="font-size:0.72rem; color:var(--admin-text-muted); margin-top:0.35rem; margin-bottom:0;">
-						Public APIs will withhold full release copy until this time passes.
-					</p>
-				</div>
 			</div>
 
 			<!--- Media Contact Information --->
@@ -246,22 +206,6 @@ function autoReleaseSlug(val) {
 	document.getElementById('releaseSlug').value = slug;
 }
 
-function toggleEmbargoField(checked) {
-	const wrap = document.getElementById('embargoUntilWrap');
-	const statusSelect = document.getElementById('releaseStatus');
-	if (checked) {
-		wrap.style.display = 'block';
-		if (statusSelect.value === 'released') {
-			statusSelect.value = 'embargoed';
-		}
-	} else {
-		wrap.style.display = 'none';
-		if (statusSelect.value === 'embargoed') {
-			statusSelect.value = 'released';
-		}
-	}
-}
-
 function saveReleaseForm() {
 	const title = document.getElementById('releaseTitle').value.trim();
 	if (!title) {
@@ -288,9 +232,6 @@ function saveReleaseForm() {
 	if (btnTop) btnTop.disabled = true;
 	if (btnSide) btnSide.disabled = true;
 
-	const isEmbargoed = document.getElementById('isEmbargoed').checked;
-	const embargoUntil = document.getElementById('embargoUntil').value;
-
 	const payload = {
 		id: parseInt(document.getElementById('releaseId').value || '0', 10),
 		title: title,
@@ -298,8 +239,8 @@ function saveReleaseForm() {
 		dateline: document.getElementById('releaseDateline').value.trim(),
 		summary: document.getElementById('releaseSummary').value.trim(),
 		content_html: contentHtml,
-		is_embargoed: isEmbargoed ? 1 : 0,
-		embargo_until: isEmbargoed ? embargoUntil : '',
+		is_embargoed: 0,
+		embargo_until: '',
 		contact_name: document.getElementById('contactName').value.trim(),
 		contact_title: document.getElementById('contactTitle').value.trim(),
 		contact_phone: document.getElementById('contactPhone').value.trim(),

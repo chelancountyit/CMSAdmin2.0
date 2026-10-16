@@ -53,19 +53,9 @@
 		</div>
 	</header>
 
-	<!--- Release Notice Banner (FOR IMMEDIATE RELEASE or EMBARGO) --->
+	<!--- Release Notice Banner --->
 	<div style="margin-bottom:1.5rem; font-family:system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-		<cfif release.is_embargoed>
-			<div style="background:##fee2e2; border-left:4px solid ##dc2626; color:##991b1b; padding:0.75rem 1rem; border-radius:4px; font-weight:700; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.06em;">
-				CONFIDENTIAL &mdash; HOLD UNDER EMBARGO
-				<cfif IsDate(release.embargo_until)>
-					<div style="font-size:0.8rem; font-weight:600; text-transform:none; margin-top:0.25rem;">
-						Do not publish or broadcast until: #DateFormat(release.embargo_until, "dddd, mmmm d, yyyy")# at #TimeFormat(release.embargo_until, "h:mm tt")# PST
-					</div>
-				</cfif>
-			</div>
-		<cfelse>
-			<div style="font-weight:800; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.08em; color:##15803d; border-bottom:1px solid ##e2e8f0; padding-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
+		<div style="font-weight:800; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.08em; color:##15803d; border-bottom:1px solid ##e2e8f0; padding-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
 				<span>FOR IMMEDIATE RELEASE</span>
 				<span style="font-weight:600; color:##64748b; font-size:0.85rem; text-transform:none; letter-spacing:normal;">
 					<cfif IsDate(release.released_at)>

@@ -30,26 +30,26 @@ component extends="Controller" {
 		// Metrics/Stats
 		variables.stats = {
 			total: 0,
-			released: 0,
-			embargoed: 0,
-			draft: 0
+			active: 0,
+			inactive: 0,
+			archive: 0
 		};
 
 		try {
 			local.qCounts = queryExecute("
 				SELECT 
 					COUNT(*) AS total,
-					SUM(CASE WHEN status = 'released' THEN 1 ELSE 0 END) AS released_cnt,
-					SUM(CASE WHEN status = 'embargoed' OR is_embargoed = 1 THEN 1 ELSE 0 END) AS embargoed_cnt,
-					SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS draft_cnt
+					SUM(CASE WHEN status IN ('active', 'released') THEN 1 ELSE 0 END) AS active_cnt,
+					SUM(CASE WHEN status IN ('inactive', 'draft', 'embargoed') THEN 1 ELSE 0 END) AS inactive_cnt,
+					SUM(CASE WHEN status IN ('archive', 'archived') THEN 1 ELSE 0 END) AS archive_cnt
 				FROM press_releases
 				WHERE deletedat IS NULL
 			", {}, { datasource: "ChelanCountyWebsite" });
 			if (local.qCounts.recordCount) {
 				variables.stats.total = Val(local.qCounts.total);
-				variables.stats.released = Val(local.qCounts.released_cnt);
-				variables.stats.embargoed = Val(local.qCounts.embargoed_cnt);
-				variables.stats.draft = Val(local.qCounts.draft_cnt);
+				variables.stats.active = Val(local.qCounts.active_cnt);
+				variables.stats.inactive = Val(local.qCounts.inactive_cnt);
+				variables.stats.archive = Val(local.qCounts.archive_cnt);
 			}
 		} catch (any eStats) {
 			writeLog(type="error", file="pressreleases", text="Stats error: #eStats.message#");
@@ -65,8 +65,12 @@ component extends="Controller" {
 		}
 
 		if (variables.filterStatus != "all" && Len(variables.filterStatus)) {
-			if (variables.filterStatus == "embargoed") {
-				ArrayAppend(local.whereClauses, "(status = 'embargoed' OR is_embargoed = 1)");
+			if (variables.filterStatus == "active") {
+				ArrayAppend(local.whereClauses, "status IN ('active', 'released')");
+			} else if (variables.filterStatus == "inactive") {
+				ArrayAppend(local.whereClauses, "status IN ('inactive', 'draft', 'embargoed')");
+			} else if (variables.filterStatus == "archive") {
+				ArrayAppend(local.whereClauses, "status IN ('archive', 'archived')");
 			} else {
 				ArrayAppend(local.whereClauses, "status = :status");
 				local.queryParams["status"] = { value: variables.filterStatus, cfsqltype: "cf_sql_varchar" };
@@ -160,7 +164,7 @@ component extends="Controller" {
 			contact_phone: local.contactPhone,
 			contact_email: local.contactEmail,
 			pdf_url: "",
-			status: "released",
+			status: "active",
 			siteid: variables.activeWorkspaceId,
 			released_at: Now()
 		};
@@ -208,6 +212,11 @@ component extends="Controller" {
 				return;
 			}
 
+			local.currStatus = local.q.status ?: "active";
+			if (local.currStatus == "released") local.currStatus = "active";
+			else if (local.currStatus == "draft" || local.currStatus == "embargoed") local.currStatus = "inactive";
+			else if (local.currStatus == "archived") local.currStatus = "archive";
+
 			variables.release = {
 				id: local.q.id,
 				title: local.q.title,
@@ -215,14 +224,14 @@ component extends="Controller" {
 				dateline: local.q.dateline ?: "WENATCHEE, WA",
 				summary: local.q.summary ?: "",
 				content_html: local.q.content_html ?: "",
-				is_embargoed: (Val(local.q.is_embargoed) == 1),
-				embargo_until: local.q.embargo_until,
+				is_embargoed: false,
+				embargo_until: "",
 				contact_name: local.q.contact_name ?: "",
 				contact_title: local.q.contact_title ?: "",
 				contact_phone: local.q.contact_phone ?: "",
 				contact_email: local.q.contact_email ?: "",
 				pdf_url: local.q.pdf_url ?: "",
-				status: local.q.status ?: "released",
+				status: local.currStatus,
 				siteid: local.q.siteid ?: "global",
 				released_at: local.q.released_at ?: Now()
 			};
@@ -309,11 +318,8 @@ component extends="Controller" {
 		local.summary = Left(Trim(local.body.summary ?: ""), 1000);
 		local.contentHtml = Trim(local.body.content_html ?: (local.body.content ?: ""));
 		
-		local.isEmbargoed = (StructKeyExists(local.body, "is_embargoed") && (local.body.is_embargoed == 1 || local.body.is_embargoed == "true" || local.body.is_embargoed == "1" || local.body.is_embargoed == "on")) ? 1 : 0;
+		local.isEmbargoed = 0;
 		local.embargoUntil = JavaCast("null", "");
-		if (local.isEmbargoed && StructKeyExists(local.body, "embargo_until") && Len(Trim(local.body.embargo_until)) && IsDate(local.body.embargo_until)) {
-			local.embargoUntil = ParseDateTime(local.body.embargo_until);
-		}
 
 		local.contactName = Left(Trim(local.body.contact_name ?: ""), 150);
 		local.contactTitle = Left(Trim(local.body.contact_title ?: ""), 150);
@@ -321,11 +327,11 @@ component extends="Controller" {
 		local.contactEmail = Left(Trim(local.body.contact_email ?: ""), 150);
 		local.pdfUrl = Left(Trim(local.body.pdf_url ?: ""), 1000);
 
-		local.status = LCase(Trim(local.body.status ?: "released"));
-		if (local.isEmbargoed && local.status == "released") {
-			local.status = "embargoed";
-		}
-		if (!ListFindNoCase("released,embargoed,draft,archived", local.status)) local.status = "released";
+		local.status = LCase(Trim(local.body.status ?: "active"));
+		if (local.status == "released") local.status = "active";
+		if (local.status == "draft" || local.status == "embargoed") local.status = "inactive";
+		if (local.status == "archived") local.status = "archive";
+		if (!ListFindNoCase("active,inactive,archive", local.status)) local.status = "active";
 
 		local.siteid = Len(Trim(local.body.siteid ?: "")) ? LCase(Trim(local.body.siteid)) : "global";
 
@@ -471,8 +477,12 @@ component extends="Controller" {
 		local.id = Val(local.body.id ?: 0);
 		local.newStatus = LCase(Trim(local.body.status ?: ""));
 
-		if (local.id <= 0 || !ListFindNoCase("released,embargoed,draft,archived", local.newStatus)) {
-			return renderJsonEnvelope(false, "Invalid press release ID or status value.", {}, 400);
+		if (local.newStatus == "released") local.newStatus = "active";
+		if (local.newStatus == "draft" || local.newStatus == "embargoed") local.newStatus = "inactive";
+		if (local.newStatus == "archived") local.newStatus = "archive";
+
+		if (local.id <= 0 || !ListFindNoCase("active,inactive,archive", local.newStatus)) {
+			return renderJsonEnvelope(false, "Invalid press release ID or status value (must be active, inactive, or archive).", {}, 400);
 		}
 
 		try {
@@ -500,20 +510,23 @@ component extends="Controller" {
 		local.limit = Val(params.limit ?: 10);
 		if (local.limit <= 0 || local.limit > 50) local.limit = 10;
 
-		local.status = StructKeyExists(params, "status") ? Trim(params.status) : "released";
+		local.status = StructKeyExists(params, "status") ? Trim(params.status) : "active";
 		local.siteid = StructKeyExists(params, "siteid") ? Trim(params.siteid) : "";
-		local.embargoClearedOnly = StructKeyExists(params, "cleared_only") ? (params.cleared_only == 1 || params.cleared_only == "true") : true;
 
 		local.whereClauses = ["deletedat IS NULL"];
 		local.qp = {};
 
-		if (Len(local.status)) {
-			ArrayAppend(local.whereClauses, "status = :status");
-			local.qp["status"] = { value: local.status, cfsqltype: "cf_sql_varchar" };
-		}
-
-		if (local.embargoClearedOnly) {
-			ArrayAppend(local.whereClauses, "(is_embargoed = 0 OR embargo_until IS NULL OR embargo_until <= SYSUTCDATETIME())");
+		if (Len(local.status) && local.status != "all") {
+			if (local.status == "active" || local.status == "released") {
+				ArrayAppend(local.whereClauses, "status IN ('active', 'released')");
+			} else if (local.status == "inactive" || local.status == "draft") {
+				ArrayAppend(local.whereClauses, "status IN ('inactive', 'draft')");
+			} else if (local.status == "archive" || local.status == "archived") {
+				ArrayAppend(local.whereClauses, "status IN ('archive', 'archived')");
+			} else {
+				ArrayAppend(local.whereClauses, "status = :status");
+				local.qp["status"] = { value: local.status, cfsqltype: "cf_sql_varchar" };
+			}
 		}
 
 		if (Len(local.siteid) && local.siteid != "all") {

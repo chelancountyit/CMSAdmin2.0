@@ -50,28 +50,28 @@
 			#svgIcon(name="check-circle", size=22)#
 		</div>
 		<div>
-			<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-text-muted); font-weight:600;">Released Live</div>
-			<div style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main); line-height:1.2;">#Val(stats.released ?: 0)#</div>
-		</div>
-	</div>
-
-	<div class="admin-card" style="padding:1.1rem; display:flex; align-items:center; gap:1rem; border-left:4px solid ##dc2626;">
-		<div style="width:42px; height:42px; border-radius:var(--radius-md); background:rgba(220, 38, 38, 0.1); display:flex; align-items:center; justify-content:center; color:##dc2626;">
-			#svgIcon(name="clock", size=22)#
-		</div>
-		<div>
-			<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-text-muted); font-weight:600;">Embargoed</div>
-			<div style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main); line-height:1.2;">#Val(stats.embargoed ?: 0)#</div>
+			<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-text-muted); font-weight:600;">Active</div>
+			<div style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main); line-height:1.2;">#Val(stats.active ?: 0)#</div>
 		</div>
 	</div>
 
 	<div class="admin-card" style="padding:1.1rem; display:flex; align-items:center; gap:1rem; border-left:4px solid ##d97706;">
 		<div style="width:42px; height:42px; border-radius:var(--radius-md); background:rgba(217, 119, 6, 0.1); display:flex; align-items:center; justify-content:center; color:##d97706;">
-			#svgIcon(name="edit", size=22)#
+			#svgIcon(name="pause-circle", size=22)#
 		</div>
 		<div>
-			<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-text-muted); font-weight:600;">Drafts</div>
-			<div style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main); line-height:1.2;">#Val(stats.draft ?: 0)#</div>
+			<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-text-muted); font-weight:600;">InActive</div>
+			<div style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main); line-height:1.2;">#Val(stats.inactive ?: 0)#</div>
+		</div>
+	</div>
+
+	<div class="admin-card" style="padding:1.1rem; display:flex; align-items:center; gap:1rem; border-left:4px solid ##64748b;">
+		<div style="width:42px; height:42px; border-radius:var(--radius-md); background:rgba(100, 116, 139, 0.1); display:flex; align-items:center; justify-content:center; color:##64748b;">
+			#svgIcon(name="archive", size=22)#
+		</div>
+		<div>
+			<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-text-muted); font-weight:600;">Archive</div>
+			<div style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main); line-height:1.2;">#Val(stats.archive ?: 0)#</div>
 		</div>
 	</div>
 </div>
@@ -88,10 +88,10 @@
 
 		<div style="min-width:180px;">
 			<select name="status" class="form-control" onchange="this.form.submit()">
-				<option value="all" <cfif filterStatus eq 'all'>selected</cfif>>All Releases</option>
-				<option value="released" <cfif filterStatus eq 'released'>selected</cfif>>Released Live Only</option>
-				<option value="embargoed" <cfif filterStatus eq 'embargoed'>selected</cfif>>Under Embargo</option>
-				<option value="draft" <cfif filterStatus eq 'draft'>selected</cfif>>Drafts Only</option>
+				<option value="all" <cfif filterStatus eq 'all'>selected</cfif>>All Statuses</option>
+				<option value="active" <cfif filterStatus eq 'active'>selected</cfif>>Active</option>
+				<option value="inactive" <cfif filterStatus eq 'inactive'>selected</cfif>>InActive</option>
+				<option value="archive" <cfif filterStatus eq 'archive'>selected</cfif>>Archive</option>
 			</select>
 		</div>
 
@@ -113,9 +113,8 @@
 			<thead>
 				<tr style="background:var(--admin-bg); border-bottom:1.5px solid var(--admin-border);">
 					<th style="padding:0.85rem 1rem;">Headline &amp; Dateline</th>
-					<th style="padding:0.85rem 1rem; width:170px;">Media Contact</th>
-					<th style="padding:0.85rem 1rem; width:130px; text-align:center;">Embargo</th>
-					<th style="padding:0.85rem 1rem; width:110px; text-align:center;">Status</th>
+					<th style="padding:0.85rem 1rem; width:180px;">Media Contact</th>
+					<th style="padding:0.85rem 1rem; width:120px; text-align:center;">Status</th>
 					<th style="padding:0.85rem 1rem; width:140px;">Release Date</th>
 					<th style="padding:0.85rem 1rem; width:160px; text-align:right;">Actions</th>
 				</tr>
@@ -123,7 +122,7 @@
 			<tbody>
 				<cfif ArrayLen(releases) eq 0>
 					<tr>
-						<td colspan="6" style="padding:3rem 1.5rem; text-align:center; color:var(--admin-text-muted);">
+						<td colspan="5" style="padding:3rem 1.5rem; text-align:center; color:var(--admin-text-muted);">
 							<div style="margin-bottom:0.75rem; color:var(--admin-text-muted);">
 								#svgIcon(name="megaphone", size=40)#
 							</div>
@@ -166,36 +165,20 @@
 								</cfif>
 							</td>
 							<td style="padding:0.75rem 1rem; vertical-align:middle; text-align:center;">
-								<cfif rel.is_embargoed>
-									<span class="badge badge-danger" style="font-size:0.72rem; padding:0.25rem 0.55rem; font-weight:600;" title="Embargoed until #DateFormat(rel.embargo_until, 'mmm d, yyyy')# #TimeFormat(rel.embargo_until, 'h:mm tt')#">
-										EMBARGOED
-									</span>
-									<cfif IsDate(rel.embargo_until)>
-										<div style="font-size:0.68rem; color:var(--admin-danger, ##ef4444); margin-top:0.25rem;">
-											Until #DateFormat(rel.embargo_until, "m/d/yy")# #TimeFormat(rel.embargo_until, "h:mm tt")#
-										</div>
-									</cfif>
-								<cfelse>
-									<span class="badge badge-neutral" style="font-size:0.72rem; padding:0.2rem 0.45rem;">
-										Immediate
-									</span>
-								</cfif>
-							</td>
-							<td style="padding:0.75rem 1rem; vertical-align:middle; text-align:center;">
-								<cfif rel.status eq "released">
-									<button type="button" class="badge badge-success" style="cursor:pointer; border:none; padding:0.25rem 0.6rem; font-size:0.72rem;" onclick="toggleReleaseStatus(#rel.id#, 'draft')" title="Switch to draft">
-										Released
+								<cfif listFindNoCase("active,released", rel.status)>
+									<button type="button" class="badge badge-success" style="cursor:pointer; border:none; padding:0.25rem 0.6rem; font-size:0.72rem;" onclick="toggleReleaseStatus(#rel.id#, 'inactive')" title="Click to set InActive">
+										Active
 									</button>
-								<cfelseif rel.status eq "embargoed">
-									<button type="button" class="badge badge-danger" style="cursor:pointer; border:none; padding:0.25rem 0.6rem; font-size:0.72rem;" onclick="toggleReleaseStatus(#rel.id#, 'released')" title="Clear embargo and release live">
-										Embargoed
+								<cfelseif listFindNoCase("inactive,draft,embargoed", rel.status)>
+									<button type="button" class="badge badge-warning" style="cursor:pointer; border:none; padding:0.25rem 0.6rem; font-size:0.72rem;" onclick="toggleReleaseStatus(#rel.id#, 'active')" title="Click to set Active">
+										InActive
 									</button>
-								<cfelseif rel.status eq "draft">
-									<button type="button" class="badge badge-warning" style="cursor:pointer; border:none; padding:0.25rem 0.6rem; font-size:0.72rem;" onclick="toggleReleaseStatus(#rel.id#, 'released')" title="Release live">
-										Draft
+								<cfelseif listFindNoCase("archive,archived", rel.status)>
+									<button type="button" class="badge badge-neutral" style="cursor:pointer; border:none; padding:0.25rem 0.6rem; font-size:0.72rem;" onclick="toggleReleaseStatus(#rel.id#, 'active')" title="Click to restore to Active">
+										Archive
 									</button>
 								<cfelse>
-									<span class="badge badge-neutral" style="font-size:0.72rem; padding:0.25rem 0.6rem;">#rel.status#</span>
+									<span class="badge badge-neutral" style="font-size:0.72rem; padding:0.25rem 0.6rem;">#EncodeForHTML(rel.status)#</span>
 								</cfif>
 							</td>
 							<td style="padding:0.75rem 1rem; vertical-align:middle; font-size:0.8rem; color:var(--admin-text-muted);">
