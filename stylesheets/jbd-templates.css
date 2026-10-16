@@ -42,6 +42,16 @@ p.jbd-faq-question {
   display: block;
 }
 
+.jbd-template .h4,
+.jbd-template p.h4 {
+  text-align: center;
+  position: relative;
+  top: 50%;
+  -ms-transform: translateY(-50%);
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
 /* Tables created by JBDEditor */
 table.jbd-table {
   width: 100%;
