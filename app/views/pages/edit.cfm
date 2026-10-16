@@ -79,6 +79,239 @@
 	.diff-stat-pill.add { background:rgba(34, 197, 94, 0.12); color:##15803d; }
 	.diff-stat-pill.del { background:rgba(239, 68, 68, 0.12); color:##b91c1c; }
 	.diff-code-view { font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:0.84rem; white-space:pre-wrap; word-break:break-all; }
+
+	/* ----------------------------------------------------
+	   Feature 2.3: In-Editor Automated ADA WCAG Pre-Flight Linter
+	   ---------------------------------------------------- */
+	.pg-a11y-linter-bar {
+		background: var(--admin-surface, ##ffffff);
+		border: 1.5px solid var(--admin-border, ##cbd5e1);
+		border-radius: var(--radius-md, 0.5rem) var(--radius-md, 0.5rem) 0 0;
+		border-bottom: 1px solid var(--admin-border-subtle, ##e2e8f0);
+		margin-bottom: 0;
+		overflow: hidden;
+		transition: all 0.2s ease;
+	}
+	.pg-a11y-linter-bar.is-passed {
+		border-color: var(--admin-border, ##cbd5e1);
+		background: var(--admin-surface, ##ffffff);
+	}
+	.pg-a11y-linter-bar.has-warnings {
+		border-color: ##f59e0b;
+		background: ##fffdfa;
+	}
+	.pg-a11y-linter-bar.has-errors {
+		border-color: ##ef4444;
+		background: ##fef8f8;
+	}
+	.pg-a11y-bar-main {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 0.65rem;
+		padding: 0.55rem 0.85rem;
+	}
+	.pg-a11y-bar-title-wrap {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+	.pg-a11y-bar-icon {
+		color: var(--admin-primary, ##0284c7);
+		display: inline-flex;
+	}
+	.pg-a11y-bar-title {
+		font-size: 0.84rem;
+		font-weight: 700;
+		color: var(--admin-text-main, ##0f172a);
+		letter-spacing: -0.01em;
+	}
+	.pg-a11y-standard-badge {
+		font-size: 0.68rem;
+		font-weight: 700;
+		padding: 0.1rem 0.35rem;
+		border-radius: 3px;
+		background: var(--admin-bg, ##f1f5f9);
+		color: var(--admin-text-muted, ##475569);
+		border: 1px solid var(--admin-border-subtle, ##e2e8f0);
+	}
+	.pg-a11y-category-chips {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+	}
+	.pg-a11y-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.2rem 0.55rem;
+		font-size: 0.74rem;
+		font-weight: 600;
+		border-radius: 9999px;
+		background: var(--admin-bg, ##f8fafc);
+		border: 1px solid var(--admin-border-subtle, ##e2e8f0);
+		color: var(--admin-text-muted, ##64748b);
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+	.pg-a11y-chip:hover {
+		background: var(--admin-surface, ##ffffff);
+		border-color: var(--admin-border-hover, ##94a3b8);
+		color: var(--admin-text-main, ##0f172a);
+	}
+	.pg-a11y-chip.is-active-filter {
+		background: rgba(2, 132, 199, 0.1);
+		border-color: var(--admin-primary, ##0284c7);
+		color: var(--admin-primary, ##0284c7);
+	}
+	.pg-a11y-chip .chip-count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.68rem;
+		padding: 0 0.35rem;
+		height: 16px;
+		min-width: 16px;
+		border-radius: 9999px;
+		background: ##e2e8f0;
+		color: ##475569;
+		font-weight: 700;
+	}
+	.pg-a11y-chip.has-error {
+		border-color: ##fca5a5;
+		background: ##fef2f2;
+		color: ##b91c1c;
+	}
+	.pg-a11y-chip.has-error .chip-count {
+		background: ##ef4444;
+		color: ##ffffff;
+	}
+	.pg-a11y-chip.has-warn {
+		border-color: ##fde68a;
+		background: ##fffbeb;
+		color: ##b45309;
+	}
+	.pg-a11y-chip.has-warn .chip-count {
+		background: ##f59e0b;
+		color: ##ffffff;
+	}
+	.pg-a11y-bar-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		flex-shrink: 0;
+	}
+	.pg-a11y-drawer {
+		border-top: 1px solid var(--admin-border-subtle, ##e2e8f0);
+		background: var(--admin-surface, ##ffffff);
+		padding: 0.85rem 1rem;
+		max-height: 480px;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.pg-a11y-drawer-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: 0.65rem;
+		border-bottom: 1px solid var(--admin-border-subtle, ##e2e8f0);
+	}
+	.pg-a11y-issues-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+	}
+	.pg-a11y-issue-card {
+		border: 1px solid var(--admin-border, ##cbd5e1);
+		border-radius: var(--radius-md, 0.5rem);
+		padding: 0.75rem 0.85rem;
+		background: var(--admin-surface, ##ffffff);
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+		transition: all 0.15s ease;
+	}
+	.pg-a11y-issue-card.is-error {
+		border-left: 4px solid ##ef4444;
+		background: ##fffbfb;
+	}
+	.pg-a11y-issue-card.is-warn {
+		border-left: 4px solid ##f59e0b;
+		background: ##fffdf9;
+	}
+	.pg-a11y-issue-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.pg-a11y-rule-tag {
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		padding: 0.12rem 0.45rem;
+		border-radius: 3px;
+	}
+	.pg-a11y-rule-tag.error { background: ##fee2e2; color: ##b91c1c; }
+	.pg-a11y-rule-tag.warn { background: ##fef3c7; color: ##b45309; }
+	.pg-a11y-issue-msg {
+		font-size: 0.84rem;
+		font-weight: 600;
+		color: var(--admin-text-main, ##0f172a);
+		line-height: 1.35;
+	}
+	.pg-a11y-issue-code {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 0.78rem;
+		background: var(--admin-bg, ##f1f5f9);
+		border: 1px solid var(--admin-border-subtle, ##e2e8f0);
+		border-radius: 4px;
+		padding: 0.35rem 0.6rem;
+		color: ##334155;
+		word-break: break-all;
+		white-space: pre-wrap;
+	}
+	.pg-a11y-issue-suggestion {
+		font-size: 0.78rem;
+		color: var(--admin-text-muted, ##475569);
+		line-height: 1.4;
+	}
+	.pg-a11y-issue-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+		flex-wrap: wrap;
+	}
+	.pg-a11y-publish-widget {
+		background: var(--admin-surface, ##ffffff);
+		border: 1px solid var(--admin-border, ##cbd5e1);
+		border-radius: var(--radius-sm, 0.375rem);
+		padding: 0.75rem;
+		margin-bottom: 0.85rem;
+	}
+	.pg-a11y-pub-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.35rem;
+	}
+	@keyframes a11yHighlightPulse {
+		0% { outline: 3px solid ##ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.4); }
+		50% { outline: 3px solid ##f59e0b; box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.3); }
+		100% { outline: 3px solid ##ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+	}
+	.jbd-a11y-pulse {
+		animation: a11yHighlightPulse 1.2s ease-in-out 3;
+		border-radius: 4px;
+	}
 </style>
 
 <div class="page-header">
@@ -164,6 +397,76 @@
 							</button>
 						</div>
 					</div>
+
+					<!--- Feature 2.3: In-Editor Automated ADA WCAG Pre-Flight Linter Bar --->
+					<div id="pgA11yLinterBar" class="pg-a11y-linter-bar is-passed" role="region" aria-label="ADA WCAG 2.1 AA Pre-Flight Linter">
+						<div class="pg-a11y-bar-main">
+							<div class="pg-a11y-bar-title-wrap">
+								<span class="pg-a11y-bar-icon" aria-hidden="true">#svgIcon(name="shield", size=15)#</span>
+								<strong class="pg-a11y-bar-title">ADA Pre-Flight Linter</strong>
+								<span class="pg-a11y-standard-badge">WCAG 2.1 AA</span>
+								<span id="pgA11yOverallBadge" class="badge badge-success" role="status" aria-live="polite">
+									#svgIcon(name="check-circle", size=12)# <span>Compliant</span>
+								</span>
+							</div>
+
+							<div class="pg-a11y-category-chips" id="pgA11yCategoryChips" role="group" aria-label="Accessibility Check Categories">
+								<button type="button" class="pg-a11y-chip" id="chipA11yImages" data-cat="images" title="Images: Alternative text & decorative check">
+									<span class="chip-label">Images</span>
+									<span class="chip-count" id="countA11yImages">0</span>
+								</button>
+								<button type="button" class="pg-a11y-chip" id="chipA11yHeadings" data-cat="headings" title="Headings: Logical outline hierarchy">
+									<span class="chip-label">Headings</span>
+									<span class="chip-count" id="countA11yHeadings">0</span>
+								</button>
+								<button type="button" class="pg-a11y-chip" id="chipA11yLinks" data-cat="links" title="Links: Descriptive text & target notifications">
+									<span class="chip-label">Links</span>
+									<span class="chip-count" id="countA11yLinks">0</span>
+								</button>
+								<button type="button" class="pg-a11y-chip" id="chipA11yTables" data-cat="tables" title="Tables: Header cells & captions">
+									<span class="chip-label">Tables</span>
+									<span class="chip-count" id="countA11yTables">0</span>
+								</button>
+								<button type="button" class="pg-a11y-chip" id="chipA11yFormat" data-cat="format" title="Readability, styling & contrast">
+									<span class="chip-label">Readability</span>
+									<span class="chip-count" id="countA11yFormat">0</span>
+								</button>
+							</div>
+
+							<div class="pg-a11y-bar-actions">
+								<button type="button" class="btn btn-outline btn-xs" id="btnToggleA11yDrawer" aria-expanded="false" aria-controls="pgA11yIssuesDrawer">
+									#svgIcon(name="eye", size=13)#
+									<span id="btnToggleA11yDrawerText">Audit Report</span>
+									<span class="badge badge-neutral" id="pgA11yIssueBadge" style="margin-left:2px; font-weight:700;">0</span>
+								</button>
+								<button type="button" class="btn btn-ghost btn-xs btn-icon-only" id="btnRescanA11y" title="Re-scan content for accessibility barriers" aria-label="Re-scan accessibility">
+									#svgIcon(name="refresh", size=13)#
+								</button>
+							</div>
+						</div>
+
+						<!--- Expandable Diagnostic & Quick-Fix Drawer --->
+						<div id="pgA11yIssuesDrawer" class="pg-a11y-drawer" hidden>
+							<div class="pg-a11y-drawer-header">
+								<div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+									<h4 class="pg-a11y-drawer-title" style="margin:0; font-size:0.875rem; font-weight:700;">Pre-Flight Audit Diagnostics</h4>
+									<div class="pg-attr-tabs" role="tablist" aria-label="Issue Filter Tabs" style="padding:0.12rem;">
+										<button type="button" class="pg-attr-tab is-active" id="tabA11yAll" data-filter="all" style="padding:0.2rem 0.55rem; font-size:0.75rem;">All (<span id="tabCountA11yAll">0</span>)</button>
+										<button type="button" class="pg-attr-tab" id="tabA11yErrors" data-filter="errors" style="padding:0.2rem 0.55rem; font-size:0.75rem; color:##b91c1c;">Errors (<span id="tabCountA11yErrors">0</span>)</button>
+										<button type="button" class="pg-attr-tab" id="tabA11yWarnings" data-filter="warnings" style="padding:0.2rem 0.55rem; font-size:0.75rem; color:##b45309;">Warnings (<span id="tabCountA11yWarnings">0</span>)</button>
+									</div>
+								</div>
+								<button type="button" class="btn btn-ghost btn-xs btn-icon-only" id="btnCloseA11yDrawer" aria-label="Collapse audit report">
+									#svgIcon(name="x", size=14)#
+								</button>
+							</div>
+
+							<div id="pgA11yIssuesList" class="pg-a11y-issues-list" role="region" aria-live="polite">
+								<!--- Dynamic Issue Cards injected by JS --->
+							</div>
+						</div>
+					</div>
+
 					<textarea id="pgContent" name="content" class="form-control pg-editor" data-jbd-editor data-jbd-toolbar="basic" data-jbd-inline-toolbar="true" data-jbd-height="400px" data-jbd-placeholder="Type page content, add headings, media, tables, and block templates..." aria-describedby="pgContentHelp"><cfif isNew><cfelseif Len(Trim(page.content ?: ''))>#EncodeForHTML(page.content)#<cfelseif Len(Trim(page.body ?: ''))>#EncodeForHTML(page.body)#<cfelse><h2>#EncodeForHTML(page.title)#</h2>
 <p>#EncodeForHTML(page.summary)#</p></cfif></textarea>
 					<div id="pgContentHelp" class="pg-help">Accessible Rich Text Editor (WCAG 2.2 AA). Shortcuts: <kbd>Alt+F10</kbd> focus toolbar &middot; <kbd>&larr;/&rarr;</kbd> navigate &middot; <kbd>Esc</kbd> exit dialogs.</div>
@@ -365,6 +668,26 @@
 				<h2 class="card-title">#svgIcon(name="published", size=16)# <span>Publish</span></h2>
 			</div>
 			<div class="card-body">
+				<!--- Feature 2.3: Companion WCAG Pre-Flight Scorecard --->
+				<div class="pg-a11y-publish-widget" id="pgA11yPublishWidget">
+					<div class="pg-a11y-pub-header">
+						<span style="display:flex; align-items:center; gap:0.35rem; font-size:0.78rem; font-weight:700; color:var(--admin-text-main);">
+							#svgIcon(name="shield", size=14)#
+							<span>ADA Pre-Flight</span>
+						</span>
+						<span id="pgA11yPublishBadge" class="badge badge-success" style="font-size:0.7rem; font-weight:700;">PASS</span>
+					</div>
+					<div class="pg-a11y-pub-body">
+						<div id="pgA11yPublishSummary" style="font-size:0.75rem; color:var(--admin-text-muted); line-height:1.4;">
+							Content ready for public release.
+						</div>
+						<a href="javascript:void(0)" id="lnkInspectA11yDrawer" style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; font-weight:600; color:var(--admin-primary); margin-top:0.35rem; text-decoration:none;">
+							<span>Inspect Diagnostics</span>
+							#svgIcon(name="chevron-down", size=12)#
+						</a>
+					</div>
+				</div>
+
 				<div class="pg-field">
 					<label for="pgStatus" class="form-label">Status</label>
 					<select id="pgStatus" name="status" class="form-control" style="width:100%;">
@@ -1448,20 +1771,62 @@
 		}
 		var contentVal = jbdInstance ? jbdInstance.getHTML() : (document.getElementById("pgContent") ? document.getElementById("pgContent").value : "");
 
-		// WCAG 2.1 Level AA Accessibility Validation Check
-		if (typeof A11yValidator !== "undefined" && !window.__cmsBypassA11yOnce) {
-			var a11yResult = (jbdInstance && typeof jbdInstance.validateA11y === "function")
-				? jbdInstance.validateA11y()
-				: A11yValidator.validate(contentVal);
+		// Feature 2.3: In-Editor Automated ADA WCAG Pre-Flight Linter Gating
+		if (typeof window.PageA11yLinter !== "undefined" && !window.__cmsBypassA11yOnce) {
+			var linterResults = window.PageA11yLinter.getResults();
+			var visVal = document.getElementById("pgVisibility") ? document.getElementById("pgVisibility").value : "";
+			var statusVal = document.getElementById("pgStatus") ? document.getElementById("pgStatus").value : "";
+			var isPublishing = (visVal === "Published" && statusVal === "Active");
 
-			if (!a11yResult.passed || (a11yResult.warnings && a11yResult.warnings.length > 0)) {
-				// Re-enable button & restore state
+			if (linterResults && linterResults.criticalCount > 0 && isPublishing) {
 				btnSavePage.disabled = false;
 				btnSavePage.classList.remove("is-loading");
 				btnSavePage.innerHTML = origBtnHtml;
 				if (typeof window.finishTopProgress === "function") window.finishTopProgress();
 
-				// Show WCAG AA Validation modal report
+				var confirmMsg = "This page contains " + linterResults.criticalCount + " critical ADA / WCAG 2.1 AA accessibility violation" +
+					(linterResults.criticalCount === 1 ? "" : "s") + " (such as missing image alt text, broken heading hierarchy, or missing table headers). " +
+					"Public release without remediation may violate ADA Title II & Washington State accessibility policies.\n\n" +
+					"Would you like to review and fix the issues now?";
+
+				if (typeof window.adminConfirm === "function") {
+					window.adminConfirm(confirmMsg, {
+						title: "ADA Pre-Flight Quality Gate",
+						confirmText: "Review & Fix Issues",
+						cancelText: "Publish Anyway",
+						confirmClass: "btn-primary",
+						cancelClass: "btn-outline",
+						onConfirm: function() {
+							window.PageA11yLinter.openDrawer();
+							status.style.cssText = "background:var(--admin-warning-light, #fffbeb); color:var(--admin-warning, #92400e); border:1px solid var(--admin-warning, #fde68a); padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem;";
+							status.textContent = "Publishing paused: please address the highlighted accessibility issues in the Pre-Flight drawer.";
+						},
+						onCancel: function() {
+							window.__cmsBypassA11yOnce = true;
+							document.getElementById("pageEditForm").dispatchEvent(new Event("submit", { cancelable: true }));
+						}
+					});
+				} else if (confirm(confirmMsg)) {
+					window.PageA11yLinter.openDrawer();
+					status.style.cssText = "background:var(--admin-warning-light, #fffbeb); color:var(--admin-warning, #92400e); border:1px solid var(--admin-warning, #fde68a); padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem;";
+					status.textContent = "Publishing paused: please address the highlighted accessibility issues in the Pre-Flight drawer.";
+				} else {
+					window.__cmsBypassA11yOnce = true;
+					document.getElementById("pageEditForm").dispatchEvent(new Event("submit", { cancelable: true }));
+				}
+				return;
+			}
+		} else if (typeof A11yValidator !== "undefined" && !window.__cmsBypassA11yOnce) {
+			var a11yResult = (jbdInstance && typeof jbdInstance.validateA11y === "function")
+				? jbdInstance.validateA11y()
+				: A11yValidator.validate(contentVal);
+
+			if (!a11yResult.passed || (a11yResult.warnings && a11yResult.warnings.length > 0)) {
+				btnSavePage.disabled = false;
+				btnSavePage.classList.remove("is-loading");
+				btnSavePage.innerHTML = origBtnHtml;
+				if (typeof window.finishTopProgress === "function") window.finishTopProgress();
+
 				A11yValidator.showModal({
 					results: a11yResult,
 					onProceed: function() {
@@ -2718,6 +3083,1102 @@ function createManualSnapshot() {
 		}
 	});
 }
+
+/* ==========================================================================
+   Feature 2.3: In-Editor Automated ADA WCAG Pre-Flight Linter Engine & Controller
+   ========================================================================== */
+window.PageA11yLinter = (function() {
+	var _activeFilter = 'all';
+	var _lastResults = {
+		passed: true,
+		criticalCount: 0,
+		warningCount: 0,
+		categories: { images: 0, headings: 0, links: 0, tables: 0, format: 0 },
+		issues: []
+	};
+	var _scanDebounceTimer = null;
+
+	function escapeHtml(str) {
+		if (str === null || str === undefined) return '';
+		return String(str)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	function getEditor() {
+		return (typeof JBDEditor !== "undefined") ? JBDEditor.get("#pgContent") : null;
+	}
+
+	function getHtmlContent() {
+		var ed = getEditor();
+		if (ed && typeof ed.getHTML === "function") {
+			return ed.getHTML();
+		}
+		var ta = document.getElementById("pgContent");
+		return ta ? ta.value : "";
+	}
+
+	function scan() {
+		var html = getHtmlContent();
+		var temp = document.createElement("div");
+		temp.innerHTML = html;
+
+		var issues = [];
+		var catCounts = { images: 0, headings: 0, links: 0, tables: 0, format: 0 };
+		var criticalCount = 0;
+		var warningCount = 0;
+
+		// --- Rule Group 1: Images (WCAG 1.1.1 Non-text Content) ---
+		var imgs = temp.querySelectorAll("img");
+		var genericNames = ["image", "photo", "picture", "graphic", "screenshot", "img", "icon", "placeholder", "file", "download"];
+		imgs.forEach(function(img, idx) {
+			var hasAlt = img.hasAttribute("alt");
+			var alt = (img.getAttribute("alt") || "").trim();
+			var isDecorative = (img.getAttribute("role") === "presentation" || img.getAttribute("aria-hidden") === "true");
+			var src = img.getAttribute("src") || "";
+			var srcPreview = src.length > 50 ? src.substring(0, 47) + "..." : (src || "Image #" + (idx + 1));
+
+			if (!hasAlt) {
+				criticalCount++;
+				catCounts.images++;
+				issues.push({
+					id: "img-missing-alt-" + idx,
+					category: "images",
+					severity: "error",
+					rule: "WCAG 1.1.1 (Non-text Content)",
+					title: "Missing Alternative Text Attribute",
+					message: "Image lacks an alt attribute entirely. Screen readers cannot describe this image.",
+					snippet: '<img src="' + escapeHtml(srcPreview) + '">',
+					suggestion: 'Provide descriptive alternative text or mark it as decorative (alt="" and role="presentation").',
+					selector: "img",
+					index: idx,
+					quickFixType: "set-alt",
+					meta: { src: src }
+				});
+			} else if (alt === "" && !isDecorative) {
+				// Linked or informative images with empty alt without role="presentation"
+				var parentLink = img.closest("a");
+				if (parentLink) {
+					criticalCount++;
+					catCounts.images++;
+					issues.push({
+						id: "img-linked-empty-alt-" + idx,
+						category: "images",
+						severity: "error",
+						rule: "WCAG 1.1.1 / 2.4.4 (Linked Image Missing Description)",
+						title: "Linked Image with Empty Alt",
+						message: "This image is inside a hyperlink with an empty alt attribute, resulting in an unlabelled link for assistive tech.",
+						snippet: '<a href="' + escapeHtml(parentLink.getAttribute("href") || "") + '"><img src="' + escapeHtml(srcPreview) + '" alt=""></a>',
+						suggestion: 'Provide descriptive alt text clarifying the link destination or add an aria-label to the parent link.',
+						selector: "img",
+						index: idx,
+						quickFixType: "set-alt",
+						meta: { src: src }
+					});
+				}
+			} else if (alt.length > 0) {
+				var lower = alt.toLowerCase().replace(/[^a-z0-9]/g, "");
+				if (genericNames.indexOf(lower) !== -1 || /^(dsc|img|p[0-9]|screenshot)[\-_0-9]*/i.test(alt) || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(alt)) {
+					warningCount++;
+					catCounts.images++;
+					issues.push({
+						id: "img-generic-alt-" + idx,
+						category: "images",
+						severity: "warning",
+						rule: "WCAG 1.1.1 (Non-text Content)",
+						title: "Generic or Filename Alt Text",
+						message: 'Alternative text "' + escapeHtml(alt) + '" appears to be a generic placeholder or filename.',
+						snippet: '<img alt="' + escapeHtml(alt) + '" src="' + escapeHtml(srcPreview) + '">',
+						suggestion: 'Replace with descriptive text explaining what the visual portrays.',
+						selector: "img",
+						index: idx,
+						quickFixType: "set-alt",
+						meta: { currentAlt: alt, src: src }
+					});
+				} else if (alt.length > 150) {
+					warningCount++;
+					catCounts.images++;
+					issues.push({
+						id: "img-long-alt-" + idx,
+						category: "images",
+						severity: "warning",
+						rule: "WCAG 1.1.1 (Concise Alt Text)",
+						title: "Excessively Long Alt Text (" + alt.length + " chars)",
+						message: 'Alt text exceeds recommended 150 characters. Screen readers read alt text without pausing.',
+						snippet: '<img alt="' + escapeHtml(alt.substring(0, 70)) + '...">',
+						suggestion: 'Summarize the core visual concept in under 150 characters and use a body caption for extended details.',
+						selector: "img",
+						index: idx,
+						quickFixType: "set-alt",
+						meta: { currentAlt: alt, src: src }
+					});
+				}
+			}
+		});
+
+		// --- Rule Group 2: Headings (WCAG 1.3.1 Info and Relationships) ---
+		var headings = temp.querySelectorAll("h1, h2, h3, h4, h5, h6");
+		var lastLevel = 1; // Outer page title serves as singular H1
+		var isFirstHeading = true;
+
+		headings.forEach(function(h, idx) {
+			var tag = h.tagName.toLowerCase();
+			var level = parseInt(tag.substring(1), 10);
+			var text = (h.textContent || "").trim();
+
+			if (!text && !h.querySelector("img[alt]")) {
+				criticalCount++;
+				catCounts.headings++;
+				issues.push({
+					id: "h-empty-" + idx,
+					category: "headings",
+					severity: "error",
+					rule: "WCAG 1.3.1 (Info and Relationships)",
+					title: "Empty Heading Tag <" + tag + ">",
+					message: "An empty heading produces a confusing dead-end milestone for screen reader users.",
+					snippet: "<" + tag + "></" + tag + ">",
+					suggestion: "Add meaningful text describing the section or remove the empty heading element.",
+					selector: "h1, h2, h3, h4, h5, h6",
+					index: idx,
+					quickFixType: "remove-element"
+				});
+			} else if (level === 1) {
+				warningCount++;
+				catCounts.headings++;
+				issues.push({
+					id: "h1-multiple-" + idx,
+					category: "headings",
+					severity: "warning",
+					rule: "WCAG 1.3.1 (Outline Structure)",
+					title: "Multiple <h1> Tags Detected",
+					message: "The page title is already the primary <h1>. In-page content sections should start at <h2>.",
+					snippet: "<h1>" + escapeHtml(text.substring(0, 40)) + "</h1>",
+					suggestion: "Demote this heading from <h1> to <h2> to maintain a coherent single-title hierarchy.",
+					selector: "h1, h2, h3, h4, h5, h6",
+					index: idx,
+					quickFixType: "change-heading",
+					meta: { targetTag: "h2" }
+				});
+			} else if (isFirstHeading && level > 2) {
+				warningCount++;
+				catCounts.headings++;
+				issues.push({
+					id: "h-skipped-initial-" + idx,
+					category: "headings",
+					severity: "warning",
+					rule: "WCAG 1.3.1 (Heading Outline Order)",
+					title: "Top-Level Section Skips <h2> (Found <" + tag + ">)",
+					message: "Content begins at <" + tag + "> after the page title <h1> without an introductory <h2>.",
+					snippet: "<" + tag + ">" + escapeHtml(text.substring(0, 40)) + "</" + tag + ">",
+					suggestion: "Change this initial heading to <h2> so document navigation begins logically.",
+					selector: "h1, h2, h3, h4, h5, h6",
+					index: idx,
+					quickFixType: "change-heading",
+					meta: { targetTag: "h2" }
+				});
+			} else if (!isFirstHeading && level > lastLevel + 1) {
+				warningCount++;
+				catCounts.headings++;
+				var expectedTag = "h" + (lastLevel + 1);
+				issues.push({
+					id: "h-skipped-" + idx,
+					category: "headings",
+					severity: "warning",
+					rule: "WCAG 1.3.1 (Heading Outline Order)",
+					title: "Skipped Heading Level (<" + tag + "> follows <h" + lastLevel + ">)",
+					message: "Skipping heading levels (e.g., jumping from <h" + lastLevel + "> to <" + tag + ">) disrupts outline comprehension for assistive software.",
+					snippet: "<" + tag + ">" + escapeHtml(text.substring(0, 40)) + "</" + tag + ">",
+					suggestion: "Adjust to <" + expectedTag + "> to preserve step-by-step document hierarchy.",
+					selector: "h1, h2, h3, h4, h5, h6",
+					index: idx,
+					quickFixType: "change-heading",
+					meta: { targetTag: expectedTag }
+				});
+			}
+
+			isFirstHeading = false;
+			lastLevel = level;
+		});
+
+		// --- Rule Group 3: Links (WCAG 2.4.4 Link Purpose in Context) ---
+		var links = temp.querySelectorAll("a");
+		var ambiguousTerms = [
+			"click here", "here", "click", "more", "read more", "learn more",
+			"link", "this link", "download", "view", "details", "info", "page"
+		];
+
+		links.forEach(function(a, idx) {
+			var isAnchorJump = (a.hasAttribute("name") || a.classList.contains("jbd-anchor-marker")) && !a.hasAttribute("href");
+			if (isAnchorJump) return;
+
+			var href = (a.getAttribute("href") || "").trim();
+			var text = (a.textContent || "").trim();
+			var ariaLabel = (a.getAttribute("aria-label") || "").trim();
+			var titleAttr = (a.getAttribute("title") || "").trim();
+			var hasImgChild = a.querySelector("img");
+			var accessibleName = text || ariaLabel || titleAttr || (hasImgChild ? (hasImgChild.getAttribute("alt") || "") : "");
+
+			if (!href || href === "#" || href === "javascript:void(0);" || href === "javascript:;" || href === "javascript:void(0)") {
+				warningCount++;
+				catCounts.links++;
+				issues.push({
+					id: "link-placeholder-href-" + idx,
+					category: "links",
+					severity: "warning",
+					rule: "WCAG 2.4.4 / 4.1.2 (Valid Destination)",
+					title: "Link Has Empty or Placeholder Href",
+					message: 'Link href is empty or "#". If this initiates a JavaScript UI action, a <button> is required.',
+					snippet: '<a href="' + escapeHtml(href || "''") + '">' + escapeHtml(text || "Link #" + (idx + 1)) + '</a>',
+					suggestion: 'Provide a valid web/document URL or switch to a semantic <button type="button">.',
+					selector: "a",
+					index: idx,
+					quickFixType: "edit-link-href",
+					meta: { currentHref: href }
+				});
+			}
+
+			if (!accessibleName) {
+				criticalCount++;
+				catCounts.links++;
+				issues.push({
+					id: "link-empty-name-" + idx,
+					category: "links",
+					severity: "error",
+					rule: "WCAG 2.4.4 (Link Purpose)",
+					title: "Completely Empty Link",
+					message: "Link contains no readable text, aria-label, or image alt description.",
+					snippet: '<a href="' + escapeHtml(href) + '"></a>',
+					suggestion: "Insert descriptive anchor text or add an aria-label explaining where the link goes.",
+					selector: "a",
+					index: idx,
+					quickFixType: "add-aria-label",
+					meta: { href: href }
+				});
+			} else {
+				var normalized = accessibleName.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+				if (ambiguousTerms.indexOf(normalized) !== -1) {
+					warningCount++;
+					catCounts.links++;
+					issues.push({
+						id: "link-ambiguous-" + idx,
+						category: "links",
+						severity: "warning",
+						rule: "WCAG 2.4.4 (Link Purpose in Context)",
+						title: 'Ambiguous Link Text "' + escapeHtml(accessibleName) + '"',
+						message: 'Generic phrases like "' + escapeHtml(accessibleName) + '" provide zero context when screen reader users list all links on a page.',
+						snippet: '<a href="' + escapeHtml(href) + '">' + escapeHtml(accessibleName) + '</a>',
+						suggestion: 'Provide specific link text (e.g. "Download the 2026 Budget Report" instead of "' + escapeHtml(accessibleName) + '") or add an informative aria-label.',
+						selector: "a",
+						index: idx,
+						quickFixType: "add-aria-label",
+						meta: { currentText: accessibleName, href: href }
+					});
+				} else if (/^https?:\/\//i.test(accessibleName) && accessibleName.length > 25) {
+					warningCount++;
+					catCounts.links++;
+					issues.push({
+						id: "link-raw-url-" + idx,
+						category: "links",
+						severity: "warning",
+						rule: "WCAG 2.4.4 (Descriptive Link)",
+						title: "Raw URL Used as Link Text",
+						message: "Assistive technologies spell out raw URLs character by character.",
+						snippet: '<a href="' + escapeHtml(href) + '">' + escapeHtml(accessibleName.substring(0, 35)) + '...</a>',
+						suggestion: "Replace the raw URL text with a human-readable title describing the target site or service.",
+						selector: "a",
+						index: idx,
+						quickFixType: "add-aria-label",
+						meta: { currentText: accessibleName, href: href }
+					});
+				}
+			}
+
+			// Target="_blank" without screen reader notice or rel="noopener noreferrer"
+			if (a.getAttribute("target") === "_blank") {
+				var rel = (a.getAttribute("rel") || "").toLowerCase();
+				var aria = (a.getAttribute("aria-label") || "").toLowerCase();
+				var txt = (a.textContent || "").toLowerCase();
+				var hasTabNotice = aria.indexOf("new tab") !== -1 || aria.indexOf("new window") !== -1 ||
+				                   txt.indexOf("new tab") !== -1 || txt.indexOf("new window") !== -1;
+
+				if (!hasTabNotice) {
+					warningCount++;
+					catCounts.links++;
+					issues.push({
+						id: "link-new-tab-notice-" + idx,
+						category: "links",
+						severity: "warning",
+						rule: "WCAG 3.2.5 (Predictable Navigation)",
+						title: "Opens in New Tab Without Screen Reader Notice",
+						message: 'Link opens in a new tab without an audible indication like "(opens in a new tab)".',
+						snippet: '<a href="' + escapeHtml(href) + '" target="_blank">' + escapeHtml(text || "Link") + '</a>',
+						suggestion: 'Add an aria-label with "(opens in a new tab)" to notify assistive tech users.',
+						selector: "a",
+						index: idx,
+						quickFixType: "add-new-tab-notice",
+						meta: { text: text, href: href, ariaLabel: ariaLabel }
+					});
+				}
+
+				if (rel.indexOf("noopener") === -1) {
+					warningCount++;
+					catCounts.links++;
+					issues.push({
+						id: "link-noopener-missing-" + idx,
+						category: "links",
+						severity: "warning",
+						rule: "Web Security & Browser Best Practice",
+						title: 'target="_blank" Missing rel="noopener noreferrer"',
+						message: 'Opening external targets without rel="noopener noreferrer" exposes tab browsing context to reverse tabnabbing.',
+						snippet: '<a href="' + escapeHtml(href) + '" target="_blank">',
+						suggestion: 'Add rel="noopener noreferrer" to external new-tab hyperlinks.',
+						selector: "a",
+						index: idx,
+						quickFixType: "add-noopener",
+						meta: { href: href }
+					});
+				}
+			}
+		});
+
+		// --- Rule Group 4: Tables (WCAG 1.3.1 Info and Relationships) ---
+		var tables = temp.querySelectorAll("table");
+		tables.forEach(function(table, idx) {
+			var ths = table.querySelectorAll("th");
+			var caption = table.querySelector("caption");
+			var ariaLabel = (table.getAttribute("aria-label") || "").trim();
+
+			if (ths.length === 0) {
+				criticalCount++;
+				catCounts.tables++;
+				issues.push({
+					id: "table-missing-th-" + idx,
+					category: "tables",
+					severity: "error",
+					rule: "WCAG 1.3.1 (Data Tables)",
+					title: "Table Has No Header Cells (<th>)",
+					message: "Assistive screen readers cannot associate data cells with headers without <th> cells.",
+					snippet: "<table> (Table #" + (idx + 1) + ")",
+					suggestion: 'Convert the top row of cells from <td> to <th scope="col">.',
+					selector: "table",
+					index: idx,
+					quickFixType: "convert-table-headers"
+				});
+			} else {
+				var missingScope = false;
+				ths.forEach(function(th) {
+					if (!th.hasAttribute("scope")) missingScope = true;
+				});
+				if (missingScope) {
+					warningCount++;
+					catCounts.tables++;
+					issues.push({
+						id: "table-missing-scope-" + idx,
+						category: "tables",
+						severity: "warning",
+						rule: "WCAG 1.3.1 (Table Header Scopes)",
+						title: "Header Cells Missing scope Attribute",
+						message: 'One or more <th> cells lack scope="col" or scope="row", causing ambiguous header association.',
+						snippet: "<th>...</th> in Table #" + (idx + 1),
+						suggestion: 'Assign scope="col" to column headers and scope="row" to row headers.',
+						selector: "table",
+						index: idx,
+						quickFixType: "add-th-scopes"
+					});
+				}
+			}
+
+			if (!caption && !ariaLabel) {
+				warningCount++;
+				catCounts.tables++;
+				issues.push({
+					id: "table-missing-caption-" + idx,
+					category: "tables",
+					severity: "warning",
+					rule: "WCAG 1.3.1 (Table Caption/Name)",
+					title: "Table Missing <caption> or aria-label",
+					message: "Tables should include a caption or accessible label summarizing the dataset.",
+					snippet: "<table> (Table #" + (idx + 1) + ")",
+					suggestion: "Add a <caption> element or aria-label describing table contents.",
+					selector: "table",
+					index: idx,
+					quickFixType: "add-table-caption"
+				});
+			}
+		});
+
+		// --- Rule Group 5: Readability, Styling & Contrast (WCAG 1.4.3 / 1.4.12) ---
+		// Check for hardcoded low contrast colors on light backgrounds
+		var styledElements = temp.querySelectorAll("[style*='color']");
+		var lowContrastRegex = /color\s*:\s*(#fff|#ffffff|#ccc|#cccccc|#eee|#eeeeee|#ddd|#dddddd|white|lightgray|yellow|lime|cyan)\b/i;
+		styledElements.forEach(function(el, idx) {
+			var styleStr = el.getAttribute("style") || "";
+			if (lowContrastRegex.test(styleStr)) {
+				warningCount++;
+				catCounts.format++;
+				issues.push({
+					id: "contrast-low-" + idx,
+					category: "format",
+					severity: "warning",
+					rule: "WCAG 1.4.3 (Contrast Minimum)",
+					title: "Potential Low-Contrast Inline Color",
+					message: 'Element specifies a pale or low-contrast text color inline (' + escapeHtml(styleStr) + '). On standard light backgrounds, this fails the 4.5:1 ratio.',
+					snippet: '<' + el.tagName.toLowerCase() + ' style="' + escapeHtml(styleStr) + '">' + escapeHtml((el.textContent || "").substring(0, 30)) + '</' + el.tagName.toLowerCase() + '>',
+					suggestion: "Remove inline color styles or ensure a minimum contrast ratio of 4.5:1 against the background.",
+					selector: "[style*='color']",
+					index: idx,
+					quickFixType: "remove-style-color"
+				});
+			}
+		});
+
+		// Check for excessive uppercase blocks (> 60 chars)
+		var textNodes = temp.querySelectorAll("p, div, span, li");
+		textNodes.forEach(function(el, idx) {
+			var txt = (el.textContent || "").trim();
+			if (txt.length > 60) {
+				var upperCount = (txt.match(/[A-Z]/g) || []).length;
+				var letterCount = (txt.match(/[a-zA-Z]/g) || []).length;
+				if (letterCount > 50 && (upperCount / letterCount) > 0.85) {
+					warningCount++;
+					catCounts.format++;
+					issues.push({
+						id: "format-uppercase-" + idx,
+						category: "format",
+						severity: "warning",
+						rule: "WCAG Readability Best Practice",
+						title: "Extended Block of Uppercase Text",
+						message: "Large passages of ALL-CAPS text are difficult for users with dyslexia and visual impairments to read.",
+						snippet: '<p>' + escapeHtml(txt.substring(0, 50)) + '...</p>',
+						suggestion: "Use sentence case with bold emphasis rather than all-uppercase text.",
+						selector: "p, div, span, li",
+						index: idx,
+						quickFixType: "to-sentence-case"
+					});
+				}
+			}
+		});
+
+		// Check for excessive empty paragraphs used as spacers
+		var emptyParas = temp.querySelectorAll("p");
+		var spacerCount = 0;
+		emptyParas.forEach(function(p) {
+			var inner = p.innerHTML.trim();
+			if (inner === "" || inner === "&nbsp;" || inner === "<br>" || inner === "<br/>") {
+				spacerCount++;
+			}
+		});
+		if (spacerCount >= 3) {
+			warningCount++;
+			catCounts.format++;
+			issues.push({
+				id: "format-empty-spacers",
+				category: "format",
+				severity: "warning",
+				rule: "WCAG 1.3.1 (Semantic Whitespace)",
+				title: spacerCount + " Empty Paragraph Spacer Tags Found",
+				message: "Using empty <p>&nbsp;</p> tags for visual spacing creates repetitive blank pauses for screen reader navigation.",
+				snippet: "<p>&nbsp;</p> (x" + spacerCount + ")",
+				suggestion: "Remove empty spacer paragraphs and use CSS margin/padding or the editor's divider component.",
+				selector: "p",
+				index: 0,
+				quickFixType: "remove-empty-spacers"
+			});
+		}
+
+		// --- Rule Group 6: Page Metadata & Title ---
+		var titleInput = document.getElementById("pgTitle");
+		var pageTitleVal = titleInput ? titleInput.value.trim() : "";
+		if (!pageTitleVal || pageTitleVal.length < 3) {
+			criticalCount++;
+			catCounts.headings++;
+			issues.push({
+				id: "meta-page-title",
+				category: "headings",
+				severity: "error",
+				rule: "WCAG 2.4.2 (Page Titled)",
+				title: "Missing or Inadequate Page Title",
+				message: "Every web page must have a descriptive title explaining its topic or purpose.",
+				snippet: '<input id="pgTitle" value="' + escapeHtml(pageTitleVal) + '">',
+				suggestion: "Provide a descriptive title for this page (e.g. 'Community Development Building Permits').",
+				selector: "#pgTitle",
+				index: 0,
+				quickFixType: "focus-input",
+				meta: { inputId: "pgTitle" }
+			});
+		}
+
+		var metaDescInput = document.getElementById("pgMetaDesc");
+		var metaDescVal = metaDescInput ? metaDescInput.value.trim() : "";
+		if (metaDescVal.length > 160) {
+			warningCount++;
+			catCounts.format++;
+			issues.push({
+				id: "meta-desc-length",
+				category: "format",
+				severity: "warning",
+				rule: "SEO & Accessibility Best Practice",
+				title: "Meta Description Exceeds 160 Characters (" + metaDescVal.length + " chars)",
+				message: "Search engines and screen reader summaries truncate descriptions beyond 160 characters.",
+				snippet: escapeHtml(metaDescVal.substring(0, 60)) + "...",
+				suggestion: "Shorten the meta description so key points remain legible in snippet previews.",
+				selector: "#pgMetaDesc",
+				index: 0,
+				quickFixType: "focus-input",
+				meta: { inputId: "pgMetaDesc" }
+			});
+		}
+
+		_lastResults = {
+			passed: (criticalCount === 0),
+			criticalCount: criticalCount,
+			warningCount: warningCount,
+			categories: catCounts,
+			issues: issues
+		};
+
+		renderUI();
+		return _lastResults;
+	}
+
+	function renderUI() {
+		var res = _lastResults;
+		var totalIssues = res.criticalCount + res.warningCount;
+
+		// 1. Update Linter Bar Header & Overall Badge
+		var bar = document.getElementById("pgA11yLinterBar");
+		var overallBadge = document.getElementById("pgA11yOverallBadge");
+		var issueCountBadge = document.getElementById("pgA11yIssueBadge");
+
+		if (bar) {
+			bar.classList.remove("is-passed", "is-warn", "is-error");
+			if (res.criticalCount > 0) {
+				bar.classList.add("is-error");
+			} else if (res.warningCount > 0) {
+				bar.classList.add("is-warn");
+			} else {
+				bar.classList.add("is-passed");
+			}
+		}
+
+		if (overallBadge) {
+			overallBadge.className = "badge";
+			if (res.criticalCount > 0) {
+				overallBadge.classList.add("badge-danger");
+				overallBadge.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <span>' + res.criticalCount + ' Error' + (res.criticalCount === 1 ? '' : 's') + '</span>';
+			} else if (res.warningCount > 0) {
+				overallBadge.classList.add("badge-warning");
+				overallBadge.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> <span>' + res.warningCount + ' Warning' + (res.warningCount === 1 ? '' : 's') + '</span>';
+			} else {
+				overallBadge.classList.add("badge-success");
+				overallBadge.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> <span>Compliant</span>';
+			}
+		}
+
+		if (issueCountBadge) {
+			issueCountBadge.textContent = totalIssues;
+			issueCountBadge.className = "badge " + (res.criticalCount > 0 ? "badge-danger" : (res.warningCount > 0 ? "badge-warning" : "badge-neutral"));
+		}
+
+		// 2. Update Category Chips
+		var chipMap = {
+			images: { chip: "chipA11yImages", count: "countA11yImages" },
+			headings: { chip: "chipA11yHeadings", count: "countA11yHeadings" },
+			links: { chip: "chipA11yLinks", count: "countA11yLinks" },
+			tables: { chip: "chipA11yTables", count: "countA11yTables" },
+			format: { chip: "chipA11yFormat", count: "countA11yFormat" }
+		};
+
+		Object.keys(chipMap).forEach(function(catKey) {
+			var cfg = chipMap[catKey];
+			var chipEl = document.getElementById(cfg.chip);
+			var countEl = document.getElementById(cfg.count);
+			var count = res.categories[catKey] || 0;
+
+			if (countEl) countEl.textContent = count;
+			if (chipEl) {
+				chipEl.classList.remove("has-error", "has-warn");
+				// Check if category contains critical errors
+				var hasCrit = res.issues.some(function(i) { return i.category === catKey && i.severity === "error"; });
+				if (hasCrit) {
+					chipEl.classList.add("has-error");
+				} else if (count > 0) {
+					chipEl.classList.add("has-warn");
+				}
+			}
+		});
+
+		// 3. Update Publish Card Scorecard
+		var pubBadge = document.getElementById("pgA11yPublishBadge");
+		var pubSummary = document.getElementById("pgA11yPublishSummary");
+		if (pubBadge) {
+			pubBadge.className = "badge";
+			if (res.criticalCount > 0) {
+				pubBadge.classList.add("badge-danger");
+				pubBadge.textContent = res.criticalCount + " CRITICAL";
+			} else if (res.warningCount > 0) {
+				pubBadge.classList.add("badge-warning");
+				pubBadge.textContent = res.warningCount + " WARNINGS";
+			} else {
+				pubBadge.classList.add("badge-success");
+				pubBadge.textContent = "PASS";
+			}
+		}
+		if (pubSummary) {
+			if (res.criticalCount > 0) {
+				pubSummary.innerHTML = '<span style="color:#b91c1c; font-weight:600;">' + res.criticalCount + ' critical barrier' + (res.criticalCount === 1 ? '' : 's') + ' detected.</span> Resolution recommended before publishing.';
+			} else if (res.warningCount > 0) {
+				pubSummary.innerHTML = '<span style="color:#b45309; font-weight:600;">Compliant with ' + res.warningCount + ' best-practice recommendation' + (res.warningCount === 1 ? '' : 's') + '.</span>';
+			} else {
+				pubSummary.textContent = "Content ready for public release. Meets ADA WCAG 2.1 AA.";
+			}
+		}
+
+		// 4. Update Filter Tab Counts
+		var tabAll = document.getElementById("tabCountA11yAll");
+		var tabErr = document.getElementById("tabCountA11yErrors");
+		var tabWarn = document.getElementById("tabCountA11yWarnings");
+		if (tabAll) tabAll.textContent = totalIssues;
+		if (tabErr) tabErr.textContent = res.criticalCount;
+		if (tabWarn) tabWarn.textContent = res.warningCount;
+
+		// 5. Render Issues Drawer List
+		renderDrawerList();
+	}
+
+	function renderDrawerList() {
+		var listEl = document.getElementById("pgA11yIssuesList");
+		if (!listEl) return;
+
+		var filtered = _lastResults.issues.filter(function(issue) {
+			if (_activeFilter === "errors") return issue.severity === "error";
+			if (_activeFilter === "warnings") return issue.severity === "warning";
+			if (_activeFilter === "images" || _activeFilter === "headings" || _activeFilter === "links" || _activeFilter === "tables" || _activeFilter === "format") {
+				return issue.category === _activeFilter;
+			}
+			return true;
+		});
+
+		if (filtered.length === 0) {
+			if (_lastResults.issues.length === 0) {
+				listEl.innerHTML = '<div style="text-align:center; padding:1.75rem 1rem; color:var(--admin-text-muted); font-size:0.875rem;">' +
+					'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" style="margin:0 auto 0.5rem auto; display:block;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+					'<strong style="color:var(--admin-text-main); display:block; margin-bottom:0.25rem;">100% WCAG 2.1 AA Compliant!</strong>' +
+					'<span>No accessibility barriers detected across images, headings, links, tables, or text contrast.</span>' +
+				'</div>';
+			} else {
+				listEl.innerHTML = '<div style="text-align:center; padding:1.5rem 1rem; color:var(--admin-text-muted); font-size:0.85rem;">' +
+					'No issues found matching this filter.' +
+				'</div>';
+			}
+			return;
+		}
+
+		var html = "";
+		filtered.forEach(function(issue) {
+			var isErr = (issue.severity === "error");
+			var cardClass = isErr ? "is-error" : "is-warn";
+			var tagClass = isErr ? "error" : "warn";
+			var tagLabel = isErr ? "Violation" : "Recommendation";
+
+			html += '<div class="pg-a11y-issue-card ' + cardClass + '" id="card-' + issue.id + '" data-issue-id="' + issue.id + '">';
+			html += '  <div class="pg-a11y-issue-header">';
+			html += '    <div style="display:flex; align-items:center; gap:0.45rem;">';
+			html += '      <span class="pg-a11y-rule-tag ' + tagClass + '">' + tagLabel + '</span>';
+			html += '      <strong style="font-size:0.85rem; color:var(--admin-text-main);">' + escapeHtml(issue.title) + '</strong>';
+			html += '    </div>';
+			html += '    <span style="font-size:0.72rem; color:var(--admin-text-muted); font-family:monospace;">' + escapeHtml(issue.rule) + '</span>';
+			html += '  </div>';
+
+			html += '  <div class="pg-a11y-issue-msg">' + escapeHtml(issue.message) + '</div>';
+
+			if (issue.snippet) {
+				html += '  <div class="pg-a11y-issue-code">' + escapeHtml(issue.snippet) + '</div>';
+			}
+
+			html += '  <div class="pg-a11y-issue-suggestion"><strong>How to resolve:</strong> ' + escapeHtml(issue.suggestion) + '</div>';
+
+			html += '  <div class="pg-a11y-issue-actions">';
+			html += '    <button type="button" class="btn btn-outline btn-xs" onclick="window.PageA11yLinter.locateIssue(\'' + issue.id + '\')" title="Scroll to and outline this item in the editor">';
+			html += '      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+			html += '      <span>Locate in Editor</span>';
+			html += '    </button>';
+
+			if (issue.quickFixType) {
+				html += '    <button type="button" class="btn btn-primary btn-xs" onclick="window.PageA11yLinter.applyQuickFix(\'' + issue.id + '\')" style="background:var(--admin-primary);">';
+				html += '      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+				html += '      <span>Quick Fix</span>';
+				html += '    </button>';
+			}
+			html += '  </div>';
+
+			html += '</div>';
+		});
+
+		listEl.innerHTML = html;
+	}
+
+	function locateIssue(issueId) {
+		var issue = _lastResults.issues.find(function(i) { return i.id === issueId; });
+		if (!issue) return;
+
+		if (issue.quickFixType === "focus-input" && issue.meta && issue.meta.inputId) {
+			var inputEl = document.getElementById(issue.meta.inputId);
+			if (inputEl) {
+				inputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+				inputEl.focus();
+				inputEl.classList.add("jbd-a11y-pulse");
+				setTimeout(function() { inputEl.classList.remove("jbd-a11y-pulse"); }, 3600);
+			}
+			return;
+		}
+
+		var ed = getEditor();
+		if (!ed || !ed.contentArea) {
+			var ta = document.getElementById("pgContent");
+			if (ta) ta.scrollIntoView({ behavior: "smooth", block: "center" });
+			return;
+		}
+
+		var targets = ed.contentArea.querySelectorAll(issue.selector);
+		var targetNode = targets[issue.index];
+
+		if (!targetNode && targets.length > 0) {
+			targetNode = targets[0];
+		}
+
+		if (targetNode) {
+			targetNode.scrollIntoView({ behavior: "smooth", block: "center" });
+			targetNode.classList.add("jbd-a11y-pulse");
+			setTimeout(function() {
+				targetNode.classList.remove("jbd-a11y-pulse");
+			}, 3600);
+		} else {
+			ed.contentArea.scrollIntoView({ behavior: "smooth", block: "center" });
+		}
+	}
+
+	function applyQuickFix(issueId) {
+		var issue = _lastResults.issues.find(function(i) { return i.id === issueId; });
+		if (!issue) return;
+
+		var ed = getEditor();
+		var contentArea = ed ? ed.contentArea : null;
+
+		function syncChanges() {
+			if (ed && typeof ed.syncToTarget === "function") {
+				ed.syncToTarget();
+			}
+			scan();
+			if (typeof window.showToast === "function") {
+				window.showToast("Applied Quick Fix: " + issue.title, "success");
+			}
+		}
+
+		if (issue.quickFixType === "focus-input") {
+			locateIssue(issueId);
+			return;
+		}
+
+		if (!contentArea) {
+			alert("Quick fix requires the rich text editor to be loaded.");
+			return;
+		}
+
+		var targets = contentArea.querySelectorAll(issue.selector);
+		var targetNode = targets[issue.index] || targets[0];
+
+		if (!targetNode && issue.quickFixType !== "remove-empty-spacers") {
+			alert("Unable to locate element in editor for quick fix.");
+			return;
+		}
+
+		switch (issue.quickFixType) {
+			case "set-alt":
+				var promptVal = prompt("Enter descriptive alternative text for this image (or click Cancel):", issue.meta ? (issue.meta.currentAlt || "") : "");
+				if (promptVal !== null) {
+					var trimmed = promptVal.trim();
+					if (trimmed.length > 0) {
+						targetNode.setAttribute("alt", trimmed);
+						targetNode.removeAttribute("role");
+						targetNode.removeAttribute("aria-hidden");
+					} else {
+						// Mark decorative if empty string entered
+						targetNode.setAttribute("alt", "");
+						targetNode.setAttribute("role", "presentation");
+					}
+					syncChanges();
+				}
+				break;
+
+			case "change-heading":
+				var newTag = (issue.meta && issue.meta.targetTag) ? issue.meta.targetTag : "h2";
+				var replacementHeading = document.createElement(newTag);
+				replacementHeading.innerHTML = targetNode.innerHTML;
+				// Copy attributes
+				Array.from(targetNode.attributes).forEach(function(attr) {
+					replacementHeading.setAttribute(attr.name, attr.value);
+				});
+				targetNode.parentNode.replaceChild(replacementHeading, targetNode);
+				syncChanges();
+				break;
+
+			case "remove-element":
+				targetNode.remove();
+				syncChanges();
+				break;
+
+			case "add-aria-label":
+				var existingLabel = targetNode.getAttribute("aria-label") || (targetNode.textContent || "").trim();
+				var newLabel = prompt("Enter an accessible description / aria-label for this link:", existingLabel);
+				if (newLabel !== null && newLabel.trim().length > 0) {
+					targetNode.setAttribute("aria-label", newLabel.trim());
+					syncChanges();
+				}
+				break;
+
+			case "add-new-tab-notice":
+				var currentAria = targetNode.getAttribute("aria-label") || (targetNode.textContent || "").trim();
+				var noticeText = currentAria ? (currentAria + " (opens in a new tab)") : "Link (opens in a new tab)";
+				targetNode.setAttribute("aria-label", noticeText);
+				if (!targetNode.getAttribute("rel") || targetNode.getAttribute("rel").indexOf("noopener") === -1) {
+					targetNode.setAttribute("rel", "noopener noreferrer");
+				}
+				syncChanges();
+				break;
+
+			case "add-noopener":
+				var curRel = (targetNode.getAttribute("rel") || "").trim();
+				var parts = curRel ? curRel.split(/\s+/) : [];
+				if (parts.indexOf("noopener") === -1) parts.push("noopener");
+				if (parts.indexOf("noreferrer") === -1) parts.push("noreferrer");
+				targetNode.setAttribute("rel", parts.join(" "));
+				syncChanges();
+				break;
+
+			case "convert-table-headers":
+				var firstRow = targetNode.querySelector("tr");
+				if (firstRow) {
+					var cells = firstRow.children;
+					for (var c = 0; c < cells.length; c++) {
+						var td = cells[c];
+						if (td.tagName.toLowerCase() === "td") {
+							var th = document.createElement("th");
+							th.setAttribute("scope", "col");
+							th.innerHTML = td.innerHTML || "Header " + (c + 1);
+							firstRow.replaceChild(th, td);
+						}
+					}
+					syncChanges();
+				}
+				break;
+
+			case "add-th-scopes":
+				var thList = targetNode.querySelectorAll("th");
+				thList.forEach(function(th) {
+					if (!th.hasAttribute("scope")) {
+						th.setAttribute("scope", "col");
+					}
+				});
+				syncChanges();
+				break;
+
+			case "add-table-caption":
+				var existingCaption = targetNode.querySelector("caption");
+				var captionPrompt = prompt("Enter a brief title or caption summarizing this table:", "Data Summary Table");
+				if (captionPrompt !== null && captionPrompt.trim().length > 0) {
+					if (!existingCaption) {
+						existingCaption = document.createElement("caption");
+						targetNode.insertBefore(existingCaption, targetNode.firstChild);
+					}
+					existingCaption.textContent = captionPrompt.trim();
+					syncChanges();
+				}
+				break;
+
+			case "remove-style-color":
+				targetNode.style.color = "";
+				if (!targetNode.getAttribute("style") || !targetNode.getAttribute("style").trim()) {
+					targetNode.removeAttribute("style");
+				}
+				syncChanges();
+				break;
+
+			case "to-sentence-case":
+				var rawText = targetNode.textContent || "";
+				var converted = rawText.charAt(0).toUpperCase() + rawText.slice(1).toLowerCase();
+				targetNode.textContent = converted;
+				syncChanges();
+				break;
+
+			case "remove-empty-spacers":
+				var paras = contentArea.querySelectorAll("p");
+				paras.forEach(function(p) {
+					var ih = p.innerHTML.trim();
+					if (ih === "" || ih === "&nbsp;" || ih === "<br>" || ih === "<br/>") {
+						p.remove();
+					}
+				});
+				syncChanges();
+				break;
+
+			case "edit-link-href":
+				var promptHref = prompt("Enter destination URL or path for this link:", (issue.meta && issue.meta.currentHref) ? issue.meta.currentHref : "https://");
+				if (promptHref !== null && promptHref.trim().length > 0) {
+					targetNode.setAttribute("href", promptHref.trim());
+					syncChanges();
+				}
+				break;
+
+			default:
+				console.warn("Unhandled quick fix type:", issue.quickFixType);
+		}
+	}
+
+	function toggleDrawer() {
+		var drawer = document.getElementById("pgA11yIssuesDrawer");
+		var toggleBtn = document.getElementById("btnToggleA11yDrawer");
+		if (!drawer) return;
+
+		var isHidden = drawer.hidden;
+		drawer.hidden = !isHidden;
+		if (toggleBtn) {
+			toggleBtn.setAttribute("aria-expanded", String(!isHidden));
+		}
+		if (!drawer.hidden) {
+			renderDrawerList();
+		}
+	}
+
+	function openDrawer() {
+		var drawer = document.getElementById("pgA11yIssuesDrawer");
+		var toggleBtn = document.getElementById("btnToggleA11yDrawer");
+		if (drawer) {
+			drawer.hidden = false;
+			if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "true");
+			renderDrawerList();
+			drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+		}
+	}
+
+	function closeDrawer() {
+		var drawer = document.getElementById("pgA11yIssuesDrawer");
+		var toggleBtn = document.getElementById("btnToggleA11yDrawer");
+		if (drawer) {
+			drawer.hidden = true;
+			if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "false");
+		}
+	}
+
+	function setFilter(filterName) {
+		_activeFilter = filterName;
+
+		// Update tab active states
+		var tabs = ["tabA11yAll", "tabA11yErrors", "tabA11yWarnings"];
+		tabs.forEach(function(tid) {
+			var el = document.getElementById(tid);
+			if (el) {
+				var f = el.getAttribute("data-filter");
+				if (f === filterName) {
+					el.classList.add("is-active");
+				} else {
+					el.classList.remove("is-active");
+				}
+			}
+		});
+
+		// Ensure drawer is open when filtering
+		openDrawer();
+		renderDrawerList();
+	}
+
+	function scheduleScan() {
+		if (_scanDebounceTimer) clearTimeout(_scanDebounceTimer);
+		_scanDebounceTimer = setTimeout(function() {
+			scan();
+		}, 300);
+	}
+
+	function init() {
+		// Wire UI Controls
+		var btnToggle = document.getElementById("btnToggleA11yDrawer");
+		if (btnToggle) btnToggle.addEventListener("click", toggleDrawer);
+
+		var btnClose = document.getElementById("btnCloseA11yDrawer");
+		if (btnClose) btnClose.addEventListener("click", closeDrawer);
+
+		var btnRescan = document.getElementById("btnRescanA11y");
+		if (btnRescan) btnRescan.addEventListener("click", function() { scan(); });
+
+		var lnkInspect = document.getElementById("lnkInspectA11yDrawer");
+		if (lnkInspect) lnkInspect.addEventListener("click", openDrawer);
+
+		// Wire Filter Tabs
+		var tabAll = document.getElementById("tabA11yAll");
+		if (tabAll) tabAll.addEventListener("click", function() { setFilter("all"); });
+		var tabErrors = document.getElementById("tabA11yErrors");
+		if (tabErrors) tabErrors.addEventListener("click", function() { setFilter("errors"); });
+		var tabWarnings = document.getElementById("tabA11yWarnings");
+		if (tabWarnings) tabWarnings.addEventListener("click", function() { setFilter("warnings"); });
+
+		// Wire Category Chips
+		var chips = document.querySelectorAll(".pg-a11y-chip");
+		chips.forEach(function(chip) {
+			chip.addEventListener("click", function() {
+				var cat = chip.getAttribute("data-cat");
+				setFilter(cat);
+			});
+		});
+
+		// Bind reactive editor input listeners
+		var ed = getEditor();
+		if (ed && ed.contentArea) {
+			ed.contentArea.addEventListener("input", scheduleScan);
+			ed.contentArea.addEventListener("keyup", scheduleScan);
+			ed.contentArea.addEventListener("paste", function() { setTimeout(scan, 100); });
+		}
+
+		var ta = document.getElementById("pgContent");
+		if (ta) {
+			ta.addEventListener("input", scheduleScan);
+			ta.addEventListener("change", scheduleScan);
+		}
+
+		var titleInput = document.getElementById("pgTitle");
+		if (titleInput) {
+			titleInput.addEventListener("input", scheduleScan);
+		}
+
+		var metaDescInput = document.getElementById("pgMetaDesc");
+		if (metaDescInput) {
+			metaDescInput.addEventListener("input", scheduleScan);
+		}
+
+		// Initial scan after short delay for editor init
+		setTimeout(scan, 400);
+	}
+
+	// Auto-init on DOMContentLoaded or immediate
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", init);
+	} else {
+		setTimeout(init, 100);
+	}
+
+	return {
+		scan: scan,
+		getResults: function() { return _lastResults; },
+		toggleDrawer: toggleDrawer,
+		openDrawer: openDrawer,
+		closeDrawer: closeDrawer,
+		setFilter: setFilter,
+		locateIssue: locateIssue,
+		applyQuickFix: applyQuickFix
+	};
+})();
 
 // Ensure any loading transition screen dismisses when editor DOM is ready
 if (typeof window.hidePageLoader === "function") window.hidePageLoader();

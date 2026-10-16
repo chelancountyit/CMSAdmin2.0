@@ -49,14 +49,20 @@ Mission-critical capabilities focused on public safety, regulatory compliance, a
   - [x] Side-by-side & unified token diff viewer highlighting additions (green `<ins>`) and deletions (red `<del>`).
   - [x] Four distinct comparison modes: Visual Diff, Side-by-Side Split, Snapshot Preview, and Raw HTML code.
   - [x] One-click "Restore this Version" action with pre-rollback safety snapshot backup and `window.adminConfirm` verification.
-- [ ] **2.3 In-Editor Automated ADA WCAG Pre-Flight Linter**
-  - [ ] Real-time accessible audit bar in [`app/views/pages/edit.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/pages/edit.cfm) validating content before publish:
-    - [ ] Missing or empty `alt` attributes on embedded `<img>` tags.
-    - [ ] Low-quality alt text (e.g. `alt="image.jpg"`, `alt="photo"`).
-    - [ ] Broken heading hierarchy (e.g. jumping from `<h2>` directly to `<h4>`).
-    - [ ] Ambiguous link text (flags "click here", "read more", "link" without descriptive text).
-    - [ ] Tables lacking semantic `<th>` column/row headers.
-    - [ ] Unclosed HTML tags or inline styles that violate contrast.
+- [x] **2.3 In-Editor Automated ADA WCAG Pre-Flight Linter**
+  - [x] Real-time accessible audit bar in [`app/views/pages/edit.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/pages/edit.cfm) validating content before publish:
+    - [x] Missing or empty `alt` attributes on embedded `<img>` tags (`WCAG 1.1.1`).
+    - [x] Low-quality alt text (e.g. `alt="image.jpg"`, `alt="photo"`, filename patterns, or >150 chars).
+    - [x] Broken heading hierarchy (e.g. skipping levels like `<h2>` to `<h4>`, multiple `<h1>` tags, empty headings).
+    - [x] Ambiguous link text (flags "click here", "read more", "link" without descriptive text or aria-label), raw URLs, missing `rel="noopener noreferrer"` or screen reader notice for `target="_blank"`.
+    - [x] Tables lacking semantic `<th>` column/row headers, missing `scope` attributes, or missing `<caption>` / `aria-label`.
+    - [x] Inline low-contrast text styles (`#fff`, `#ccc`, `yellow`, etc. on light surfaces), extensive uppercase blocks (>50 chars), repetitive empty `<p>&nbsp;</p>` spacer blocks, and page meta title/description checks.
+  - [x] Interactive Category Chips (`Images`, `Headings`, `Links`, `Tables`, `Readability`) with live error/warning counters.
+  - [x] Collapsible diagnostic & quick-fix drawer (`#pgA11yIssuesDrawer`) with severity filter tabs (`All`, `Errors`, `Warnings`).
+  - [x] "Locate in Editor" action: smoothly scrolls to problematic DOM element and triggers pulsating focus outline (`.jbd-a11y-pulse`).
+  - [x] "Quick Fix" actions: convert first table row to `<th scope="col">`, prompt & set image alt/decorative attributes, add link aria-label or new-tab accessibility notice, correct skipped headings, and clean spacer blocks.
+  - [x] Companion ADA scorecard in Publish sidebar (`#pgA11yPublishWidget`).
+  - [x] Pre-flight save gate on form submit: intercepts public releases (`Visibility: Published` + `Status: Active`) when critical ADA violations exist, prompting author with `window.adminConfirm` to review or proceed.
 - [ ] **2.4 Public Website API Layer & Mega-Menu Integration**
   - [ ] Read-only REST/JSON endpoints for consumption by `chelancounty.gov`:
     - [ ] `GET /api/v1/how-do-i` (Categorized active items with `show_in_mega_menu = 1`).
