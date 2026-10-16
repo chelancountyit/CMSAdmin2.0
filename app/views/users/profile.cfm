@@ -132,7 +132,7 @@
 					#svgIcon(name="user", size=16)#
 					<span>Personal &amp; Contact Details</span>
 				</h2>
-				<span style="font-size:0.75rem; color:var(--admin-text-muted);">Staff ID: ###user.id#</span>
+				<span style="font-size:0.75rem; color:var(--admin-text-muted);">Staff ID: &##35;#user.id#</span>
 			</div>
 			<div class="card-body" style="padding:1.25rem;">
 				<form action="#urlFor(controller='users', action='updateProfile')#" method="post">

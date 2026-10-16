@@ -89,7 +89,7 @@
 						Accessible JBDEditor &bull; WCAG 2.1 AA Compliant
 					</span>
 				</div>
-				<textarea id="articleContent" name="content_html" data-jbd-editor data-jbd-toolbar="full" data-jbd-inline-toolbar="true" data-jbd-height="420px" data-jbd-placeholder="Type or paste formatted article text here...">#EncodeForHTML(article.content_html ?: "")#</textarea>
+				<textarea id="articleContent" name="content_html" data-jbd-editor data-jbd-toolbar="basic" data-jbd-inline-toolbar="true" data-jbd-height="420px" data-jbd-placeholder="Type or paste formatted article text here...">#EncodeForHTML(article.content_html ?: "")#</textarea>
 			</div>
 
 			<!--- SEO & Search Engine Metadata (Collapsible) --->

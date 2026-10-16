@@ -78,7 +78,7 @@
 				<div class="card-header" style="padding:1rem 1.25rem; border-bottom:1px solid var(--admin-border); display:flex; justify-content:space-between; align-items:center;">
 					<h2 style="font-size:0.95rem; font-weight:700; margin:0; color:var(--admin-text-main); display:flex; align-items:center; gap:0.5rem;">
 						#svgIcon(name="user", size=16)#
-						<span>Profile Information (User ID: ###user.id#)</span>
+						<span>Profile Information (User ID: &##35;#user.id#)</span>
 					</h2>
 					<span class="badge #(user.status eq 'active' ? 'badge-success' : 'badge-neutral')#">#UCase(user.status)#</span>
 				</div>
