@@ -19,49 +19,49 @@ public void function ensureMasterWorkspacesTablePopulated() {
 
 				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'assessor')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('assessor', 'Assessor - Property & Parcels', 'assessors', 'dept', 'Assessor', 'badge-info', 'building', 'Property assessment & shared media library', 'files/assessors', 'assessors', 'https://www.co.chelan.wa.us/assessor', 'Assessor', 'Finance and Records', 1, 0, 10);
+					VALUES ('assessor', 'Assessor - Property & Parcels', 'assessors', 'dept', 'Assessor', 'badge-info', 'building', 'Property assessment & shared media library', 'files/assessors', 'assessors', 'https://www.chelancounty.gov/assessor', 'Assessor', 'Finance and Records', 1, 0, 10);
 
 				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'auditor')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('auditor', 'Auditor - Elections & Records', '', 'dept', 'Auditor', 'badge-purple', 'building', 'Elections, recording & licensing', 'files/auditor', 'auditor', 'https://www.co.chelan.wa.us/auditor', 'Auditor', 'Finance and Records', 1, 0, 20);
+					VALUES ('auditor', 'Auditor - Elections & Records', '', 'dept', 'Auditor', 'badge-purple', 'building', 'Elections, recording & licensing', 'files/auditor', 'auditor', 'https://www.chelancounty.gov/auditor', 'Auditor', 'Finance and Records', 1, 0, 20);
 
 				IF EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'human-resources' AND (deletedat IS NOT NULL OR is_active = 0))
 					UPDATE cms_workspaces SET is_active = 1, deletedat = NULL, is_system = 1 WHERE code = 'human-resources';
 				ELSE IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'human-resources')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('human-resources', 'Human Resources', 'hrm', 'dept', 'HRM', 'badge-purple', 'briefcase', 'Recruitment, personnel & benefits', 'files/hrm', 'hrm', 'https://www.co.chelan.wa.us/human-resources', 'Human Resources', 'Internal Services', 1, 1, 30);
+					VALUES ('human-resources', 'Human Resources', 'hrm', 'dept', 'HRM', 'badge-purple', 'briefcase', 'Recruitment, personnel & benefits', 'files/hrm', 'hrm', 'https://www.chelancounty.gov/human-resources', 'Human Resources', 'Internal Services', 1, 1, 30);
 
 				IF EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'communications' AND (deletedat IS NOT NULL OR is_active = 0))
 					UPDATE cms_workspaces SET is_active = 1, deletedat = NULL, is_system = 1 WHERE code = 'communications';
 				ELSE IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'communications')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('communications', 'Public Information', 'pio', 'dept', 'PIO', 'badge-info', 'megaphone', 'Media alerts, press & notifications', 'files/pio', 'pio', 'https://www.co.chelan.wa.us/pio', 'Public Information', 'Community Outreach', 1, 1, 40);
+					VALUES ('communications', 'Public Information', 'pio', 'dept', 'PIO', 'badge-info', 'megaphone', 'Media alerts, press & notifications', 'files/pio', 'pio', 'https://www.chelancounty.gov/pio', 'Public Information', 'Community Outreach', 1, 1, 40);
 
 				IF EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'admin' AND (deletedat IS NOT NULL OR is_active = 0))
 					UPDATE cms_workspaces SET is_active = 1, deletedat = NULL, is_system = 1 WHERE code = 'admin';
 				ELSE IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'admin')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('admin', 'County Administration', 'county-administration', 'dept', 'Admin', 'badge-neutral', 'building', 'Commissioners, executive & budget', 'files/admin', 'admin', 'https://www.co.chelan.wa.us/administration', 'County Administration', 'County Administration', 1, 1, 70);
+					VALUES ('admin', 'County Administration', 'county-administration', 'dept', 'Admin', 'badge-neutral', 'building', 'Commissioners, executive & budget', 'files/admin', 'admin', 'https://www.chelancounty.gov/administration', 'County Administration', 'County Administration', 1, 1, 70);
 
 				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'commissioners')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('commissioners', 'Board of Commissioners', '', 'dept', 'Commissioners', 'badge-neutral', 'building', 'County Commissioners & legislative agendas', 'files/commissioners', 'commissioners', 'https://www.co.chelan.wa.us/board-of-commissioners', 'Commissioners', 'County Administration', 1, 0, 80);
+					VALUES ('commissioners', 'Board of Commissioners', '', 'dept', 'Commissioners', 'badge-neutral', 'building', 'County Commissioners & legislative agendas', 'files/commissioners', 'commissioners', 'https://www.chelancounty.gov/board-of-commissioners', 'Commissioners', 'County Administration', 1, 0, 80);
 
 				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'sheriff')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('sheriff', 'Sheriff''s Office', '', 'dept', 'Sheriff', 'badge-neutral', 'shield', 'Law enforcement & public safety', 'files/sheriff', 'sheriff', 'https://www.co.chelan.wa.us/sheriff', 'Sheriff', 'Law Enforcement', 1, 0, 90);
+					VALUES ('sheriff', 'Sheriff''s Office', '', 'dept', 'Sheriff', 'badge-neutral', 'shield', 'Law enforcement & public safety', 'files/sheriff', 'sheriff', 'https://www.chelancounty.gov/sheriff', 'Sheriff', 'Law Enforcement', 1, 0, 90);
 
 				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'treasurer')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('treasurer', 'Treasurer', '', 'dept', 'Treasurer', 'badge-neutral', 'building', 'Tax collections & county finance', 'files/treasurer', 'treasurer', 'https://www.co.chelan.wa.us/treasurer', 'Treasurer', 'Finance and Records', 1, 0, 100);
+					VALUES ('treasurer', 'Treasurer', '', 'dept', 'Treasurer', 'badge-neutral', 'building', 'Tax collections & county finance', 'files/treasurer', 'treasurer', 'https://www.chelancounty.gov/treasurer', 'Treasurer', 'Finance and Records', 1, 0, 100);
 
 				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'clerk')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('clerk', 'County Clerk', '', 'dept', 'Clerk', 'badge-neutral', 'building', 'Superior court records & judicial filings', 'files/clerk', 'clerk', 'https://www.co.chelan.wa.us/clerk', 'County Clerk', 'Law and Judicial Services', 1, 0, 110);
+					VALUES ('clerk', 'County Clerk', '', 'dept', 'Clerk', 'badge-neutral', 'building', 'Superior court records & judicial filings', 'files/clerk', 'clerk', 'https://www.chelancounty.gov/clerk', 'County Clerk', 'Law and Judicial Services', 1, 0, 110);
 
 				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'site-main')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('site-main', 'chelancounty.gov', 'chelancounty.gov', 'site', 'Main Site', 'badge-success', 'globe', 'Primary County public government portal', 'files/chelancounty.gov', 'chelancounty.gov', 'https://www.co.chelan.wa.us', 'Public Portal', 'County Administration', 1, 0, 120);
+					VALUES ('site-main', 'chelancounty.gov', 'chelancounty.gov', 'site', 'Main Site', 'badge-success', 'globe', 'Primary County public government portal', 'files/chelancounty.gov', 'chelancounty.gov', 'https://www.chelancounty.gov', 'Public Portal', 'County Administration', 1, 0, 120);
 
 				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'site-parks')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
@@ -165,7 +165,7 @@ public array function getMasterWorkspaces() {
 				contact: {
 					first_name: "County",
 					last_name: "Administration",
-					email: "info@co.chelan.wa.us",
+					email: "info@chelancounty.gov",
 					phone: "509-667-6215",
 					fax: "",
 					address: "400 Douglas Street",
@@ -487,5 +487,144 @@ public string function activeWorkspaceId() {
 	var id = lCase(trim(ws.id ?: ""));
 	if (id == "global" || id == "all") return "";
 	return len(id) ? left(id, 100) : "";
+}
+
+/**
+ * Retrieves dynamic system notifications across form submissions, page revisions,
+ * job applications, and security events, tailored to the staff user's role.
+ */
+public array function getSystemNotifications(string role = "admin", numeric limit = 10) {
+	var notifications = [];
+	var targetRole = len(trim(arguments.role)) ? lCase(trim(arguments.role)) : "admin";
+	var maxItems = Val(arguments.limit) > 0 ? Val(arguments.limit) : 10;
+	
+	try {
+		// 1. Recent Form Submissions (Content, PIO, HR, Admin)
+		var qForms = queryExecute("
+			SELECT TOP 5 s.id, s.form_id, s.status, s.createdat, f.title AS form_title
+			FROM form_submissions s
+			LEFT JOIN forms f ON f.id = s.form_id
+			WHERE s.deletedat IS NULL
+			ORDER BY s.createdat DESC
+		", {}, { datasource: "ChelanCountyWebsite" });
+
+		for (var row in qForms) {
+			var formTitle = len(trim(row.form_title ?: "")) ? trim(row.form_title) : "Online Form ##" & row.form_id;
+			var isPending = (row.status == "received" || row.status == "in_review");
+			arrayAppend(notifications, {
+				id: "form-" & row.id,
+				type: "form",
+				category: "Form Submission",
+				title: "Form Submission ##" & row.id,
+				message: "Received for """ & formTitle & """",
+				icon: "form",
+				badgeClass: isPending ? "badge-primary" : "badge-neutral",
+				badgeText: isPending ? "New Intake" : UCase(row.status),
+				colorClass: "stat-icon-purple",
+				iconColor: "##7e22ce",
+				createdat: isDate(row.createdat) ? row.createdat : Now(),
+				isUnread: isPending,
+				link: urlFor(controller="forms", action="submissions", params="id=" & row.form_id)
+			});
+		}
+	} catch (any eForms) {}
+
+	try {
+		// 2. Recent Page Updates (All roles)
+		var qPages = queryExecute("
+			SELECT TOP 5 ContentID, Title, Modified, ModifiedBy, StatusCode, isPublished
+			FROM pages
+			WHERE DeletedAt IS NULL
+			ORDER BY Modified DESC
+		", {}, { datasource: "ChelanCountyWebsite" });
+
+		for (var row in qPages) {
+			var pageTitle = len(trim(row.Title ?: "")) ? trim(row.Title) : "Untitled Page";
+			var author = len(trim(row.ModifiedBy ?: "")) ? trim(row.ModifiedBy) : "Staff";
+			var isLive = (row.isPublished == 1 || row.StatusCode == "Active");
+			arrayAppend(notifications, {
+				id: "page-" & row.ContentID,
+				type: "page",
+				category: "Content Update",
+				title: isLive ? "Page Updated" : "Draft Saved",
+				message: """" & pageTitle & """ by " & author,
+				icon: "pages",
+				badgeClass: isLive ? "badge-success" : "badge-warning",
+				badgeText: isLive ? "Published" : "Draft",
+				colorClass: "stat-icon-primary",
+				iconColor: "##0073aa",
+				createdat: isDate(row.Modified) ? row.Modified : Now(),
+				isUnread: !isLive,
+				link: urlFor(controller="pages", action="edit", params="id=" & row.ContentID)
+			});
+		}
+	} catch (any ePages) {}
+
+	// 3. Recent Job Applications (HR and Admin only)
+	if (targetRole == "admin" || targetRole == "hr") {
+		try {
+			var qJobs = queryExecute("
+				SELECT TOP 5 a.id, a.first_name, a.last_name, a.createdat, a.status, p.title AS job_title
+				FROM job_applications a
+				LEFT JOIN job_postings p ON p.id = a.job_posting_id
+				WHERE a.deletedat IS NULL
+				ORDER BY a.createdat DESC
+			", {}, { datasource: "ChelanCountyWebsite" });
+
+			for (var row in qJobs) {
+				var applicantName = trim(row.first_name & " " & row.last_name);
+				var jobTitle = len(trim(row.job_title ?: "")) ? trim(row.job_title) : "Open Position";
+				var isNewApp = (row.status == "received" || row.status == "new" || !len(trim(row.status ?: "")));
+				arrayAppend(notifications, {
+					id: "job-" & row.id,
+					type: "job",
+					category: "HRM Recruitment",
+					title: "Candidate Application",
+					message: applicantName & " applied for " & jobTitle,
+					icon: "briefcase",
+					badgeClass: isNewApp ? "badge-purple" : "badge-neutral",
+					badgeText: isNewApp ? "New Candidate" : UCase(row.status),
+					colorClass: "stat-icon-purple",
+					iconColor: "##7e22ce",
+					createdat: isDate(row.createdat) ? row.createdat : Now(),
+					isUnread: isNewApp,
+					link: urlFor(controller="jobs", action="applications")
+				});
+			}
+		} catch (any eJobs) {}
+	}
+
+	// Sort newest first
+	if (arrayLen(notifications) > 1) {
+		arraySort(notifications, function(a, b) {
+			if (isDate(a.createdat) && isDate(b.createdat)) {
+				return dateCompare(b.createdat, a.createdat);
+			}
+			return 0;
+		});
+	}
+
+	// Slice to requested limit
+	if (arrayLen(notifications) > maxItems) {
+		return arraySlice(notifications, 1, maxItems);
+	}
+
+	return notifications;
+}
+
+/**
+ * Returns formatted relative time (e.g. "5m ago", "2h ago", "Yesterday", "Oct 12")
+ */
+public string function formatTimeAgo(required any dateVal) {
+	if (!isDate(arguments.dateVal)) return "Recently";
+	var diffMin = dateDiff("n", arguments.dateVal, Now());
+	if (diffMin < 1) return "Just now";
+	if (diffMin < 60) return diffMin & "m ago";
+	var diffHours = dateDiff("h", arguments.dateVal, Now());
+	if (diffHours < 24) return diffHours & "h ago";
+	var diffDays = dateDiff("d", arguments.dateVal, Now());
+	if (diffDays == 1) return "Yesterday";
+	if (diffDays < 7) return diffDays & "d ago";
+	return dateFormat(arguments.dateVal, "mmm d, yyyy");
 }
 </cfscript>

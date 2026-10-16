@@ -1405,7 +1405,7 @@ export const DEFAULT_BLOCK_TEMPLATES = [
     <p><strong>Location:</strong> 350 Orondo Ave, Suite 201, Wenatchee, WA 98801</p>
     <p><strong>Hours:</strong> Monday &ndash; Friday: 8:00 AM &ndash; 5:00 PM</p>
     <p><strong>Phone:</strong> <a href="tel:5096676100">(509) 667-6100</a></p>
-    <p><strong>Email:</strong> <a href="mailto:info@co.chelan.wa.us">info@co.chelan.wa.us</a></p>
+    <p><strong>Email:</strong> <a href="mailto:info@chelancounty.gov">info@chelancounty.gov</a></p>
   </div>
 </aside>`
   },

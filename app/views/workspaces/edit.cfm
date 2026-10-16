@@ -196,7 +196,7 @@
 
 				<div>
 					<label for="redirect_url" class="ws-form-label">Custom Redirect URL</label>
-					<input type="text" id="redirect_url" name="redirect_url" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.redirect_url)#" placeholder="https://www.co.chelan.wa.us/..." autocomplete="off">
+					<input type="text" id="redirect_url" name="redirect_url" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.redirect_url)#" placeholder="https://www.chelancounty.gov/..." autocomplete="off">
 				</div>
 
 				<!--- Workspace Theme & Brand Accent Color Picker --->
@@ -287,7 +287,7 @@
 
 				<div>
 					<label for="contact_email" class="ws-form-label">Email</label>
-					<input type="email" id="contact_email" name="contact_email" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_email)#" placeholder="e.g. contact@co.chelan.wa.us" autocomplete="off">
+					<input type="email" id="contact_email" name="contact_email" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_email)#" placeholder="e.g. contact@chelancounty.gov" autocomplete="off">
 				</div>
 
 				<div class="ws-grid-2">

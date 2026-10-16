@@ -72,6 +72,11 @@
 		.post(name="deleteSubpage", pattern="pages/subpage/delete", to="pages##deleteSubpage")
 		.post(name="createPageModal", pattern="pages/create-modal", to="pages##createModal")
 		.post(name="savePage", pattern="pages/save", to="pages##save")
+		.get(name="pageRevisions", pattern="pages/revisions", to="pages##revisions")
+		.get(name="pageRevision", pattern="pages/revision", to="pages##revision")
+		.post(name="restorePageRevision", pattern="pages/restore-revision", to="pages##restoreRevision")
+		.post(name="restorePageRevisionCamel", pattern="pages/restoreRevision", to="pages##restoreRevision")
+		.post(name="snapshotPageRevision", pattern="pages/snapshot-revision", to="pages##snapshotRevision")
 
 		// Media Library Routes
 		.get(name="mediaIndex", pattern="media", to="media##index")
@@ -96,6 +101,10 @@
 		.get(name="eventsExportIcsHyphen", pattern="events/export-ics", to="events##exportIcs")
 
 		// Users & Roles Security Routes
+		.get(name="usersProfile", pattern="users/profile", to="users##profile")
+		.post(name="usersUpdateProfile", pattern="users/profile/update", to="users##updateProfile")
+		.post(name="usersUpdatePassword", pattern="users/profile/password", to="users##updatePassword")
+		.post(name="usersToggle2Fa", pattern="users/profile/2fa", to="users##toggle2Fa")
 		.get(name="usersIndex", pattern="users", to="users##index")
 		.get(name="usersRoles", pattern="users/roles", to="users##roles")
 		.get(name="usersNew", pattern="users/new", to="users##new")
@@ -105,6 +114,20 @@
 		.get(name="usersSimulate", pattern="users/simulate", to="users##simulate")
 		.post(name="usersToggleStatus", pattern="users/toggle-status", to="users##toggleStatus")
 		.post(name="usersToggleStatusDirect", pattern="users/toggleStatus", to="users##toggleStatus")
+
+		// Notifications Center Routes
+		.get(name="notificationsIndex", pattern="notifications", to="main##notifications")
+		.get(name="mainNotifications", pattern="main/notifications", to="main##notifications")
+
+		// Emergency Alerts & Public Safety Dispatch Routes
+		.get(name="alertsIndex", pattern="alerts", to="alerts##index")
+		.get(name="alertsPioIndex", pattern="pio/alerts", to="alerts##index")
+		.post(name="alertsSave", pattern="alerts/save", to="alerts##save")
+		.post(name="alertsToggle", pattern="alerts/toggle", to="alerts##toggle")
+		.post(name="alertsDelete", pattern="alerts/delete", to="alerts##delete")
+		.get(name="alertsApiActive", pattern="api/v1/alerts/active", to="alerts##apiActive")
+		.get(name="alertsApiActiveAll", pattern="api/v1/alerts", to="alerts##apiActive")
+		.get(name="alertsActive", pattern="alerts/active", to="alerts##active")
 
 		// Workspaces Administration Routes (Admin Only)
 		.get(name="workspacesIndex", pattern="workspaces", to="workspaces##index")

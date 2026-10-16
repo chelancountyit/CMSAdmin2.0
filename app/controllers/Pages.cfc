@@ -2,6 +2,7 @@ component extends="Controller" {
 
 	function config() {
 		super.config();
+		protectsFromForgery(except="save,createModal,saveSubpage,deleteSubpage,saveFolderExplorer,deleteFolderExplorer,saveHowDoIItem,deleteHowDoIItem,reorderHowDoIItems,saveHowDoICategory,deleteHowDoICategory,restoreRevision,snapshotRevision");
 	}
 
 	/**
@@ -70,6 +71,33 @@ component extends="Controller" {
 		variables.availableFolders = loadFolderExplorers(contentId=variables.page.id, requestedWs=local.editSiteId);
 		variables.menuItemOptions = loadMenuItemOptions(requestedWs=local.editSiteId, currentSelected=variables.page.parent);
 		variables.availableForms = loadWorkspaceForms(requestedWs=local.editSiteId);
+
+		// Page Revisions and Version Tracking (RCW 42.56 compliance)
+		variables.revisionCount = 0;
+		variables.currentVersion = 1;
+		if (variables.page.id > 0) {
+			try {
+				ensurePageRevisionsTable();
+				local.revCountQ = queryExecute("
+					SELECT COUNT(*) AS cnt, MAX(version_number) AS max_ver
+					FROM page_revisions
+					WHERE page_id = :id
+				", { id: { value: variables.page.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+				variables.revisionCount = Val(local.revCountQ.cnt);
+				variables.currentVersion = Val(local.revCountQ.max_ver);
+				if (variables.revisionCount == 0 && Len(Trim(variables.page.title))) {
+					local.initRev = recordPageRevision(variables.page.id, "System", "Initial baseline version snapshot");
+					if (local.initRev.success) {
+						variables.revisionCount = 1;
+						variables.currentVersion = 1;
+					}
+				}
+				if (variables.currentVersion == 0) variables.currentVersion = 1;
+			} catch (any errRev) {
+				variables.revisionCount = 0;
+				variables.currentVersion = 1;
+			}
+		}
 	}
 
 	/**
@@ -310,6 +338,15 @@ component extends="Controller" {
 				return;
 			}
 
+			// Capture baseline revision of existing page if this is its first tracked revision
+			ensurePageRevisionsTable();
+			local.existingRevCheck = queryExecute("
+				SELECT COUNT(*) AS cnt FROM page_revisions WHERE page_id = :id
+			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+			if (Val(local.existingRevCheck.cnt) == 0) {
+				recordPageRevision(local.id, local.actor, "Baseline snapshot prior to edits");
+			}
+
 			local.siteId = local.curPageQ.SiteID ?: activeWorkspaceId();
 			if (local.curPageQ.isLocked == 1) {
 				// Locked / root pages keep their permalink
@@ -438,6 +475,18 @@ component extends="Controller" {
 				}
 			}
 
+			// Record the updated state as the new revision version (RCW 42.56 compliance)
+			local.changeNote = StructKeyExists(local.req, "changeSummary") && Len(Trim(local.req.changeSummary))
+				? Trim(local.req.changeSummary)
+				: (StructKeyExists(local.req, "changeNote") && Len(Trim(local.req.changeNote)) ? Trim(local.req.changeNote) : "Published page update");
+			recordPageRevision(local.id, local.actor, local.changeNote);
+
+			local.revSummaryQ = queryExecute("
+				SELECT COUNT(*) AS total_revs, MAX(version_number) AS max_ver
+				FROM page_revisions
+				WHERE page_id = :id
+			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+
 			local.updatedStr = DateFormat(Now(), "mm/dd/yyyy") & " " & TimeFormat(Now(), "hh:mm:ss");
 			fxRenderJson({
 				success: true,
@@ -451,7 +500,11 @@ component extends="Controller" {
 				title: local.title,
 				TITLE: local.title,
 				slug: local.slug,
-				SLUG: local.slug
+				SLUG: local.slug,
+				revisionCount: Val(local.revSummaryQ.total_revs),
+				REVISIONCOUNT: Val(local.revSummaryQ.total_revs),
+				versionNumber: Val(local.revSummaryQ.max_ver),
+				VERSIONNUMBER: Val(local.revSummaryQ.max_ver)
 			});
 		} catch (any e) {
 			writeLog(type="error", file="pages", text="Failed to save page: #e.message# #e.detail#");
@@ -1202,8 +1255,7 @@ component extends="Controller" {
 	}
 
 	private void function fxRenderJson(required any data, numeric status = 200) {
-		cfheader(name="Content-Type", value="application/json; charset=utf-8");
-		renderText(text=SerializeJSON(arguments.data), status=arguments.status);
+		renderText(text=SerializeJSON(arguments.data), contentType="application/json", layout=false, status=arguments.status);
 	}
 
 	private array function samplePages() {
@@ -1344,6 +1396,399 @@ component extends="Controller" {
 			writeLog(type="error", file="pages", text="loadPagesList failed: #e.message# #e.detail#");
 		}
 		return local.pages;
+	}
+
+	/**
+	 * GET /pages/revisions?id=N
+	 * Returns full list of timestamped revision snapshots for a page (RCW 42.56 compliance)
+	 */
+	function revisions() {
+		ensurePageRevisionsTable();
+		local.pageId = StructKeyExists(params, "pageId") ? Val(params.pageId) : (StructKeyExists(params, "id") ? Val(params.id) : 0);
+		if (local.pageId <= 0) {
+			fxRenderJson({ "success": false, "SUCCESS": false, "message": "Invalid page ID." }, 400);
+			return;
+		}
+
+		try {
+			local.revQ = queryExecute("
+				SELECT id, page_id, version_number, title, slug, summary, layout_type,
+				       change_summary, created_by, created_at,
+				       DATALENGTH(content_html) / 2 AS content_length,
+				       DATALENGTH(content_html) AS content_bytes
+				FROM page_revisions
+				WHERE page_id = :id
+				ORDER BY version_number DESC, created_at DESC
+			", { id: { value: local.pageId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+
+			local.list = [];
+			for (local.r in local.revQ) {
+				local.formattedDate = IsDate(local.r.created_at)
+					? (DateFormat(local.r.created_at, "mmm dd, yyyy") & " at " & TimeFormat(local.r.created_at, "hh:mm tt"))
+					: "";
+
+				ArrayAppend(local.list, {
+					"id": Val(local.r.id),
+					"pageId": Val(local.r.page_id),
+					"versionNumber": Val(local.r.version_number),
+					"title": local.r.title ?: "",
+					"slug": local.r.slug ?: "",
+					"summary": local.r.summary ?: "",
+					"layoutType": local.r.layout_type ?: "Full",
+					"changeSummary": local.r.change_summary ?: "",
+					"createdBy": local.r.created_by ?: "System",
+					"createdAt": local.r.created_at,
+					"createdAtFormatted": local.formattedDate,
+					"contentLength": Val(local.r.content_length ?: 0),
+					"contentBytes": Val(local.r.content_bytes ?: 0)
+				});
+			}
+
+			fxRenderJson({
+				"success": true,
+				"SUCCESS": true,
+				"pageId": local.pageId,
+				"count": ArrayLen(local.list),
+				"COUNT": ArrayLen(local.list),
+				"revisions": local.list,
+				"REVISIONS": local.list
+			});
+		} catch (any e) {
+			writeLog(type="error", file="pages", text="revisions failed: #e.message# #e.detail#");
+			fxRenderJson({ "success": false, "SUCCESS": false, "message": "Unable to load page revisions: #e.message#" }, 500);
+		}
+	}
+
+	/**
+	 * GET /pages/revision?id=N&revId=M
+	 * Returns full content_html and metadata for a specific revision
+	 */
+	function revision() {
+		ensurePageRevisionsTable();
+		local.pageId = StructKeyExists(params, "pageId") ? Val(params.pageId) : 0;
+		local.revId = StructKeyExists(params, "revId") ? Val(params.revId) : (StructKeyExists(params, "revisionId") ? Val(params.revisionId) : (StructKeyExists(params, "id") ? Val(params.id) : 0));
+
+		if (local.revId <= 0) {
+			fxRenderJson({ "success": false, "SUCCESS": false, "message": "Invalid revision ID." }, 400);
+			return;
+		}
+
+		try {
+			local.revQ = queryExecute("
+				SELECT TOP 1 id, page_id, version_number, title, slug, content_html,
+				       summary, layout_type, meta_json, change_summary, created_by, created_at
+				FROM page_revisions
+				WHERE id = :revId " & (local.pageId > 0 ? "AND page_id = :pageId" : "") & "
+			", {
+				revId: { value: local.revId, cfsqltype: "cf_sql_integer" },
+				pageId: { value: local.pageId, cfsqltype: "cf_sql_integer" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			if (local.revQ.recordCount == 0) {
+				fxRenderJson({ "success": false, "SUCCESS": false, "message": "Revision record not found." }, 404);
+				return;
+			}
+
+			local.r = local.revQ;
+			local.metaStruct = {};
+			if (Len(Trim(local.r.meta_json ?: "")) && IsJSON(local.r.meta_json)) {
+				try {
+					local.metaStruct = DeserializeJSON(local.r.meta_json);
+				} catch (any errJ) {
+					local.metaStruct = {};
+				}
+			}
+
+			local.formattedDate = IsDate(local.r.created_at)
+				? (DateFormat(local.r.created_at, "mmm dd, yyyy") & " at " & TimeFormat(local.r.created_at, "hh:mm tt"))
+				: "";
+
+			fxRenderJson({
+				"success": true,
+				"SUCCESS": true,
+				"revision": {
+					"id": Val(local.r.id),
+					"pageId": Val(local.r.page_id),
+					"versionNumber": Val(local.r.version_number),
+					"title": local.r.title ?: "",
+					"slug": local.r.slug ?: "",
+					"contentHtml": local.r.content_html ?: "",
+					"summary": local.r.summary ?: "",
+					"layoutType": local.r.layout_type ?: "Full",
+					"meta": local.metaStruct,
+					"changeSummary": local.r.change_summary ?: "",
+					"createdBy": local.r.created_by ?: "System",
+					"createdAt": local.r.created_at,
+					"createdAtFormatted": local.formattedDate
+				}
+			});
+		} catch (any e) {
+			writeLog(type="error", file="pages", text="revision detail failed: #e.message# #e.detail#");
+			fxRenderJson({ "success": false, "SUCCESS": false, "message": "Unable to load revision: #e.message#" }, 500);
+		}
+	}
+
+	/**
+	 * POST /pages/restore-revision
+	 * One-click rollback to a prior snapshot (with auto-snapshot of pre-rollback state)
+	 */
+	function restoreRevision() {
+		ensurePageRevisionsTable();
+		local.body = fxReadJsonBody();
+		local.req = IsStruct(local.body) ? local.body : params;
+
+		local.pageId = Val(local.req.pageId ?: 0);
+		local.revId = Val(local.req.revisionId ?: (local.req.revId ?: 0));
+
+		if (local.pageId <= 0 || local.revId <= 0) {
+			fxRenderJson({ "success": false, "SUCCESS": false, "message": "Both pageId and revisionId are required." }, 400);
+			return;
+		}
+
+		local.actor = spCurrentActor();
+
+		try {
+			// 1. Fetch the target revision
+			local.revQ = queryExecute("
+				SELECT TOP 1 id, page_id, version_number, title, slug, content_html,
+				       summary, layout_type, meta_json, change_summary, created_by
+				FROM page_revisions
+				WHERE id = :revId AND page_id = :pageId
+			", {
+				revId: { value: local.revId, cfsqltype: "cf_sql_integer" },
+				pageId: { value: local.pageId, cfsqltype: "cf_sql_integer" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			if (local.revQ.recordCount == 0) {
+				fxRenderJson({ "success": false, "SUCCESS": false, "message": "Revision record not found for this page." }, 404);
+				return;
+			}
+
+			local.targetRev = local.revQ;
+
+			// 2. Snapshot current page state FIRST before applying rollback
+			recordPageRevision(local.pageId, local.actor, "Pre-rollback snapshot before restoring version " & local.targetRev.version_number);
+
+			// 3. Deserialize meta if present
+			local.meta = {};
+			if (Len(Trim(local.targetRev.meta_json ?: "")) && IsJSON(local.targetRev.meta_json)) {
+				try { local.meta = DeserializeJSON(local.targetRev.meta_json); } catch (any ej) { local.meta = {}; }
+			}
+
+			local.metaTitle = StructKeyExists(local.meta, "metaTitle") ? local.meta.metaTitle : local.targetRev.title;
+			local.metaDesc = StructKeyExists(local.meta, "metaDesc") ? local.meta.metaDesc : local.targetRev.summary;
+			local.metaKeywords = StructKeyExists(local.meta, "metaKeywords") ? local.meta.metaKeywords : "";
+			local.layout = Len(Trim(local.targetRev.layout_type)) ? local.targetRev.layout_type : "Full";
+
+			// 4. Update the live pages record with the restored version
+			queryExecute("
+				SET ANSI_NULLS ON;
+				SET QUOTED_IDENTIFIER ON;
+				UPDATE pages
+				SET Title = :title,
+				    Permalink = :slug,
+				    Body = :body,
+				    Summary = :summary,
+				    LayoutType = :layout,
+				    MetaTitle = :metaTitle,
+				    MetaDesc = :metaDesc,
+				    MetaKeyWords = :metaKeywords,
+				    Modified = SYSUTCDATETIME(),
+				    ModifiedBy = :actor
+				WHERE ContentID = :id
+			", {
+				title: { value: local.targetRev.title, cfsqltype: "cf_sql_nvarchar" },
+				slug: { value: local.targetRev.slug, cfsqltype: "cf_sql_nvarchar" },
+				body: { value: local.targetRev.content_html ?: "", cfsqltype: "cf_sql_longvarchar" },
+				summary: { value: local.targetRev.summary ?: "", cfsqltype: "cf_sql_longvarchar" },
+				layout: { value: local.layout, cfsqltype: "cf_sql_nvarchar" },
+				metaTitle: { value: local.metaTitle, cfsqltype: "cf_sql_nvarchar" },
+				metaDesc: { value: local.metaDesc, cfsqltype: "cf_sql_nvarchar" },
+				metaKeywords: { value: local.metaKeywords, cfsqltype: "cf_sql_nvarchar" },
+				actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar" },
+				id: { value: local.pageId, cfsqltype: "cf_sql_integer" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			// 5. Record the restored state as a new active revision
+			local.newSnap = recordPageRevision(local.pageId, local.actor, "Restored from version " & local.targetRev.version_number);
+
+			local.revCountQ = queryExecute("
+				SELECT COUNT(*) AS total_revs, MAX(version_number) AS max_ver
+				FROM page_revisions
+				WHERE page_id = :id
+			", { id: { value: local.pageId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+
+			fxRenderJson({
+				"success": true,
+				"SUCCESS": true,
+				"message": "Successfully restored Page to Version " & local.targetRev.version_number & ".",
+				"MESSAGE": "Successfully restored Page to Version " & local.targetRev.version_number & ".",
+				"restoredVersion": Val(local.targetRev.version_number),
+				"currentVersion": Val(local.revCountQ.max_ver),
+				"revisionCount": Val(local.revCountQ.total_revs),
+				"page": {
+					"id": local.pageId,
+					"title": local.targetRev.title,
+					"slug": local.targetRev.slug,
+					"body": local.targetRev.content_html ?: "",
+					"summary": local.targetRev.summary ?: "",
+					"layout": local.layout,
+					"metaTitle": local.metaTitle,
+					"metaDesc": local.metaDesc,
+					"metaKeywords": local.metaKeywords
+				}
+			});
+		} catch (any e) {
+			writeLog(type="error", file="pages", text="restoreRevision failed: #e.message# #e.detail#");
+			fxRenderJson({ "success": false, "SUCCESS": false, "message": "Failed to restore revision: #e.message#" }, 500);
+		}
+	}
+
+	/**
+	 * POST /pages/snapshot-revision
+	 * Manually triggers a snapshot checkpoint for a page
+	 */
+	function snapshotRevision() {
+		ensurePageRevisionsTable();
+		local.body = fxReadJsonBody();
+		local.req = IsStruct(local.body) ? local.body : params;
+
+		local.pageId = Val(local.req.pageId ?: (local.req.id ?: 0));
+		local.note = Trim(local.req.changeSummary ?: (local.req.note ?: "Manual checkpoint snapshot"));
+
+		if (local.pageId <= 0) {
+			fxRenderJson({ "success": false, "SUCCESS": false, "message": "Valid page ID is required." }, 400);
+			return;
+		}
+
+		local.snap = recordPageRevision(local.pageId, spCurrentActor(), local.note);
+		if (local.snap.success) {
+			fxRenderJson({
+				"success": true,
+				"SUCCESS": true,
+				"message": "Snapshot created as Version " & local.snap.version & ".",
+				"MESSAGE": "Snapshot created as Version " & local.snap.version & ".",
+				"versionNumber": local.snap.version,
+				"revisionId": local.snap.revisionId
+			});
+		} else {
+			fxRenderJson({ "success": false, "SUCCESS": false, "message": "Unable to create snapshot for page." }, 500);
+		}
+	}
+
+	/**
+	 * Records a snapshot of the current state of a page into dbo.page_revisions
+	 * for RCW 42.56 compliance, audit logs, and version rollback.
+	 */
+	private struct function recordPageRevision(required numeric pageId, string actor = "", string changeSummary = "") {
+		local.res = { "success": false, "version": 0, "revisionId": 0 };
+		if (arguments.pageId <= 0) return local.res;
+
+		try {
+			ensurePageRevisionsTable();
+
+			// Read current page row
+			local.pageQ = queryExecute("
+				SELECT TOP 1 ContentID, SiteID, PageType, MenuSelected, LayoutType, ParentID,
+				       StatusCode, Permalink, Title, MetaTitle, MetaDesc, MetaKeyWords,
+				       Summary, Body, isService, hasArchive, ShowInMenu, isLocked, SidebarIDs,
+				       SortOrder, isPublished, Visibility, PublishAt, Created, CreatedBy, Modified, ModifiedBy
+				FROM pages
+				WHERE ContentID = :id AND DeletedAt IS NULL
+			", { id: { value: arguments.pageId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+
+			if (local.pageQ.recordCount == 0) return local.res;
+
+			// Compute next version number for this page
+			local.vQ = queryExecute("
+				SELECT ISNULL(MAX(version_number), 0) + 1 AS next_ver
+				FROM page_revisions
+				WHERE page_id = :id
+			", { id: { value: arguments.pageId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+
+			local.nextVer = Val(local.vQ.next_ver);
+			local.actorName = Len(Trim(arguments.actor)) ? Trim(arguments.actor) : spCurrentActor();
+
+			local.metaStruct = {
+				"metaTitle": local.pageQ.MetaTitle ?: "",
+				"metaDesc": local.pageQ.MetaDesc ?: "",
+				"metaKeywords": local.pageQ.MetaKeyWords ?: "",
+				"summary": local.pageQ.Summary ?: "",
+				"layoutType": local.pageQ.LayoutType ?: "Full",
+				"menuSelected": local.pageQ.MenuSelected ?: "",
+				"showInMenu": (local.pageQ.ShowInMenu == 1),
+				"pageType": Val(local.pageQ.PageType ?: 0),
+				"isPublished": (local.pageQ.isPublished == 1),
+				"visibility": local.pageQ.Visibility ?: "Published",
+				"statusCode": local.pageQ.StatusCode ?: "Active",
+				"sidebarIds": local.pageQ.SidebarIDs ?: "[]",
+				"siteId": local.pageQ.SiteID ?: "global"
+			};
+
+			local.summaryNote = Len(Trim(arguments.changeSummary)) ? Trim(arguments.changeSummary) : ("Version " & local.nextVer & " snapshot");
+
+			local.insQ = queryExecute("
+				SET ANSI_NULLS ON;
+				SET QUOTED_IDENTIFIER ON;
+				INSERT INTO page_revisions (
+					page_id, version_number, title, slug, content_html, summary,
+					layout_type, meta_json, change_summary, created_by, created_at
+				) VALUES (
+					:pageId, :ver, :title, :slug, :body, :summary,
+					:layout, :metaJson, :note, :actor, SYSUTCDATETIME()
+				);
+				SELECT SCOPE_IDENTITY() AS new_id;
+			", {
+				pageId: { value: arguments.pageId, cfsqltype: "cf_sql_integer" },
+				ver: { value: local.nextVer, cfsqltype: "cf_sql_integer" },
+				title: { value: local.pageQ.Title ?: "Untitled", cfsqltype: "cf_sql_nvarchar" },
+				slug: { value: local.pageQ.Permalink ?: "", cfsqltype: "cf_sql_nvarchar" },
+				body: { value: local.pageQ.Body ?: "", cfsqltype: "cf_sql_longvarchar" },
+				summary: { value: local.pageQ.Summary ?: "", cfsqltype: "cf_sql_longvarchar" },
+				layout: { value: local.pageQ.LayoutType ?: "Full", cfsqltype: "cf_sql_nvarchar" },
+				metaJson: { value: SerializeJSON(local.metaStruct), cfsqltype: "cf_sql_longvarchar" },
+				note: { value: Left(local.summaryNote, 500), cfsqltype: "cf_sql_nvarchar" },
+				actor: { value: Left(local.actorName, 255), cfsqltype: "cf_sql_nvarchar" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			local.res.success = true;
+			local.res.version = local.nextVer;
+			local.res.revisionId = Val(local.insQ.new_id);
+		} catch (any e) {
+			writeLog(type="error", file="pages", text="recordPageRevision error: #e.message# #e.detail#");
+		}
+		return local.res;
+	}
+
+	/**
+	 * Ensures dbo.page_revisions exists in SQL Server
+	 */
+	private void function ensurePageRevisionsTable() {
+		try {
+			queryExecute("
+				IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[page_revisions]') AND type in (N'U'))
+				BEGIN
+					CREATE TABLE [dbo].[page_revisions] (
+						[id]             INT IDENTITY(1,1) NOT NULL,
+						[page_id]        INT NOT NULL,
+						[version_number] INT NOT NULL,
+						[title]          NVARCHAR(255) NOT NULL,
+						[slug]           NVARCHAR(255) NULL,
+						[content_html]   NVARCHAR(MAX) NULL,
+						[summary]        NVARCHAR(MAX) NULL,
+						[layout_type]    NVARCHAR(50) NOT NULL CONSTRAINT [DF_page_rev_layout] DEFAULT ('Full'),
+						[meta_json]      NVARCHAR(MAX) NULL,
+						[change_summary] NVARCHAR(500) NULL,
+						[created_by]     NVARCHAR(255) NOT NULL CONSTRAINT [DF_page_rev_author] DEFAULT ('System'),
+						[created_at]     DATETIME2(7) NOT NULL CONSTRAINT [DF_page_rev_created] DEFAULT (SYSUTCDATETIME()),
+						CONSTRAINT [PK_page_revisions] PRIMARY KEY CLUSTERED ([id] ASC),
+						CONSTRAINT [FK_page_revisions_pages] FOREIGN KEY ([page_id]) REFERENCES [dbo].[pages] ([ContentID]) ON DELETE CASCADE
+					);
+				END;
+			", {}, { datasource: "ChelanCountyWebsite" });
+		} catch (any e) {
+			writeLog(type="error", file="pages", text="ensurePageRevisionsTable error: #e.message#");
+		}
 	}
 
 	/**
@@ -1971,7 +2416,7 @@ component extends="Controller" {
 					{ cat: "learn-about", site: "assessors", q: "How Property Taxes Are Calculated", type: "page", url: "/assessor/pages/frequently-asked-questions", newTab: 0, mega: 1, sort: 20 },
 
 					// Register To
-					{ cat: "register-to", site: "clerk", q: "Jury Duty", type: "external", url: "https://jury.co.chelan.wa.us", newTab: 1, mega: 1, sort: 10 },
+					{ cat: "register-to", site: "clerk", q: "Jury Duty", type: "external", url: "https://jury.chelancounty.gov", newTab: 1, mega: 1, sort: 10 },
 					{ cat: "register-to", site: "clerk", q: "Parenting Class", type: "page", url: "/clerk/pages/parenting-class", newTab: 0, mega: 1, sort: 20 },
 					{ cat: "register-to", site: "Auditor", q: "Vote", type: "external", url: "https://www.sos.wa.gov/elections/myvote/", newTab: 1, mega: 1, sort: 30 },
 

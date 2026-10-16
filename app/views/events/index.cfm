@@ -1011,7 +1011,7 @@
 
 					<div style="grid-column: span 4;">
 						<label for="evContactEmail" class="form-label" style="font-weight:600;">Contact Email</label>
-						<input type="email" id="evContactEmail" class="form-control" placeholder="bocc.clerk@co.chelan.wa.us">
+						<input type="email" id="evContactEmail" class="form-control" placeholder="bocc.clerk@chelancounty.gov">
 					</div>
 
 					<div style="grid-column: span 4;">

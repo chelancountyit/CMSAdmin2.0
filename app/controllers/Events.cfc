@@ -535,7 +535,7 @@ component extends="Controller" {
 			local.sDateClean = Replace(local.ev.startDate, "-", "", "all");
 			local.eDateClean = Replace(local.ev.endDate, "-", "", "all");
 			ArrayAppend(local.lines, "BEGIN:VEVENT");
-			ArrayAppend(local.lines, "UID:chelan-county-event-" & local.ev.id & "@co.chelan.wa.us");
+			ArrayAppend(local.lines, "UID:chelan-county-event-" & local.ev.id & "@chelancounty.gov");
 			ArrayAppend(local.lines, "DTSTAMP:" & local.dtStamp);
 			if (local.ev.isAllDay || !Len(local.ev.startTime)) {
 				ArrayAppend(local.lines, "DTSTART;VALUE=DATE:" & local.sDateClean);
@@ -703,7 +703,7 @@ component extends="Controller" {
 						vId: "Meeting ID: 890 4002 0100 / Passcode: 98801",
 						agenda: "/files/commissioners/agendas/bocc-regular-session-agenda.pdf",
 						contact: "Anabel Torres, Clerk of the Board",
-						email: "bocc.clerk@co.chelan.wa.us",
+						email: "bocc.clerk@chelancounty.gov",
 						phone: "509-667-6215",
 						featured: 1,
 						notice: 0
@@ -726,7 +726,7 @@ component extends="Controller" {
 						vId: "Meeting ID: 890 4002 0100",
 						agenda: "/files/community-development/packets/comp-plan-docket-staff-report.pdf",
 						contact: "Community Development Planning Desk",
-						email: "cd.planning@co.chelan.wa.us",
+						email: "cd.planning@chelancounty.gov",
 						phone: "509-667-6225",
 						featured: 1,
 						notice: 1
@@ -749,7 +749,7 @@ component extends="Controller" {
 						vId: "Meeting ID: 844 3163 0100",
 						agenda: "/files/community-development/agendas/planning-commission-agenda.pdf",
 						contact: "Planning Commission Secretary",
-						email: "cd.planning@co.chelan.wa.us",
+						email: "cd.planning@chelancounty.gov",
 						phone: "509-667-6225",
 						featured: 0,
 						notice: 0
@@ -772,7 +772,7 @@ component extends="Controller" {
 						vId: "",
 						agenda: "",
 						contact: "Chelan County Elections",
-						email: "elections@co.chelan.wa.us",
+						email: "elections@chelancounty.gov",
 						phone: "509-667-6808",
 						featured: 1,
 						notice: 1
@@ -795,7 +795,7 @@ component extends="Controller" {
 						vId: "",
 						agenda: "/files/expo.chelancounty.gov/events/harvest-expo-map-schedule.pdf",
 						contact: "Expo Center Event Office",
-						email: "fairgrounds@co.chelan.wa.us",
+						email: "fairgrounds@chelancounty.gov",
 						phone: "509-782-3232",
 						featured: 1,
 						notice: 0
@@ -818,7 +818,7 @@ component extends="Controller" {
 						vId: "Meeting ID: 890 4002 0100",
 						agenda: "/files/public-works/documents/6-year-tip-draft-project-list.pdf",
 						contact: "Public Works Engineering",
-						email: "public.works@co.chelan.wa.us",
+						email: "public.works@chelancounty.gov",
 						phone: "509-667-6415",
 						featured: 0,
 						notice: 1
@@ -841,7 +841,7 @@ component extends="Controller" {
 						vId: "",
 						agenda: "",
 						contact: "Treasurer's Tax Service Desk",
-						email: "treasurer@co.chelan.wa.us",
+						email: "treasurer@chelancounty.gov",
 						phone: "509-667-6405",
 						featured: 1,
 						notice: 1
@@ -864,7 +864,7 @@ component extends="Controller" {
 						vId: "Teams Live Event",
 						agenda: "/files/sheriff/emergency-management-readiness-guide.pdf",
 						contact: "Emergency Management Specialist",
-						email: "em@co.chelan.wa.us",
+						email: "em@chelancounty.gov",
 						phone: "509-667-6863",
 						featured: 0,
 						notice: 0
@@ -887,7 +887,7 @@ component extends="Controller" {
 						vId: "",
 						agenda: "",
 						contact: "County Administration",
-						email: "info@co.chelan.wa.us",
+						email: "info@chelancounty.gov",
 						phone: "509-667-6215",
 						featured: 1,
 						notice: 0

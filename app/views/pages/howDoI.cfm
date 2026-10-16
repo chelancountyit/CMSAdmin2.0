@@ -831,11 +831,11 @@
 		</div>
 
 		<div class="hdi-modal-body">
-			<!--- Tab 1: /howdoi Directory View (Matches https://www.co.chelan.wa.us/howdoi) --->
+			<!--- Tab 1: /howdoi Directory View (Matches https://www.chelancounty.gov/howdoi) --->
 			<div id="hdiPreviewDirectoryPane">
 				<div style="margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:2px solid ##0f172a; display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap;">
 					<h3 style="margin:0; font-size:1.65rem; font-weight:700; color:##0f172a;">How Do I</h3>
-					<span style="font-size:0.78rem; color:var(--admin-text-muted);">Public URL: <strong>https://www.co.chelan.wa.us/howdoi</strong></span>
+					<span style="font-size:0.78rem; color:var(--admin-text-muted);">Public URL: <strong>https://www.chelancounty.gov/howdoi</strong></span>
 				</div>
 				<div style="display:grid; grid-template-columns:240px minmax(0, 1fr); gap:1.5rem; align-items:start;">
 					<ul id="hdiPreviewSidebarList" style="list-style:none; margin:0; padding:0; border:1px solid ##cbd5e1; border-radius:0.375rem; overflow:hidden;"></ul>

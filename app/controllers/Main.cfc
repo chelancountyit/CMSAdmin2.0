@@ -373,4 +373,50 @@ component extends="Controller" {
 		return local.candidates;
 	}
 
+	/**
+	 * Full System Notifications & Activity Center
+	 */
+	function notifications() {
+		variables.pageTitle = "Notifications & Activity Center";
+		local.role = getCurrentActiveRole();
+		variables.activeRole = local.role;
+		variables.isAdmin = (local.role eq "admin");
+
+		// Fetch up to 50 notifications across modules
+		variables.allNotifications = getSystemNotifications(role = local.role, limit = 50);
+
+		// Metric counts
+		variables.counts = {
+			total: ArrayLen(variables.allNotifications),
+			forms: 0,
+			pages: 0,
+			jobs: 0,
+			unread: 0
+		};
+
+		for (local.n in variables.allNotifications) {
+			if (local.n.isUnread) variables.counts.unread++;
+			if (local.n.type == "form") variables.counts.forms++;
+			else if (local.n.type == "page") variables.counts.pages++;
+			else if (local.n.type == "job") variables.counts.jobs++;
+		}
+
+		// Filter by category if requested
+		local.filterType = StructKeyExists(params, "type") ? LCase(Trim(params.type)) : "all";
+		variables.activeFilterType = local.filterType;
+
+		if (local.filterType != "all") {
+			local.filteredList = [];
+			for (local.n in variables.allNotifications) {
+				if (local.n.type == local.filterType) {
+					ArrayAppend(local.filteredList, local.n);
+				}
+			}
+			variables.notifications = local.filteredList;
+		} else {
+			variables.notifications = variables.allNotifications;
+		}
+	}
+
 }
+

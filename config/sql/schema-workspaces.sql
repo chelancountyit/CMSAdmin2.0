@@ -95,7 +95,7 @@ USING (VALUES
         'global', 'All Workspaces', NULL, 'global', 'Global', 'badge-neutral', 'grid',
         'County-wide unified view across all municipal divisions and portals',
         'files/shared', 'shared', '', 'County-wide', 'County Administration',
-        'County', 'Administration', 'info@co.chelan.wa.us', '509-667-6215', '',
+        'County', 'Administration', 'info@chelancounty.gov', '509-667-6215', '',
         '400 Douglas Street', 'Suite 201', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 1, 0
     ),
@@ -103,8 +103,8 @@ USING (VALUES
     (
         'assessors', 'Assessor - Property & Parcels', NULL, 'dept', 'Assessor', 'badge-info', 'building',
         'Property assessment & shared media library',
-        'files/assessors', 'assessors', 'https://www.co.chelan.wa.us/assessor', 'Assessor', 'Finance and Records',
-        'Deanna', 'Walter', 'assessor@co.chelan.wa.us', '509-667-6365', '509-667-6664',
+        'files/assessors', 'assessors', 'https://www.chelancounty.gov/assessor', 'Assessor', 'Finance and Records',
+        'Deanna', 'Walter', 'assessor@chelancounty.gov', '509-667-6365', '509-667-6664',
         '350 Orondo Ave', 'Level 2', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 9:00 AM - 4:00 PM', 1, 0, 10
     ),
@@ -112,8 +112,8 @@ USING (VALUES
     (
         'auditor', 'Auditor - Elections & Records', NULL, 'dept', 'Auditor', 'badge-purple', 'building',
         'Elections, recording & licensing',
-        'files/auditor', 'auditor', 'https://www.co.chelan.wa.us/auditor', 'Auditor', 'Finance and Records',
-        'Skip', 'Moore', 'auditor@co.chelan.wa.us', '509-667-6800', '509-667-6818',
+        'files/auditor', 'auditor', 'https://www.chelancounty.gov/auditor', 'Auditor', 'Finance and Records',
+        'Skip', 'Moore', 'auditor@chelancounty.gov', '509-667-6800', '509-667-6818',
         '350 Orondo Ave', 'Level 3', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 9:00 AM - 5:00 PM', 1, 0, 20
     ),
@@ -121,8 +121,8 @@ USING (VALUES
     (
         'hrm', 'HRM - Human Resources', NULL, 'dept', 'HRM', 'badge-purple', 'briefcase',
         'Recruitment, personnel & benefits',
-        'files/hrm', 'hrm', 'https://www.co.chelan.wa.us/human-resources', 'Human Resources', 'Internal Services',
-        'Human', 'Resources', 'jobs@co.chelan.wa.us', '509-667-6855', '509-667-6858',
+        'files/hrm', 'hrm', 'https://www.chelancounty.gov/human-resources', 'Human Resources', 'Internal Services',
+        'Human', 'Resources', 'jobs@chelancounty.gov', '509-667-6855', '509-667-6858',
         '400 Douglas Street', 'Suite 201', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 0, 30
     ),
@@ -130,8 +130,8 @@ USING (VALUES
     (
         'pio', 'PIO - Public Information', NULL, 'dept', 'PIO', 'badge-info', 'megaphone',
         'Media alerts, press & notifications',
-        'files/pio', 'pio', 'https://www.co.chelan.wa.us/pio', 'Public Information', 'Community Outreach',
-        'Jill', 'FitzSimmons', 'pio@co.chelan.wa.us', '509-667-6523', '',
+        'files/pio', 'pio', 'https://www.chelancounty.gov/pio', 'Public Information', 'Community Outreach',
+        'Jill', 'FitzSimmons', 'pio@chelancounty.gov', '509-667-6523', '',
         '400 Douglas Street', 'Suite 201', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 0, 40
     ),
@@ -139,8 +139,8 @@ USING (VALUES
     (
         'commdev', 'Community Development', 'community-development', 'dept', 'Dept', 'badge-neutral', 'building',
         'Permits, planning & zoning',
-        'files/community-development', 'community-development', 'https://www.co.chelan.wa.us/community-development', 'Community Development', 'Community Services',
-        'Deanna', 'Walter', 'cd.director@co.chelan.wa.us', '509-667-6800', '509-667-6860',
+        'files/community-development', 'community-development', 'https://www.chelancounty.gov/community-development', 'Community Development', 'Community Services',
+        'Deanna', 'Walter', 'cd.director@chelancounty.gov', '509-667-6800', '509-667-6860',
         '316 Washington Street', 'Suite 401', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 0, 50
     ),
@@ -148,8 +148,8 @@ USING (VALUES
     (
         'pw', 'Public Works', 'public-works', 'dept', 'Dept', 'badge-neutral', 'building',
         'Roads, utilities & infrastructure',
-        'files/public-works', 'public-works', 'https://www.co.chelan.wa.us/public-works', 'Public Works', 'Internal Services',
-        'Eric', 'Pierson', 'public.works@co.chelan.wa.us', '509-667-6415', '509-667-6250',
+        'files/public-works', 'public-works', 'https://www.chelancounty.gov/public-works', 'Public Works', 'Internal Services',
+        'Eric', 'Pierson', 'public.works@chelancounty.gov', '509-667-6415', '509-667-6250',
         '316 Washington Street', 'Suite 402', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 0, 60
     ),
@@ -157,8 +157,8 @@ USING (VALUES
     (
         'admin', 'County Administration', 'county-administration', 'dept', 'Dept', 'badge-neutral', 'building',
         'Commissioners, executive & budget',
-        'files/admin', 'admin', 'https://www.co.chelan.wa.us/administration', 'County Administration', 'County Administration',
-        'Cathy', 'Mulhall', 'admin@co.chelan.wa.us', '509-667-6215', '509-667-6599',
+        'files/admin', 'admin', 'https://www.chelancounty.gov/administration', 'County Administration', 'County Administration',
+        'Cathy', 'Mulhall', 'admin@chelancounty.gov', '509-667-6215', '509-667-6599',
         '400 Douglas Street', 'Suite 201', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 0, 70
     ),
@@ -166,8 +166,8 @@ USING (VALUES
     (
         'commissioners', 'Board of Commissioners', NULL, 'dept', 'Dept', 'badge-neutral', 'building',
         'County Commissioners & legislative agendas',
-        'files/commissioners', 'commissioners', 'https://www.co.chelan.wa.us/board-of-commissioners', 'Commissioners', 'County Administration',
-        'Clerk of', 'the Board', 'commissioners@co.chelan.wa.us', '509-667-6215', '509-667-6599',
+        'files/commissioners', 'commissioners', 'https://www.chelancounty.gov/board-of-commissioners', 'Commissioners', 'County Administration',
+        'Clerk of', 'the Board', 'commissioners@chelancounty.gov', '509-667-6215', '509-667-6599',
         '400 Douglas Street', 'Suite 201', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 0, 80
     ),
@@ -175,8 +175,8 @@ USING (VALUES
     (
         'sheriff', 'Sheriff''s Office', NULL, 'dept', 'Dept', 'badge-neutral', 'shield',
         'Law enforcement & public safety',
-        'files/sheriff', 'sheriff', 'https://www.co.chelan.wa.us/sheriff', 'Sheriff', 'Law Enforcement',
-        'Mike', 'Morrison', 'sheriff@co.chelan.wa.us', '509-667-6851', '509-667-6860',
+        'files/sheriff', 'sheriff', 'https://www.chelancounty.gov/sheriff', 'Sheriff', 'Law Enforcement',
+        'Mike', 'Morrison', 'sheriff@chelancounty.gov', '509-667-6851', '509-667-6860',
         '401 Washington Street', 'Level 1', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:30 AM - 4:30 PM', 1, 0, 90
     ),
@@ -184,8 +184,8 @@ USING (VALUES
     (
         'treasurer', 'Treasurer', NULL, 'dept', 'Dept', 'badge-neutral', 'building',
         'Tax collections & county finance',
-        'files/treasurer', 'treasurer', 'https://www.co.chelan.wa.us/treasurer', 'Treasurer', 'Finance and Records',
-        'David', 'Griffiths', 'treasurer@co.chelan.wa.us', '509-667-6405', '509-667-6404',
+        'files/treasurer', 'treasurer', 'https://www.chelancounty.gov/treasurer', 'Treasurer', 'Finance and Records',
+        'David', 'Griffiths', 'treasurer@chelancounty.gov', '509-667-6405', '509-667-6404',
         '350 Orondo Ave', 'Suite 204', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 9:00 AM - 4:00 PM', 1, 0, 100
     ),
@@ -193,8 +193,8 @@ USING (VALUES
     (
         'clerk', 'County Clerk', NULL, 'dept', 'Dept', 'badge-neutral', 'building',
         'Superior court records & judicial filings',
-        'files/clerk', 'clerk', 'https://www.co.chelan.wa.us/clerk', 'County Clerk', 'Law and Judicial Services',
-        'Marty', 'Young', 'clerk@co.chelan.wa.us', '509-667-6380', '509-667-6456',
+        'files/clerk', 'clerk', 'https://www.chelancounty.gov/clerk', 'County Clerk', 'Law and Judicial Services',
+        'Marty', 'Young', 'clerk@chelancounty.gov', '509-667-6380', '509-667-6456',
         '350 Orondo Ave', 'Suite 501', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:30 AM - 4:30 PM', 1, 0, 110
     ),
@@ -202,8 +202,8 @@ USING (VALUES
     (
         'site-main', 'chelancounty.gov', 'chelancounty.gov', 'site', 'Main Site', 'badge-success', 'globe',
         'Primary County public government portal',
-        'files/chelancounty.gov', 'chelancounty.gov', 'https://www.co.chelan.wa.us', 'Public Portal', 'County Administration',
-        'Web', 'Master', 'webmaster@co.chelan.wa.us', '509-667-6215', '',
+        'files/chelancounty.gov', 'chelancounty.gov', 'https://www.chelancounty.gov', 'Public Portal', 'County Administration',
+        'Web', 'Master', 'webmaster@chelancounty.gov', '509-667-6215', '',
         '400 Douglas Street', 'Suite 201', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 0, 120
     ),
@@ -212,7 +212,7 @@ USING (VALUES
         'site-parks', 'parks.chelancounty.gov', 'parks.chelancounty.gov', 'site', 'Subsite', 'badge-primary', 'globe',
         'County Parks & Recreation portal',
         'files/parks.chelancounty.gov', 'parks.chelancounty.gov', 'https://parks.chelancounty.gov', 'Parks & Recreation', 'Community Services',
-        'Parks', 'Director', 'parks@co.chelan.wa.us', '509-667-6340', '',
+        'Parks', 'Director', 'parks@chelancounty.gov', '509-667-6340', '',
         '316 Washington Street', 'Suite 402', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 0, 130
     ),
@@ -221,7 +221,7 @@ USING (VALUES
         'site-gis', 'gis.chelancounty.gov', 'gis.chelancounty.gov', 'site', 'Portal', 'badge-warning', 'globe',
         'GIS, parcel viewer & map layers',
         'files/gis.chelancounty.gov', 'gis.chelancounty.gov', 'https://gis.chelancounty.gov', 'Information Technology / GIS', 'Internal Services',
-        'GIS', 'Coordinator', 'gis@co.chelan.wa.us', '509-667-6839', '',
+        'GIS', 'Coordinator', 'gis@chelancounty.gov', '509-667-6839', '',
         '400 Douglas Street', 'Suite 201', 'Wenatchee', 'WA', '98801',
         'Monday - Friday: 8:00 AM - 5:00 PM', 1, 0, 140
     ),
@@ -230,7 +230,7 @@ USING (VALUES
         'site-expo', 'expo.chelancounty.gov', 'expo.chelancounty.gov', 'site', 'Portal', 'badge-info', 'globe',
         'Chelan County Expo Center & Fairgrounds',
         'files/expo.chelancounty.gov', 'expo.chelancounty.gov', 'https://expo.chelancounty.gov', 'Expo Center', 'Chelan-Douglas',
-        'Expo', 'Manager', 'expo@co.chelan.wa.us', '509-782-3232', '',
+        'Expo', 'Manager', 'expo@chelancounty.gov', '509-782-3232', '',
         '5700 Wescott Drive', '', 'Cashmere', 'WA', '98815',
         'Monday - Friday: 8:00 AM - 4:30 PM', 1, 0, 150
     )

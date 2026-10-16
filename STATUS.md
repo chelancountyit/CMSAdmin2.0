@@ -1,7 +1,7 @@
 # Chelan County CMS Admin 2.0 - Comprehensive Project Status
 
-**Current Stage:** Pages, Navigation, HRM Jobs, Form Builder & "How Do I?" Directory Manager (SQL Server Wired)  
-**Last Updated:** 2026-10-14  
+**Current Stage:** Emergency Alerts (2.1), User Profile (1.4), Pages, Navigation, HRM Jobs, Form Builder & "How Do I?" Directory Manager (SQL Server Wired)  
+**Last Updated:** 2026-10-15  
 **Platform Host:** `http://cmsadmin.chelancounty.gov/`  
 **Framework:** CFWheels 4.1.2 (App-side flat structure)  
 **Server Environment:** Microsoft-IIS/10.0 + Lucee CFML Engine (Java/JVM)  
@@ -21,9 +21,12 @@ CMSAdmin 2.0 is an enterprise-grade, high-performance Content Management System 
 |---|---|---|---|
 | **Admin Shell & Layout** | `/` (Dashboard) | ✅ Complete | Chelan County official logo (`logo.png`), responsive sidebar, workspace selector, breadcrumbs, notifications, and custom modal dialog system (`window.adminAlert`, `window.adminConfirm`, `window.adminPrompt`). |
 | **Workspace Selector** | Global Header | ✅ Complete | Department/site switcher (`Global`, `HRM`, `PIO`, `Admin`, `Community Development`, etc.) with localStorage/cookie persistence and event broadcasting. |
-| **How Do I? Directory Manager** | `/pages/how-do-i`, `/pages/save-how-do-i-item`, `/pages/save-how-do-i-category`, `/pages/delete-how-do-i-item`, `/pages/delete-how-do-i-category` | ✅ Complete | Full CRUD manager under **Pages > How Do I** modeled after `https://www.co.chelan.wa.us/howdoi` (Apply for, Contact, Find, File, Get, Learn About, Pay, Register for, Report, Request, Submit, View). Supports linking each question to an internal CMS **Page**, an online **Form**, or an **External URL**, with live 4-column public directory preview, category management, SQL Server persistence (`how_do_i_categories`, `how_do_i_items`), CSRF header verification, and custom `adminAlert`/`adminConfirm` dialogs. |
+| **Emergency Alerts & Incident Dispatch** | `/alerts`, `/pio/alerts`, `/alerts/save`, `/alerts/toggle`, `/alerts/delete`, `/api/v1/alerts/active` | ✅ Complete | Full emergency dispatch studio (`emergency_alerts` table, `Alerts.cfc`, `EmergencyAlert.cfc`). Real-time live banner simulator (Critical/Warning/Notice), one-click incident presets (Wildfires Level 1/2/3, Winter Pass Closures, Flood Advisory, Courthouse Closures), instant status toggle, active alert indicator in admin header, and high-speed public JSON API endpoint (`/api/v1/alerts/active`) with IIS URL rewrite integration. |
+| **User Profile & Account Settings** | `/users/profile`, `/users/updateProfile`, `/users/updatePassword`, `/users/updatePreferences` | ✅ Complete | Staff profile and credentials studio (`Users.cfc:profile`, `users/profile.cfm`) with personal information editor, dedicated secure password changer, notification preferences, assigned workspace overview, and functional header dropdown integration. |
+| **How Do I? Directory Manager** | `/pages/how-do-i`, `/pages/save-how-do-i-item`, `/pages/save-how-do-i-category`, `/pages/delete-how-do-i-item`, `/pages/delete-how-do-i-category` | ✅ Complete | Full CRUD manager under **Pages > How Do I** modeled after `https://www.chelancounty.gov/howdoi` (Apply for, Contact, Find, File, Get, Learn About, Pay, Register for, Report, Request, Submit, View). Supports linking each question to an internal CMS **Page**, an online **Form**, or an **External URL**, with live 4-column public directory preview, category management, SQL Server persistence (`how_do_i_categories`, `how_do_i_items`), CSRF header verification, and custom `adminAlert`/`adminConfirm` dialogs. |
 | **All Pages Directory & Modal** | `/pages`, `/pages/index` | ✅ Complete | SQL Server-backed filterable listing, system-page protection, and accessible "Add Page" modal with real-time slugify, immediate DB creation, and 2 iconized layout wireframe cards (`Full Width` and `Right Sidebar`). |
 | **Add / Edit Page Editor** | `/pages/edit`, `/pages/edit?id=N` | ✅ Complete | SQL Server-backed page & sub-page editor (`pages`, `sub_pages`), JBD Rich Text Editor, SEO meta fields, Page Assignment listbox (`Top Level - Called from URL` / `Assign to Main Menu Item`), conditional menu item picker, and Right Sidebar sub-pages manager. |
+| **Page Revision History & Rollback Studio (RCW 42.56)** | `/pages/revisions`, `/pages/revision`, `/pages/restore-revision`, `/pages/snapshot-revision` | ✅ Complete | Full revision tracking and version rollback studio (`page_revisions` table, `PageRevision.cfc`, `Pages.cfc:revisions,revision,restoreRevision,snapshotRevision`). Automatic baseline and pre-rollback safety snapshots for RCW 42.56 Public Records Act compliance, token-level diff calculation, 4 comparison views (Visual Diff, Side-by-Side Split, Snapshot Preview, Raw HTML), live header badge counter, and one-click restore. |
 | **Folder Explorer in Page Attributes** | `/pages/edit` (Page Attributes) | ✅ Complete | Integrated into Page Attributes on Add/Edit Page (`folder_explorers`). "Add Folder Explorer Item" modal prompts for Title, Server Absolute Path, Web URL Relative Path, and Layout selection (`Full Width` vs `3/9 Grid Layout`) with iconized wireframe cards. |
 | **Events / Calendar Manager** | `/events`, `/calendar`, `/events/save`, `/events/delete`, `/events/category/save`, `/events/ics` | ✅ Complete | Full County Calendar of Events studio under **Content Management > Events / Calendar** (`calendar_events`, `calendar_event_categories`). Features Interactive Monthly Calendar Grid, Filterable Events List, Public Calendar Preview, Add/Edit Event modal with Quick Presets (time & county locations), Virtual Meeting (Zoom/Teams) links, Agenda Packet Media Library integration, Category Manager, and `.ICS` iCalendar export. |
 | **Navigation Menu Manager** | `/navigation`, `/navigation/index` | ✅ Complete | Multi-workspace navigation menu & hierarchical menu item studio (`navigation_menus`, `navigation_menu_items`). |
@@ -42,7 +45,7 @@ CMSAdmin 2.0 is an enterprise-grade, high-performance Content Management System 
 | **Add / Edit User Management** | `/users/new`, `/users/edit` | ✅ Complete | Fast-action add/edit staff forms with interactive 4-role selection radio cards, department workspace scoping, and live permission summaries. |
 | **Dynamic Role Simulator** | `/users/simulate?role=[role]` | ✅ Complete | Real-time interface simulator allowing administrators to test and preview the exact CMS interface for Admin, PIO, HR, and Author roles. |
 | **Delete Prevention Policy** | Pages & Core Records | ✅ Complete | Permanent record protection on Pages: delete actions removed from Pages screens. Inactive/Hidden status used for decommissioning. |
-| **Database Schema Specs** | `config/sql/*.sql`, `Form-Builder.md` | ✅ Complete | Complete SQL Server schemas (`schema-complete.sql`, `schema-how-do-i.sql`, `schema-pages.sql`, `schema-page-subpage.sql`, `schema-foldex-explorer.sql`, `schema-navigation.sql`, `schema-form-builder.sql`, `schema-users-roles.sql`, `schema-workspaces.sql`). |
+| **Database Schema Specs** | `config/sql/*.sql`, `Form-Builder.md` | ✅ Complete | Complete SQL Server schemas (`schema-complete.sql`, `schema-emergency-alerts.sql`, `schema-events.sql`, `schema-how-do-i.sql`, `schema-pages.sql`, `schema-page-subpage.sql`, `schema-foldex-explorer.sql`, `schema-navigation.sql`, `schema-form-builder.sql`, `schema-users-roles.sql`, `schema-workspaces.sql`). |
 
 ---
 
@@ -159,6 +162,7 @@ The platform enforces a robust 4-tier security model designed specifically for C
 c:\inetpub\CMSAdmin2.0\
 ├── app/
 │   ├── controllers/
+│   │   ├── Alerts.cfc              # Emergency Alert Banner & Incident Dispatch controller
 │   │   ├── Controller.cfc          # Base CFWheels controller (CSRF protection, role & workspace security)
 │   │   ├── Documentation.cfc       # System documentation & guides controller
 │   │   ├── Forms.cfc               # Form builder, listing, preview, submit, submissions & CSV export
@@ -172,6 +176,7 @@ c:\inetpub\CMSAdmin2.0\
 │   │   ├── Users.cfc               # Users & Roles directory, matrix, simulation & CRUD actions
 │   │   └── Workspaces.cfc          # Administrator Workspace Management Studio controller
 │   ├── models/
+│   │   ├── EmergencyAlert.cfc      # Emergency alert notifications (`emergency_alerts`)
 │   │   ├── FolderExplorer.cfc      # Folder explorer mappings (`folder_explorers`)
 │   │   ├── Form.cfc                # Form definitions (`forms`)
 │   │   ├── FormAuditLog.cfc        # Form security & lifecycle audit log (`form_audit_logs`)
@@ -192,8 +197,10 @@ c:\inetpub\CMSAdmin2.0\
 │   │   ├── UserWorkspace.cfc       # User-workspace junction (`cms_user_workspaces`)
 │   │   └── Workspace.cfc           # Municipal workspaces (`cms_workspaces`)
 │   └── views/
-│       ├── layout.cfm              # Master admin template, sidebar, header, custom dialog modal (`#adminPromptBackdrop`)
+│       ├── layout.cfm              # Master admin template, sidebar, header, active alert badge, modal dialogs
 │       ├── helpers.cfm             # Global view helpers (svgIcon, badges)
+│       ├── alerts/
+│       │   └── index.cfm           # Emergency Alert Dispatch Studio (live banner simulator, presets, table)
 │       ├── forms/
 │       │   ├── builder.cfm         # Interactive 3-column Form Builder Studio
 │       │   ├── index.cfm           # Forms management directory & template gallery
@@ -209,6 +216,7 @@ c:\inetpub\CMSAdmin2.0\
 │       │   └── picker.cfm          # Standalone embeddable Media Picker dialog for editors
 │       ├── users/
 │       │   ├── index.cfm           # Users Directory, KPI stat cards, fast-action modal, inspector
+│       │   ├── profile.cfm         # Staff Profile & Account Settings studio (personal info, password, prefs)
 │       │   ├── roles.cfm           # Roles & Permissions studio, matrix, persona switcher
 │       │   ├── new.cfm             # Add New Staff Account with interactive role radio cards
 │       │   └── edit.cfm            # Edit Staff Member, role tier assignment & security flags
@@ -220,6 +228,7 @@ c:\inetpub\CMSAdmin2.0\
 │   ├── settings.cfm                # App settings, reload password configuration
 │   └── sql/
 │       ├── schema-complete.sql     # Compiled master SQL Server schema
+│       ├── schema-emergency-alerts.sql # Emergency alerts DDL & filtered index
 │       ├── schema-how-do-i.sql     # "How Do I?" categories & items SQL Server schema + Chelan County seed
 │       ├── schema-pages.sql        # Pages relational DDL definitions
 │       ├── schema-page-subpage.sql # Sub-pages relational DDL definitions
@@ -239,18 +248,24 @@ c:\inetpub\CMSAdmin2.0\
 ├── Form-Builder.md                 # Form Builder technical architecture & database specs
 ├── NEXT-AI-PROMPT.md               # Continuation prompt for next AI session
 ├── PROMPT.md                       # Comprehensive prompt history & continuation guidelines
-└── STATUS.md                       # Master project status & compliance documentation
+├── STATUS.md                       # Master project status & compliance documentation
+└── TODO.md                         # Engineering roadmap & technical debt tracker
 ```
 
 ---
 
 ## ⏳ 7. Open Items & Next Milestones
 
-1. **Public Frontend / Mega-Menu Consumption of "How Do I?" Directory**:
-   - Expose a read-only public endpoint or helper query for the public website theme and global mega-menu (`show_in_mega_menu = 1`) to render active `how_do_i_categories` and `how_do_i_items`.
-2. **Drag-and-Drop / Quick Sort Reordering in "How Do I?" Manager**:
-   - Optional UI enhancement to reorder `sort_order` across items within a category without opening the Edit modal.
-3. **PIO Press Release & News Manager**:
-   - Scaffold the dedicated Articles & Posts interface stationed under the PIO division.
-4. **Media Library Database Metadata Sync**:
-   - Connect `Media.cfc` alt-text and document metadata catalog to SQL Server persistence.
+1. **Feature 2.2: Page Revision History & Rollback Studio (RCW 42.56 Compliance)**:
+   - Database schema: `dbo.page_revisions` (`id`, `page_id`, `version_number`, `title`, `content_html`, `summary`, `layout_type`, `meta_json`, `created_by`, `created_at`).
+   - Automatically snapshot prior state on save in `Pages.cfc:save()`.
+   - Add "Revision History" tab in the Page Editor with visual diff viewer and one-click rollback.
+2. **Feature 1.1: Scaffold PIO Division Modules (Replace Placeholder Anchors)**:
+   - Articles & Posts (`Articles.cfc`): Working CRUD routes for news, county blog posts, categories, and tags.
+   - Press Releases & Media Alerts: Embargo dates, media contacts, and downloadable PDF attachments.
+3. **Feature 2.3: In-Editor Automated ADA WCAG Pre-Flight Linter**:
+   - Real-time pre-flight bar in `pages/edit.cfm` validating alt text quality, heading hierarchy, link text clarity, and table headers.
+4. **Feature 2.4: Public Website API Layer & Mega-Menu Integration**:
+   - Expose read-only REST/JSON endpoints (`/api/v1/how-do-i`, `/api/v1/navigation/menu`, `/api/v1/events/upcoming`) with cache management for `chelancounty.gov`.
+5. **Feature 1.3: Media Library Database Metadata Persistence**:
+   - Persist alt-text, captions, copyright, and ADA compliance tags to `dbo.media_assets` with SHA-256 duplicate detection.

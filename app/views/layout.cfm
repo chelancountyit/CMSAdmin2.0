@@ -207,6 +207,20 @@
 				activeWsVirtualDir = (structKeyExists(activeWsObj, "virtual_directory") && len(trim(activeWsObj.virtual_directory)))
 					? trim(activeWsObj.virtual_directory)
 					: (activeWsObj.id eq 'global' ? 'shared' : activeWsObj.id);
+
+				// Dynamic System Notifications for header bell
+				headerNotifications = getSystemNotifications(activeRole, 5);
+				headerUnreadCount = 0;
+				for (local.hn in headerNotifications) {
+					if (local.hn.isUnread) headerUnreadCount++;
+				}
+
+				// Active Emergency Alerts indicator
+				activeEmergencyAlertsCount = 0;
+				try {
+					local.qEmerg = queryExecute("SELECT COUNT(*) AS cnt FROM emergency_alerts WHERE is_active = 1 AND deletedat IS NULL", {}, { datasource: "ChelanCountyWebsite" });
+					activeEmergencyAlertsCount = Val(local.qEmerg.cnt);
+				} catch (any e) {}
 			</cfscript>
 
 			<!--- WCAG 2.4.1 Accessible Skip to Main Content Link --->
@@ -368,6 +382,14 @@
 					</div>
 
 					<div class="header-right">
+						<!--- Emergency Alert Active Broadcast Indicator --->
+						<cfif activeEmergencyAlertsCount gt 0>
+							<a href="<cfoutput>#urlFor(controller='alerts', action='index')#</cfoutput>" class="badge badge-danger" style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.35rem 0.75rem; text-decoration:none; font-size:0.75rem; font-weight:700; border-radius:20px; box-shadow:0 2px 8px rgba(185,28,28,0.3); animation:pulse 2s infinite;" title="Active Emergency Broadcast Live on County Websites">
+								<cfoutput>#svgIcon(name="alert-triangle", size=14)#</cfoutput>
+								<span>EMERGENCY ALERT LIVE (<cfoutput>#activeEmergencyAlertsCount#</cfoutput>)</span>
+							</a>
+						</cfif>
+
 						<!--- Fullscreen Toggle --->
 						<button type="button" class="nav-action-btn" id="btnFullscreen" title="Toggle Fullscreen">
 							<cfoutput>#svgIcon(name="maximize", size=18)#</cfoutput>
@@ -380,35 +402,47 @@
 
 						<!--- Notifications Dropdown --->
 						<div class="dropdown">
-							<button type="button" class="nav-action-btn" data-toggle="dropdown" title="Notifications" aria-label="Notifications">
+							<button type="button" class="nav-action-btn" data-toggle="dropdown" title="Notifications" aria-label="Notifications" style="position:relative;">
 								<cfoutput>#svgIcon(name="bell", size=18)#</cfoutput>
-								<span class="nav-badge-dot"></span>
+								<cfif headerUnreadCount gt 0>
+									<span class="nav-badge-dot" style="background:var(--admin-primary); position:absolute; top:7px; right:7px; width:8px; height:8px; border-radius:50%; border:2px solid var(--admin-surface);"></span>
+								</cfif>
 							</button>
-							<div class="dropdown-menu" style="min-width: 290px;">
-								<div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
-									<span>Notifications</span>
-									<span class="badge badge-primary">3 New</span>
+							<div class="dropdown-menu" style="min-width: 320px; max-width: 360px; padding:0;">
+								<div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 1rem; border-bottom:1px solid var(--admin-border); background:var(--admin-surface);">
+									<span style="font-weight:700; color:var(--admin-text-main);">Notifications</span>
+									<cfif headerUnreadCount gt 0>
+										<span class="badge badge-primary"><cfoutput>#headerUnreadCount# New</cfoutput></span>
+									<cfelse>
+										<span class="badge badge-neutral">All Caught Up</span>
+									</cfif>
 								</div>
-								<a href="#notif-1" class="dropdown-item" style="padding:0.75rem 1rem;">
-									<div style="display:flex; gap:0.65rem; align-items:flex-start;">
-										<span style="color:var(--admin-success); margin-top:2px;"><cfoutput>#svgIcon(name="check-circle", size=16)#</cfoutput></span>
-										<div>
-											<div style="font-weight:600; font-size:0.825rem;">Article Published</div>
-											<div style="font-size:0.75rem; color:var(--admin-text-muted);">"Fall Tourism 2026" went live</div>
+
+								<div style="max-height: 320px; overflow-y: auto;">
+									<cfif arrayLen(headerNotifications) gt 0>
+										<cfloop array="#headerNotifications#" index="local.n">
+											<a href="<cfoutput>#local.n.link#</cfoutput>" class="dropdown-item" style="padding:0.75rem 1rem; border-bottom:1px solid rgba(0,0,0,0.04); display:flex; gap:0.75rem; align-items:flex-start; <cfif local.n.isUnread>background:rgba(0,115,170,0.02);</cfif>">
+												<span style="color:<cfoutput>#local.n.iconColor#</cfoutput>; margin-top:2px; flex-shrink:0;">
+													<cfoutput>#svgIcon(name=local.n.icon, size=16)#</cfoutput>
+												</span>
+												<div style="flex-grow:1; min-width:0;">
+													<div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.4rem; margin-bottom:0.15rem;">
+														<span style="font-weight:700; font-size:0.8rem; color:var(--admin-text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><cfoutput>#local.n.title#</cfoutput></span>
+														<span style="font-size:0.68rem; color:var(--admin-text-muted); flex-shrink:0;"><cfoutput>#formatTimeAgo(local.n.createdat)#</cfoutput></span>
+													</div>
+													<div style="font-size:0.75rem; color:var(--admin-text-muted); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><cfoutput>#local.n.message#</cfoutput></div>
+												</div>
+											</a>
+										</cfloop>
+									<cfelse>
+										<div style="padding:1.5rem 1rem; text-align:center; color:var(--admin-text-muted); font-size:0.8rem;">
+											No recent notifications at this time.
 										</div>
-									</div>
-								</a>
-								<a href="#notif-2" class="dropdown-item" style="padding:0.75rem 1rem;">
-									<div style="display:flex; gap:0.65rem; align-items:flex-start;">
-										<span style="color:var(--admin-warning); margin-top:2px;"><cfoutput>#svgIcon(name="clock", size=16)#</cfoutput></span>
-										<div>
-											<div style="font-weight:600; font-size:0.825rem;">Review Requested</div>
-											<div style="font-size:0.75rem; color:var(--admin-text-muted);">Editor submitted 2 pending drafts</div>
-										</div>
-									</div>
-								</a>
-								<div class="dropdown-divider"></div>
-								<a href="#all-notifications" class="dropdown-item" style="justify-content:center; font-weight:600; font-size:0.8rem; color:var(--admin-primary);">
+									</cfif>
+								</div>
+
+								<div class="dropdown-divider" style="margin:0;"></div>
+								<a href="<cfoutput>#urlFor(controller='main', action='notifications')#</cfoutput>" class="dropdown-item" style="justify-content:center; font-weight:600; font-size:0.8rem; color:var(--admin-primary); padding:0.65rem 1rem; background:rgba(0,115,170,0.02);">
 									View All Notifications
 								</a>
 							</div>
@@ -426,9 +460,9 @@
 							</button>
 							<div class="dropdown-menu" style="min-width: 270px;">
 								<div class="dropdown-header">Signed in as <strong><cfoutput>#curUserEmail#</cfoutput></strong></div>
-								<a href="#profile" class="dropdown-item">
+								<a href="<cfoutput>#urlFor(controller='users', action='profile')#</cfoutput>" class="dropdown-item">
 									<cfoutput>#svgIcon(name="user", size=15)#</cfoutput>
-									<span>My Profile</span>
+									<span>My Profile &amp; Security</span>
 								</a>
 								<cfif isAdmin>
 									<a href="<cfoutput>#urlFor(controller='users', action='index')#</cfoutput>" class="dropdown-item">
@@ -626,7 +660,7 @@
 										<ul class="nav-submenu">
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'dept') and params.dept eq 'pio' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='forms', action='index', params='dept=pio')#</cfoutput>" class="submenu-link">PIO Forms &amp; Inquiries</a></li>
 											<li class="submenu-item"><a href="#pio-press" class="submenu-link">Press Releases &amp; Media</a></li>
-											<li class="submenu-item"><a href="#pio-alerts" class="submenu-link">Emergency Alerts &amp; News</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'alerts' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='alerts', action='index')#</cfoutput>" class="submenu-link">Emergency Alerts &amp; News</a></li>
 										</ul>
 									</li>
 									<!--- Articles & Posts (PIO-owned content) --->

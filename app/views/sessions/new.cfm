@@ -905,7 +905,7 @@
 		<!--- Footer security note --->
 		<div class="login-footer-info">
 			Chelan County Information Technology &bull; 400 Douglas Street, Wenatchee, WA 98801<br>
-			Need help? Contact IT Support at <a href="mailto:support@co.chelan.wa.us">support@co.chelan.wa.us</a> or (509) 667-6215.
+			Need help? Contact IT Support at <a href="mailto:support@chelancounty.gov">support@chelancounty.gov</a> or (509) 667-6215.
 		</div>
 	</div>
 

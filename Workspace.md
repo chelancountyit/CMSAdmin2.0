@@ -138,11 +138,11 @@ like this:
   "folder_path": "files/assessors",
   "department": "Assessor",
   "department_category": "Finance and Records",
-  "redirect_url": "https://www.co.chelan.wa.us/assessor",
+  "redirect_url": "https://www.chelancounty.gov/assessor",
   "contact": {
     "first_name": "Deanna",
     "last_name": "Walter",
-    "email": "assessor@co.chelan.wa.us",
+    "email": "assessor@chelancounty.gov",
     "phone": "509-667-6365",
     "fax": "509-667-6664",
     "address": "350 Orondo Ave",

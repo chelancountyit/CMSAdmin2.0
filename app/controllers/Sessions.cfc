@@ -1,4 +1,4 @@
-﻿component extends="Controller" {
+component extends="Controller" {
 
 	function config() {
 		super.config();
@@ -324,14 +324,6 @@
 		local.cleanInput = LCase(Trim(arguments.email));
 		if (!Len(local.cleanInput)) return local.result;
 
-		// Compute alternate domain (chelancounty.gov <-> co.chelan.wa.us)
-		local.altEmail = local.cleanInput;
-		if (FindNoCase("@co.chelan.wa.us", local.cleanInput)) {
-			local.altEmail = ReplaceNoCase(local.cleanInput, "@co.chelan.wa.us", "@chelancounty.gov");
-		} else if (FindNoCase("@chelancounty.gov", local.cleanInput)) {
-			local.altEmail = ReplaceNoCase(local.cleanInput, "@chelancounty.gov", "@co.chelan.wa.us");
-		}
-
 		// User prefix without domain
 		local.prefix = ListFirst(local.cleanInput, "@");
 
@@ -345,7 +337,6 @@
 				LEFT JOIN cms_roles r ON u.role_id = r.id
 				WHERE (
 					LOWER(LTRIM(RTRIM(u.email))) = :input
-					OR LOWER(LTRIM(RTRIM(u.email))) = :altEmail
 					OR LOWER(LTRIM(RTRIM(u.username))) = :input
 					OR LOWER(LTRIM(RTRIM(u.username))) = :prefix
 					OR LOWER(LTRIM(RTRIM(u.first_name + '.' + u.last_name))) = :input
@@ -355,7 +346,6 @@
 				ORDER BY u.id ASC
 			", {
 				input: { value: local.cleanInput, cfsqltype: "cf_sql_varchar" },
-				altEmail: { value: local.altEmail, cfsqltype: "cf_sql_varchar" },
 				prefix: { value: local.prefix, cfsqltype: "cf_sql_varchar" }
 			}, { datasource: getDb() });
 

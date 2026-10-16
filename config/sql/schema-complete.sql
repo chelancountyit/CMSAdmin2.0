@@ -6,13 +6,14 @@
 -- Modules Compiled:
 --   1. Workspaces Directory (cms_workspaces)
 --   2. Roles & User Security (cms_roles, cms_users, cms_user_workspaces)
---   3. Pages & Subpages (pages, page_FolderExplorer, page_SubPage)
+--   3. Pages, Subpages & Revisions (pages, page_FolderExplorer, page_SubPage, page_revisions)
 --   4. Navigation Menus & Links (navigation_menus, navigation_menu_items)
 --   5. Online Form Builder & EAV Submissions (form_departments, forms, form_fields,
 --      form_submissions, form_submission_values, form_audit_logs)
 --   6. Careers & Job Postings (job_listings, job_applications)
 --   7. "How Do I" Directory & Mega-Menu (how_do_i_categories, how_do_i_items)
 --   8. County Calendar of Events (calendar_event_categories, calendar_events)
+--   9. Emergency Alerts & Incident Dispatch (emergency_alerts)
 --
 -- Execution Mode: One-time execution script, safe to rerun (idempotent).
 -- Data Policy: ZERO test data. Only required core system lookup definitions.
@@ -98,7 +99,7 @@ USING (VALUES
     ('public-works', 'Public Works & Roads', 'pw', 'dept', 'Dept', 'badge-neutral', 'building', 'Road maintenance, flood control, solid waste', 'files/public-works', 'pw', NULL, 'Public Works', 'Operations and Infrastructure', 'Wenatchee', 'WA', '98801', 1, 0, 90),
     ('sheriff', 'Sheriff''s Office', 'sheriff', 'dept', 'Dept', 'badge-neutral', 'shield', 'Law enforcement, public safety, dispatch', 'files/sheriff', 'sheriff', NULL, 'Sheriff', 'Law and Justice', 'Wenatchee', 'WA', '98801', 1, 0, 100),
     ('treasurer', 'Treasurer - Property Taxes', 'treasurer', 'dept', 'Dept', 'badge-neutral', 'building', 'Tax collection and county financial custody', 'files/treasurer', 'treasurer', NULL, 'Treasurer', 'Finance and Records', 'Wenatchee', 'WA', '98801', 1, 0, 110),
-    ('site-main', 'chelancounty.gov (Main Portal)', 'chelancounty.gov', 'site', 'Main Site', 'badge-success', 'globe', 'Primary County public portal', 'files/chelancounty.gov', 'chelancounty.gov', 'https://www.co.chelan.wa.us', 'Public Portal', 'County Administration', 'Wenatchee', 'WA', '98801', 1, 0, 120),
+    ('site-main', 'chelancounty.gov (Main Portal)', 'chelancounty.gov', 'site', 'Main Site', 'badge-success', 'globe', 'Primary County public portal', 'files/chelancounty.gov', 'chelancounty.gov', 'https://www.chelancounty.gov', 'Public Portal', 'County Administration', 'Wenatchee', 'WA', '98801', 1, 0, 120),
     ('site-parks', 'parks.chelancounty.gov', 'parks.chelancounty.gov', 'site', 'Subsite', 'badge-primary', 'globe', 'Parks & recreation department portal', 'files/parks.chelancounty.gov', 'parks.chelancounty.gov', 'https://parks.chelancounty.gov', 'Parks & Recreation', 'Community Services', 'Wenatchee', 'WA', '98801', 1, 0, 130),
     ('site-gis', 'gis.chelancounty.gov', 'gis.chelancounty.gov', 'site', 'Portal', 'badge-warning', 'globe', 'GIS, maps and parcel viewer', 'files/gis.chelancounty.gov', 'gis.chelancounty.gov', 'https://gis.chelancounty.gov', 'GIS', 'Internal Services', 'Wenatchee', 'WA', '98801', 1, 0, 140),
     ('site-expo', 'expo.chelancounty.gov', 'expo.chelancounty.gov', 'site', 'Portal', 'badge-info', 'globe', 'Expo Center and Fairgrounds portal', 'files/expo.chelancounty.gov', 'expo.chelancounty.gov', 'https://expo.chelancounty.gov', 'Expo Center', 'Community Services', 'Cashmere', 'WA', '98815', 1, 0, 150)
@@ -327,6 +328,41 @@ BEGIN
     );
 
     CREATE NONCLUSTERED INDEX [IX_page_SubPage_ContentID] ON [dbo].[page_SubPage] ([SiteID] ASC, [ContentID] ASC, [Position] ASC);
+END;
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[page_revisions]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[page_revisions] (
+        [id]             INT IDENTITY(1,1) NOT NULL,
+        [page_id]        INT NOT NULL,
+        [version_number] INT NOT NULL,
+        [title]          NVARCHAR(255) NOT NULL,
+        [slug]           NVARCHAR(255) NULL,
+        [content_html]   NVARCHAR(MAX) NULL,
+        [summary]        NVARCHAR(MAX) NULL,
+        [layout_type]    NVARCHAR(50) NOT NULL CONSTRAINT [DF_page_rev_layout] DEFAULT ('Full'),
+        [meta_json]      NVARCHAR(MAX) NULL,
+        [change_summary] NVARCHAR(500) NULL,
+        [created_by]     NVARCHAR(255) NOT NULL CONSTRAINT [DF_page_rev_author] DEFAULT ('System'),
+        [created_at]     DATETIME2(7) NOT NULL CONSTRAINT [DF_page_rev_created] DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT [PK_page_revisions] PRIMARY KEY CLUSTERED ([id] ASC),
+        CONSTRAINT [FK_page_revisions_pages] FOREIGN KEY ([page_id]) REFERENCES [dbo].[pages] ([ContentID]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_page_revisions_page_version' AND object_id = OBJECT_ID(N'[dbo].[page_revisions]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_page_revisions_page_version]
+    ON [dbo].[page_revisions] ([page_id] ASC, [version_number] DESC);
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_page_revisions_created' AND object_id = OBJECT_ID(N'[dbo].[page_revisions]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_page_revisions_created]
+    ON [dbo].[page_revisions] ([page_id] ASC, [created_at] DESC);
 END;
 GO
 
@@ -940,6 +976,87 @@ GO
 
 
 -- =============================================================================
+-- MODULE 9: EMERGENCY ALERTS & INCIDENT DISPATCH
+-- =============================================================================
+
+PRINT 'Checking Module 9: emergency_alerts...';
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[emergency_alerts]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[emergency_alerts] (
+        [id]             INT IDENTITY(1,1) NOT NULL,
+        [title]          NVARCHAR(255) NOT NULL,
+        [message]        NVARCHAR(MAX) NOT NULL,
+        [severity]       NVARCHAR(50) NOT NULL CONSTRAINT [DF_emergency_alerts_severity] DEFAULT ('danger'), -- 'danger' (critical/red), 'warning' (orange), 'info' (blue), 'success' (green)
+        [incident_type]  NVARCHAR(50) NOT NULL CONSTRAINT [DF_emergency_alerts_type] DEFAULT ('wildfire'), -- 'wildfire', 'weather', 'road_closure', 'facility', 'general'
+        [link_url]       NVARCHAR(1000) NULL,
+        [link_text]      NVARCHAR(100) NOT NULL CONSTRAINT [DF_emergency_alerts_linktext] DEFAULT (N'View Incident Details'),
+        [is_active]      BIT NOT NULL CONSTRAINT [DF_emergency_alerts_active] DEFAULT (1),
+        [is_dismissible] BIT NOT NULL CONSTRAINT [DF_emergency_alerts_dismiss] DEFAULT (1),
+        [siteid]         NVARCHAR(100) NOT NULL CONSTRAINT [DF_emergency_alerts_siteid] DEFAULT (N'global'),
+        [starts_at]      DATETIME2(7) NULL,
+        [expires_at]     DATETIME2(7) NULL,
+        [created_by]     NVARCHAR(255) NULL,
+        [modified_by]    NVARCHAR(255) NULL,
+        [createdat]      DATETIME2(7) NOT NULL CONSTRAINT [DF_emergency_alerts_createdat] DEFAULT (SYSUTCDATETIME()),
+        [updatedat]      DATETIME2(7) NOT NULL CONSTRAINT [DF_emergency_alerts_updatedat] DEFAULT (SYSUTCDATETIME()),
+        [deletedat]      DATETIME2(7) NULL,
+        CONSTRAINT [PK_emergency_alerts] PRIMARY KEY CLUSTERED ([id] ASC)
+    );
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_emergency_alerts_active' AND object_id = OBJECT_ID(N'[dbo].[emergency_alerts]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_emergency_alerts_active] 
+    ON [dbo].[emergency_alerts] ([is_active], [siteid])
+    INCLUDE ([severity], [title], [starts_at], [expires_at])
+    WHERE [deletedat] IS NULL;
+END;
+GO
+
+-- Seed Baseline Winter Weather Advisory Broadcast if empty
+IF NOT EXISTS (SELECT 1 FROM [dbo].[emergency_alerts] WHERE [deletedat] IS NULL)
+BEGIN
+    INSERT INTO [dbo].[emergency_alerts] (
+        [title],
+        [message],
+        [severity],
+        [incident_type],
+        [link_url],
+        [link_text],
+        [is_active],
+        [is_dismissible],
+        [siteid],
+        [starts_at],
+        [expires_at],
+        [created_by],
+        [modified_by],
+        [createdat],
+        [updatedat]
+    ) VALUES (
+        N'WINTER WEATHER ADVISORY: Stevens Pass & Blewett Pass Traction Tires Required',
+        N'Heavy winter snowfall is impacting higher elevations across Chelan County. WSDOT requires traction tires or chains on US-2 and US-97. County and state road crews are actively plowing and treating mountain corridors.',
+        N'warning',
+        N'road_closure',
+        N'https://wsdot.com/travel/real-time/',
+        N'View Live Pass Conditions',
+        1,
+        1,
+        N'global',
+        SYSUTCDATETIME(),
+        DATEADD(day, 3, SYSUTCDATETIME()),
+        N'PIO Administrator',
+        N'PIO Administrator',
+        SYSUTCDATETIME(),
+        SYSUTCDATETIME()
+    );
+END;
+GO
+
+
+-- =============================================================================
 -- FINAL VERIFICATION: TABLE AUDIT REPORT
 -- =============================================================================
 
@@ -976,7 +1093,9 @@ WHERE t.[schema_id] = SCHEMA_ID(N'dbo')
       N'how_do_i_categories',
       N'how_do_i_items',
       N'calendar_event_categories',
-      N'calendar_events'
+      N'calendar_events',
+      N'emergency_alerts',
+      N'page_revisions'
   )
 ORDER BY t.[name] ASC;
 GO

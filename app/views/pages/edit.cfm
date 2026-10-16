@@ -46,6 +46,39 @@
 	.pg-attr-tab { display:inline-flex; align-items:center; gap:0.35rem; padding:0.32rem 0.7rem; font-size:0.78rem; font-weight:600; border:none; border-radius:var(--radius-sm, 0.375rem); background:transparent; color:var(--admin-text-muted, ##475569); cursor:pointer; transition:all 0.15s ease; }
 	.pg-attr-tab:hover { color:var(--admin-text-main, ##0f172a); }
 	.pg-attr-tab.is-active { background:var(--admin-surface, ##ffffff); color:var(--admin-primary, ##0284c7); box-shadow:0 1px 2px rgba(15, 23, 42, 0.08); }
+
+	/* ----------------------------------------------------
+	   Feature 2.2: Page Revision History & Rollback Studio
+	   ---------------------------------------------------- */
+	##pgRevisionsModalBackdrop { position:fixed; inset:0; z-index:9988; background:rgba(15,23,42,0.72); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+	##pgRevisionsModal { position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9990; width:min(96vw, 1340px); height:min(90vh, 900px); background:var(--admin-surface, ##ffffff); border-radius:var(--radius-lg, 0.75rem); box-shadow:0 25px 70px rgba(15,23,42,0.4); border:1px solid var(--admin-border, ##cbd5e1); display:flex; flex-direction:column; overflow:hidden; }
+	.rev-layout { display:grid; grid-template-columns:340px minmax(0, 1fr); flex:1; min-height:0; overflow:hidden; }
+	@media (max-width: 900px) { .rev-layout { grid-template-columns:1fr; } }
+	.rev-sidebar { border-right:1px solid var(--admin-border-subtle, ##e2e8f0); background:var(--admin-bg, ##f8fafc); display:flex; flex-direction:column; min-height:0; }
+	.rev-sidebar-header { padding:0.85rem 1.1rem; border-bottom:1px solid var(--admin-border-subtle, ##e2e8f0); display:flex; justify-content:space-between; align-items:center; }
+	.rev-list { flex:1; overflow-y:auto; padding:0.75rem; display:flex; flex-direction:column; gap:0.5rem; }
+	.rev-item-card { border:1.5px solid var(--admin-border, ##cbd5e1); border-radius:var(--radius-md, 0.5rem); padding:0.75rem 0.9rem; background:var(--admin-surface, ##ffffff); cursor:pointer; transition:all 0.15s ease; text-align:left; width:100%; display:block; position:relative; }
+	.rev-item-card:hover { border-color:var(--admin-primary, ##0284c7); box-shadow:0 2px 6px rgba(15,23,42,0.06); }
+	.rev-item-card:focus-visible { outline:2px solid var(--admin-primary) !important; outline-offset:2px; }
+	.rev-item-card.is-active { border-color:var(--admin-primary, ##0284c7); background:rgba(2, 132, 199, 0.05); box-shadow:0 0 0 1px var(--admin-primary, ##0284c7); }
+	.rev-item-version { font-weight:700; font-size:0.88rem; color:var(--admin-text-main, ##0f172a); display:flex; align-items:center; justify-content:space-between; }
+	.rev-item-meta { font-size:0.75rem; color:var(--admin-text-muted, ##64748b); margin-top:0.25rem; display:flex; align-items:center; gap:0.35rem; }
+	.rev-item-note { font-size:0.8rem; color:var(--admin-text-main, ##334155); margin-top:0.4rem; line-height:1.35; word-break:break-word; }
+	.rev-stage { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; background:var(--admin-surface, ##ffffff); }
+	.rev-stage-toolbar { padding:0.75rem 1.25rem; border-bottom:1px solid var(--admin-border-subtle, ##e2e8f0); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; background:var(--admin-bg, ##f8fafc); }
+	.rev-stage-body { flex:1; min-height:0; overflow:auto; padding:1.25rem; }
+	.diff-pane { background:var(--admin-surface, ##ffffff); border:1px solid var(--admin-border, ##cbd5e1); border-radius:var(--radius-md, 0.5rem); padding:1.25rem; min-height:100%; line-height:1.65; font-size:0.95rem; }
+	.diff-split-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; height:100%; min-height:0; }
+	@media (max-width: 800px) { .diff-split-grid { grid-template-columns:1fr; } }
+	.diff-split-col { display:flex; flex-direction:column; min-height:0; height:100%; }
+	.diff-split-col-header { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--admin-text-muted, ##64748b); padding:0.4rem 0.6rem; border-bottom:2px solid var(--admin-border, ##cbd5e1); margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center; }
+	.diff-split-col-body { flex:1; overflow:auto; border:1px solid var(--admin-border, ##cbd5e1); border-radius:var(--radius-md, 0.5rem); padding:1rem; background:var(--admin-surface, ##ffffff); }
+	.diff-add { background:rgba(34, 197, 94, 0.18) !important; color:##15803d !important; text-decoration:none !important; border-bottom:2px solid ##22c55e !important; padding:1px 3px; border-radius:2px; font-weight:600; }
+	.diff-del { background:rgba(239, 68, 68, 0.18) !important; color:##b91c1c !important; text-decoration:line-through !important; border-bottom:2px solid ##ef4444 !important; padding:1px 3px; border-radius:2px; opacity:0.85; }
+	.diff-stat-pill { display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:9999px; }
+	.diff-stat-pill.add { background:rgba(34, 197, 94, 0.12); color:##15803d; }
+	.diff-stat-pill.del { background:rgba(239, 68, 68, 0.12); color:##b91c1c; }
+	.diff-code-view { font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:0.84rem; white-space:pre-wrap; word-break:break-all; }
 </style>
 
 <div class="page-header">
@@ -65,6 +98,11 @@
 			<span>All Pages</span>
 		</a>
 		<cfif not isNew>
+			<button type="button" class="btn btn-outline btn-sm" id="btnOpenRevisions" aria-haspopup="dialog" title="View historical snapshots & compare differences (RCW 42.56 compliance)">
+				#svgIcon(name="clock", size=14)#
+				<span>Revisions</span>
+				<span class="badge badge-neutral" id="pgHeaderRevCount" style="margin-left:4px; font-size:0.75rem; font-weight:700;">#Val(revisionCount)#</span>
+			</button>
 			<a href="/#EncodeForHTMLAttribute(page.slug)#" id="btnViewLivePage" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
 				#svgIcon(name="eye", size=14)#
 				<span>View Live<span class="sr-only"> (opens in new tab)</span></span>
@@ -346,9 +384,18 @@
 					<label for="pgPublishAt" class="form-label">Publish On</label>
 					<input type="datetime-local" id="pgPublishAt" name="publishAt" class="form-control" style="width:100%;">
 				</div>
+				<cfif not isNew>
+					<div class="pg-field" style="margin-top:0.6rem; margin-bottom:0.75rem;">
+						<label for="pgChangeSummary" class="form-label" style="font-size:0.8rem; font-weight:600;">Revision Note <span class="pg-help" style="display:inline; margin:0; font-weight:normal;">(optional)</span></label>
+						<input type="text" id="pgChangeSummary" name="changeSummary" class="form-control form-control-sm" placeholder="e.g. Updated fee schedule" maxlength="255" style="width:100%; font-size:0.85rem;">
+					</div>
+				</cfif>
 				<dl id="pgMetaAuditDl" style="margin:0 0 1rem 0;<cfif isNew and not len(trim(page.updated ?: ''))> display:none;</cfif>">
 					<div class="pg-meta-row"><dt>Last updated</dt><dd id="pgLastUpdatedDd">#page.updated ?: ''#</dd></div>
 					<div class="pg-meta-row"><dt>Updated by</dt><dd id="pgAuthorDd">#EncodeForHTML(page.author ?: '')#</dd></div>
+					<cfif not isNew>
+						<div class="pg-meta-row"><dt>History</dt><dd><a href="javascript:void(0)" id="lnkSidebarRevisions" style="font-weight:600; text-decoration:underline; color:var(--admin-primary);">v<span id="pgCurrentVerDd">#Val(currentVersion)#</span> (<span id="pgSidebarRevCount">#Val(revisionCount)#</span> snapshots)</a></dd></div>
+					</cfif>
 				</dl>
 				<div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
 					<button type="submit" class="btn btn-primary btn-sm" id="btnSavePage" style="flex:1;">
@@ -1105,7 +1152,7 @@
 		'panel-warning': '<aside class="jbd-template jbd-panel jbd-panel-warning" aria-label="Warning Panel">\n  <div class="jbd-panel-header">\n    <span class="jbd-panel-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>\n    <h4 class="jbd-panel-title">Attention Required</h4>\n    <span class="jbd-panel-badge" aria-hidden="true">WARNING</span>\n  </div>\n  <div class="jbd-panel-body">\n    <p>Please double-check filing deadlines and required supporting documentation before submitting.</p>\n  </div>\n</aside>',
 		'related-links': '<nav class="jbd-template jbd-related-links" aria-label="Related Links and Resources">\n  <div class="jbd-related-header">\n    <span class="jbd-related-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>\n    <strong class="jbd-related-title">Related Resources &amp; Links</strong>\n  </div>\n  <ul class="jbd-related-list">\n    <li>\n      <a href="#county-code">Chelan County Code &amp; Regulations</a>\n      <span class="jbd-related-desc">Official municipal code and legislative records</span>\n    </li>\n    <li>\n      <a href="#permit-portal">Online Applications &amp; Forms</a>\n      <span class="jbd-related-desc">Downloadable forms and electronic filing portal</span>\n    </li>\n    <li>\n      <a href="#public-notices">Public Notices &amp; Meeting Agendas</a>\n      <span class="jbd-related-desc">Upcoming hearing schedules and community notices</span>\n    </li>\n  </ul>\n</nav>',
 		'references-authority': '<section class="jbd-template jbd-references" aria-label="References and Statutory Authority">\n  <div class="jbd-references-header">\n    <span class="jbd-references-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/></svg></span>\n    <strong class="jbd-references-title">References &amp; Statutory Authority</strong>\n  </div>\n  <ul class="jbd-references-list">\n    <li>\n      <span class="jbd-ref-badge">RCW 36.32</span>\n      <span class="jbd-ref-text">Revised Code of Washington &mdash; County Commissioners General Powers</span>\n    </li>\n    <li>\n      <span class="jbd-ref-badge">CCC Title 14</span>\n      <span class="jbd-ref-text">Chelan County Code &mdash; Development Standards &amp; Administration</span>\n    </li>\n    <li>\n      <span class="jbd-ref-badge">Policy &num;2024-03</span>\n      <span class="jbd-ref-text">Department Operating Procedure &amp; Review Timeline</span>\n    </li>\n  </ul>\n</section>',
-		'contact-hours': '<aside class="jbd-template jbd-contact-card" aria-label="Department Contact and Hours">\n  <div class="jbd-contact-header">\n    <span class="jbd-contact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>\n    <strong class="jbd-contact-title">Office Hours &amp; Location</strong>\n  </div>\n  <div class="jbd-contact-body">\n    <p><strong>Location:</strong> 350 Orondo Ave, Suite 201, Wenatchee, WA 98801</p>\n    <p><strong>Hours:</strong> Monday &ndash; Friday: 8:00 AM &ndash; 5:00 PM</p>\n    <p><strong>Phone:</strong> <a href="tel:5096676100">(509) 667-6100</a></p>\n    <p><strong>Email:</strong> <a href="mailto:info@co.chelan.wa.us">info@co.chelan.wa.us</a></p>\n  </div>\n</aside>',
+		'contact-hours': '<aside class="jbd-template jbd-contact-card" aria-label="Department Contact and Hours">\n  <div class="jbd-contact-header">\n    <span class="jbd-contact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>\n    <strong class="jbd-contact-title">Office Hours &amp; Location</strong>\n  </div>\n  <div class="jbd-contact-body">\n    <p><strong>Location:</strong> 350 Orondo Ave, Suite 201, Wenatchee, WA 98801</p>\n    <p><strong>Hours:</strong> Monday &ndash; Friday: 8:00 AM &ndash; 5:00 PM</p>\n    <p><strong>Phone:</strong> <a href="tel:5096676100">(509) 667-6100</a></p>\n    <p><strong>Email:</strong> <a href="mailto:info@chelancounty.gov">info@chelancounty.gov</a></p>\n  </div>\n</aside>',
 		'callout-info': '<aside class="jbd-template jbd-callout jbd-callout-info" aria-label="Note: Information">\n  <div class="jbd-callout-header">\n    <span class="jbd-callout-badge" aria-hidden="true">INFO</span>\n    <strong class="jbd-callout-title">Important Note</strong>\n  </div>\n  <p>Enter your key takeaway or instructions for the reader here.</p>\n</aside>',
 		'faq-item': '<div class="jbd-template jbd-faq-block" aria-label="Frequently Asked Questions">\n  <div class="jbd-faq-item">\n    <div class="jbd-faq-header">\n      <span class="jbd-faq-badge" aria-hidden="true">Q&amp;A</span>\n      <h4 class="jbd-faq-question">What are the requirements for this procedure?</h4>\n    </div>\n    <div class="jbd-faq-answer">\n      <p>Provide clear, concise details about eligibility, deadlines, and next steps.</p>\n    </div>\n  </div>\n</div>',
 		'steps-process': '<ol class="jbd-template jbd-steps" aria-label="Step by step instructions">\n  <li class="jbd-step">\n    <div class="jbd-step-badge" aria-hidden="true">1</div>\n    <div class="jbd-step-body">\n      <strong class="jbd-step-title">Step 1: Preparation</strong>\n      <p>Gather the necessary documentation and review prerequisites.</p>\n    </div>\n  </li>\n  <li class="jbd-step">\n    <div class="jbd-step-badge" aria-hidden="true">2</div>\n    <div class="jbd-step-body">\n      <strong class="jbd-step-title">Step 2: Submission</strong>\n      <p>Submit your application in person, by mail, or through the online portal.</p>\n    </div>\n  </li>\n</ol>'
@@ -1447,7 +1494,8 @@
 			menuItem: document.getElementById("pgMenuItem") ? document.getElementById("pgMenuItem").checked : false,
 			folderListingEnabled: folderListingEnabled ? folderListingEnabled.checked : false,
 			folderListingIds: folderCheckedIds,
-			sidebarIds: sidebarChecked
+			sidebarIds: sidebarChecked,
+			changeSummary: document.getElementById("pgChangeSummary") ? document.getElementById("pgChangeSummary").value.trim() : ""
 		};
 
 		var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -1513,6 +1561,22 @@
 					var authorDd = document.getElementById("pgAuthorDd");
 					if (authorDd) authorDd.textContent = authorVal;
 				}
+
+				// Update Revision Counters
+				var revCountVal = getField(data, "revisionCount");
+				if (revCountVal !== undefined) {
+					var hBadge = document.getElementById("pgHeaderRevCount");
+					if (hBadge) hBadge.textContent = revCountVal;
+					var sBadge = document.getElementById("pgSidebarRevCount");
+					if (sBadge) sBadge.textContent = revCountVal;
+				}
+				var verNumVal = getField(data, "versionNumber");
+				if (verNumVal !== undefined) {
+					var vDd = document.getElementById("pgCurrentVerDd");
+					if (vDd) vDd.textContent = verNumVal;
+				}
+				var csInput = document.getElementById("pgChangeSummary");
+				if (csInput) csInput.value = "";
 
 				// Update breadcrumb and page title display if title changed
 				var newTitle = getField(data, "title") || title.value.trim();
@@ -2072,6 +2136,589 @@ function insertSnippetAtCursor(textareaId, text) {
 	ta.focus();
 }
 
+/* ==========================================================================
+   Feature 2.2: Page Revision History & Rollback Studio (RCW 42.56 Compliance)
+   ========================================================================== */
+window.__pageRevisions = [];
+window.__selectedRevisionDetail = null;
+window.__currentDiffMode = 'visual';
+
+function getEditorHtmlContent() {
+	var editor = (typeof JBDEditor !== "undefined") ? JBDEditor.get("#pgContent") : null;
+	if (editor && typeof editor.getHTML === "function") {
+		return editor.getHTML();
+	}
+	var ta = document.getElementById("pgContent");
+	return ta ? ta.value : "";
+}
+
+function openRevisionsModal() {
+	var modal = document.getElementById("pgRevisionsModal");
+	var backdrop = document.getElementById("pgRevisionsModalBackdrop");
+	if (!modal || !backdrop) return;
+
+	backdrop.style.display = "block";
+	modal.style.display = "flex";
+	document.body.style.overflow = "hidden";
+
+	loadRevisionsTimeline();
+}
+
+function closeRevisionsModal() {
+	var modal = document.getElementById("pgRevisionsModal");
+	var backdrop = document.getElementById("pgRevisionsModalBackdrop");
+	if (modal) modal.style.display = "none";
+	if (backdrop) backdrop.style.display = "none";
+	document.body.style.overflow = "";
+
+	var openBtn = document.getElementById("btnOpenRevisions");
+	if (openBtn) openBtn.focus();
+}
+
+document.addEventListener("keydown", function(e) {
+	if (e.key === "Escape") {
+		var modal = document.getElementById("pgRevisionsModal");
+		if (modal && modal.style.display === "flex") {
+			closeRevisionsModal();
+		}
+	}
+});
+
+var btnOpenRevisions = document.getElementById("btnOpenRevisions");
+if (btnOpenRevisions) {
+	btnOpenRevisions.addEventListener("click", openRevisionsModal);
+}
+var lnkSidebarRevisions = document.getElementById("lnkSidebarRevisions");
+if (lnkSidebarRevisions) {
+	lnkSidebarRevisions.addEventListener("click", function(e) {
+		e.preventDefault();
+		openRevisionsModal();
+	});
+}
+
+function loadRevisionsTimeline(forceSelectId) {
+	var pageIdEl = document.getElementById("pgContentId");
+	var pageId = parseInt(pageIdEl ? pageIdEl.value : 0, 10) || 0;
+	var listContainer = document.getElementById("revisionsTimelineList");
+	var countEl = document.getElementById("revTimelineCount");
+	var headerCountEl = document.getElementById("pgHeaderRevCount");
+	var sidebarCountEl = document.getElementById("pgSidebarRevCount");
+
+	if (pageId <= 0) {
+		if (listContainer) {
+			listContainer.innerHTML = '<div style="text-align:center; padding:2rem 1rem; color:var(--admin-text-muted); font-size:0.85rem;">This is a new unsaved page. Save the page to database first to begin tracking historical revisions.</div>';
+		}
+		return;
+	}
+
+	if (listContainer) {
+		listContainer.innerHTML = '<div style="text-align:center; padding:2rem 1rem; color:var(--admin-text-muted); font-size:0.85rem;"><span class="admin-spinner-sm" style="margin-right:6px;" aria-hidden="true"></span> Loading revisions...</div>';
+	}
+
+	fetch("/pages/revisions?pageId=" + encodeURIComponent(pageId), {
+		headers: { "Accept": "application/json" }
+	})
+	.then(function(res) { return res.json(); })
+	.then(function(data) {
+		if (!data || !data.success) {
+			if (listContainer) {
+				listContainer.innerHTML = '<div style="text-align:center; padding:2rem 1rem; color:var(--admin-danger); font-size:0.85rem;">Failed to load revisions: ' + (data.message || 'Unknown error') + '</div>';
+			}
+			return;
+		}
+
+		var revs = data.revisions || data.REVISIONS || [];
+		window.__pageRevisions = revs;
+		var total = revs.length;
+
+		if (countEl) countEl.textContent = total;
+		if (headerCountEl) headerCountEl.textContent = total;
+		if (sidebarCountEl) sidebarCountEl.textContent = total;
+
+		if (total === 0) {
+			if (listContainer) {
+				listContainer.innerHTML = '<div style="text-align:center; padding:2rem 1rem; color:var(--admin-text-muted); font-size:0.85rem;">No historical revisions found yet. Click <strong>Snapshot Now</strong> above to create your baseline checkpoint.</div>';
+			}
+			return;
+		}
+
+		// Render timeline items
+		var html = "";
+		for (var i = 0; i < revs.length; i++) {
+			var r = revs[i];
+			var isLatest = (i === 0);
+			var isPreRollback = (r.changeSummary && r.changeSummary.indexOf("Pre-rollback") !== -1);
+			var isRestored = (r.changeSummary && r.changeSummary.indexOf("Restored from") !== -1);
+			var badgeTag = "";
+			if (isLatest) {
+				badgeTag = '<span class="badge badge-primary" style="font-size:0.68rem; padding:0.12rem 0.4rem;">Latest</span>';
+			} else if (isPreRollback) {
+				badgeTag = '<span class="badge badge-warning" style="font-size:0.68rem; padding:0.12rem 0.4rem;">Safety Backup</span>';
+			} else if (isRestored) {
+				badgeTag = '<span class="badge badge-success" style="font-size:0.68rem; padding:0.12rem 0.4rem;">Restored</span>';
+			}
+
+			var sizeKb = (r.contentBytes > 0) ? (Math.round(r.contentBytes / 1024 * 10) / 10) + " KB" : (r.contentLength + " chars");
+
+			html += '<button type="button" class="rev-item-card" data-rev-id="' + r.id + '" onclick="selectRevision(' + r.id + ')" aria-selected="false">';
+			html += '  <div class="rev-item-version">';
+			html += '    <span>Version ' + r.versionNumber + '</span>';
+			html += '    ' + badgeTag;
+			html += '  </div>';
+			html += '  <div class="rev-item-meta">';
+			html += '    <span>' + escapeHtml(r.createdAtFormatted || r.createdAt || "") + '</span>';
+			html += '    <span>&bull;</span>';
+			html += '    <span>' + escapeHtml(r.createdBy || "Admin") + '</span>';
+			html += '  </div>';
+			if (r.changeSummary) {
+				html += '  <div class="rev-item-note">&ldquo;' + escapeHtml(r.changeSummary) + '&rdquo;</div>';
+			}
+			html += '  <div style="font-size:0.72rem; color:var(--admin-text-muted); margin-top:0.35rem; display:flex; justify-content:space-between;">';
+			html += '    <span>Layout: ' + escapeHtml(r.layoutType || 'Full') + '</span>';
+			html += '    <span>' + sizeKb + '</span>';
+			html += '  </div>';
+			html += '</button>';
+		}
+
+		if (listContainer) {
+			listContainer.innerHTML = html;
+		}
+
+		// Auto select requested or first revision
+		var targetId = forceSelectId;
+		if (!targetId && revs.length > 0) {
+			targetId = revs[0].id;
+		}
+		if (targetId) {
+			selectRevision(targetId);
+		}
+	})
+	.catch(function(err) {
+		console.error("loadRevisionsTimeline error:", err);
+		if (listContainer) {
+			listContainer.innerHTML = '<div style="text-align:center; padding:2rem 1rem; color:var(--admin-danger); font-size:0.85rem;">Error contacting revisions service.</div>';
+		}
+	});
+}
+
+function selectRevision(revId) {
+	// Mark active item in sidebar
+	var cards = document.querySelectorAll(".rev-item-card");
+	cards.forEach(function(c) {
+		if (parseInt(c.getAttribute("data-rev-id"), 10) === parseInt(revId, 10)) {
+			c.classList.add("is-active");
+			c.setAttribute("aria-selected", "true");
+		} else {
+			c.classList.remove("is-active");
+			c.setAttribute("aria-selected", "false");
+		}
+	});
+
+	var stageContainer = document.getElementById("revDiffViewer");
+	var selectedTitleEl = document.getElementById("revSelectedTitle");
+	var restoreBtn = document.getElementById("btnRestoreRevision");
+
+	if (stageContainer) {
+		stageContainer.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:var(--admin-text-muted);"><span class="admin-spinner-sm" style="margin-right:6px;" aria-hidden="true"></span> Fetching snapshot content...</div>';
+	}
+
+	var pageIdEl = document.getElementById("pgContentId");
+	var pageId = parseInt(pageIdEl ? pageIdEl.value : 0, 10) || 0;
+
+	fetch("/pages/revision?revId=" + encodeURIComponent(revId) + "&pageId=" + encodeURIComponent(pageId), {
+		headers: { "Accept": "application/json" }
+	})
+	.then(function(res) { return res.json(); })
+	.then(function(data) {
+		if (!data || !data.success || !data.revision) {
+			if (stageContainer) {
+				stageContainer.innerHTML = '<div style="text-align:center; padding:2rem 1rem; color:var(--admin-danger);">Failed to load revision details.</div>';
+			}
+			return;
+		}
+
+		var rev = data.revision;
+		window.__selectedRevisionDetail = rev;
+
+		if (selectedTitleEl) {
+			selectedTitleEl.textContent = "Version " + rev.versionNumber + " (" + (rev.createdAtFormatted || "Snapshot") + ") vs Working Draft";
+		}
+
+		if (restoreBtn) {
+			restoreBtn.disabled = false;
+			restoreBtn.setAttribute("data-version", rev.versionNumber);
+			restoreBtn.setAttribute("data-rev-id", rev.id);
+		}
+
+		renderRevisionDiff();
+	})
+	.catch(function(err) {
+		console.error("selectRevision error:", err);
+		if (stageContainer) {
+			stageContainer.innerHTML = '<div style="text-align:center; padding:2rem 1rem; color:var(--admin-danger);">Error fetching revision content.</div>';
+		}
+	});
+}
+
+function setDiffViewMode(mode) {
+	window.__currentDiffMode = mode;
+	var modeButtons = [
+		{ id: "revModeVisual", mode: "visual" },
+		{ id: "revModeSplit", mode: "split" },
+		{ id: "revModePreview", mode: "preview" },
+		{ id: "revModeRaw", mode: "raw" }
+	];
+	modeButtons.forEach(function(item) {
+		var btn = document.getElementById(item.id);
+		if (btn) {
+			if (item.mode === mode) {
+				btn.classList.add("is-active");
+				btn.setAttribute("aria-selected", "true");
+			} else {
+				btn.classList.remove("is-active");
+				btn.setAttribute("aria-selected", "false");
+			}
+		}
+	});
+
+	if (window.__selectedRevisionDetail) {
+		renderRevisionDiff();
+	}
+}
+
+// Tokenizes text or HTML into word/punctuation tokens
+function tokenizeText(str) {
+	if (!str) return [];
+	return str.match(/<[^>]+>|[\w'-]+|[^\w\s<]+|\s+/g) || [];
+}
+
+// Longest Common Subsequence Diff Generator
+function computeTokenDiff(oldTokens, newTokens) {
+	var n = oldTokens.length;
+	var m = newTokens.length;
+
+	if (n * m > 400000) {
+		return computeLineDiff(oldTokens.join(""), newTokens.join(""));
+	}
+
+	var dp = Array(n + 1);
+	for (var i = 0; i <= n; i++) {
+		dp[i] = new Uint16Array(m + 1);
+	}
+
+	for (var i = 1; i <= n; i++) {
+		for (var j = 1; j <= m; j++) {
+			if (oldTokens[i - 1] === newTokens[j - 1]) {
+				dp[i][j] = dp[i - 1][j - 1] + 1;
+			} else {
+				dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+			}
+		}
+	}
+
+	var diff = [];
+	var i = n, j = m;
+	while (i > 0 || j > 0) {
+		if (i > 0 && j > 0 && oldTokens[i - 1] === newTokens[j - 1]) {
+			diff.unshift({ type: "eq", val: oldTokens[i - 1] });
+			i--;
+			j--;
+		} else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+			diff.unshift({ type: "add", val: newTokens[j - 1] });
+			j--;
+		} else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
+			diff.unshift({ type: "del", val: oldTokens[i - 1] });
+			i--;
+		}
+	}
+
+	return diff;
+}
+
+function computeLineDiff(oldStr, newStr) {
+	var oldLines = oldStr.split("\n");
+	var newLines = newStr.split("\n");
+	var diff = [];
+	var maxLen = Math.max(oldLines.length, newLines.length);
+	for (var i = 0; i < maxLen; i++) {
+		var o = oldLines[i];
+		var n = newLines[i];
+		if (o === n) {
+			if (o !== undefined) diff.push({ type: "eq", val: o + "\n" });
+		} else {
+			if (o !== undefined) diff.push({ type: "del", val: o + "\n" });
+			if (n !== undefined) diff.push({ type: "add", val: n + "\n" });
+		}
+	}
+	return diff;
+}
+
+function renderRevisionDiff() {
+	var rev = window.__selectedRevisionDetail;
+	var container = document.getElementById("revDiffViewer");
+	var statsEl = document.getElementById("revDiffStats");
+	if (!rev || !container) return;
+
+	var histHtml = rev.contentHtml || "";
+	var currHtml = getEditorHtmlContent();
+
+	var oldTokens = tokenizeText(histHtml);
+	var newTokens = tokenizeText(currHtml);
+	var diffResult = computeTokenDiff(oldTokens, newTokens);
+
+	var adds = 0;
+	var dels = 0;
+	for (var k = 0; k < diffResult.length; k++) {
+		if (diffResult[k].type === "add") adds++;
+		if (diffResult[k].type === "del") dels++;
+	}
+
+	if (statsEl) {
+		if (adds === 0 && dels === 0) {
+			statsEl.innerHTML = '<span class="badge badge-neutral" style="font-size:0.75rem;">Exact Match (No Changes)</span>';
+		} else {
+			statsEl.innerHTML = '<span class="diff-stat-pill add">+' + adds + ' additions</span>' +
+			                    '<span class="diff-stat-pill del">-' + dels + ' deletions</span>';
+		}
+	}
+
+	var mode = window.__currentDiffMode;
+
+	if (mode === "visual") {
+		var output = "";
+		for (var d = 0; d < diffResult.length; d++) {
+			var token = diffResult[d];
+			if (token.type === "eq") {
+				output += token.val;
+			} else if (token.type === "add") {
+				output += '<ins class="diff-add">' + escapeHtml(token.val) + '</ins>';
+			} else if (token.type === "del") {
+				output += '<del class="diff-del">' + escapeHtml(token.val) + '</del>';
+			}
+		}
+		container.innerHTML = '<div style="margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:var(--admin-bg); border-radius:var(--radius-sm); font-size:0.8rem; color:var(--admin-text-muted); display:flex; gap:1rem; align-items:center;">' +
+		                      '  <span><ins class="diff-add" style="margin-right:4px;">Green Text</ins> = Added in Current Working Draft</span>' +
+		                      '  <span><del class="diff-del" style="margin-right:4px;">Strikethrough Red</del> = Removed from Version ' + rev.versionNumber + '</span>' +
+		                      '</div>' +
+		                      '<div class="diff-visual-flow" style="line-height:1.7;">' + output + '</div>';
+	} else if (mode === "split") {
+		var splitHtml = '<div class="diff-split-grid">';
+		splitHtml += '  <div class="diff-split-col">';
+		splitHtml += '    <div class="diff-split-col-header">';
+		splitHtml += '      <span>Version ' + rev.versionNumber + ' (Snapshot ' + (rev.createdAtFormatted || "") + ')</span>';
+		splitHtml += '      <span class="badge badge-neutral" style="font-size:0.68rem;">Historical</span>';
+		splitHtml += '    </div>';
+		splitHtml += '    <div class="diff-split-col-body">' + (histHtml || '<em style="color:var(--admin-text-muted);">(Empty Content)</em>') + '</div>';
+		splitHtml += '  </div>';
+
+		splitHtml += '  <div class="diff-split-col">';
+		splitHtml += '    <div class="diff-split-col-header">';
+		splitHtml += '      <span>Current Working Draft (Editor State)</span>';
+		splitHtml += '      <span class="badge badge-primary" style="font-size:0.68rem;">Active</span>';
+		splitHtml += '    </div>';
+		splitHtml += '    <div class="diff-split-col-body">' + (currHtml || '<em style="color:var(--admin-text-muted);">(Empty Content)</em>') + '</div>';
+		splitHtml += '  </div>';
+		splitHtml += '</div>';
+
+		container.innerHTML = splitHtml;
+	} else if (mode === "preview") {
+		var previewHtml = '<div style="margin-bottom:0.75rem; display:flex; justify-content:space-between; align-items:center;">' +
+		                  '  <span style="font-size:0.82rem; color:var(--admin-text-muted);">Isolated layout rendering of Version ' + rev.versionNumber + '</span>' +
+		                  '  <span class="badge badge-secondary" style="font-size:0.75rem;">Layout: ' + escapeHtml(rev.layoutType || 'Full') + '</span>' +
+		                  '</div>' +
+		                  '<div style="border:1px solid var(--admin-border); border-radius:var(--radius-md); padding:1.5rem; background:#ffffff; min-height:360px;">' +
+		                  '  <h1 style="font-size:1.6rem; margin-top:0; margin-bottom:0.75rem; color:#0f172a;">' + escapeHtml(rev.title || "") + '</h1>' +
+		                  (rev.summary ? '<p style="font-size:1rem; color:#64748b; font-style:italic; margin-bottom:1.25rem;">' + escapeHtml(rev.summary) + '</p>' : '') +
+		                  '  <hr style="border:none; border-top:1px solid #e2e8f0; margin-bottom:1.5rem;">' +
+		                  '  <div class="preview-content-rendered">' + (histHtml || '<p><em>(Empty content body)</em></p>') + '</div>' +
+		                  '</div>';
+		container.innerHTML = previewHtml;
+	} else if (mode === "raw") {
+		var rawDiff = "";
+		for (var r = 0; r < diffResult.length; r++) {
+			var tok = diffResult[r];
+			if (tok.type === "eq") {
+				rawDiff += escapeHtml(tok.val);
+			} else if (tok.type === "add") {
+				rawDiff += '<span class="diff-add">' + escapeHtml(tok.val) + '</span>';
+			} else if (tok.type === "del") {
+				rawDiff += '<span class="diff-del">' + escapeHtml(tok.val) + '</span>';
+			}
+		}
+		container.innerHTML = '<div class="diff-code-view" style="padding:1rem; background:var(--admin-bg); border-radius:var(--radius-md); max-height:560px; overflow:auto;">' + rawDiff + '</div>';
+	}
+}
+
+function escapeHtml(str) {
+	if (!str) return "";
+	return String(str)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
+}
+
+function confirmRollbackRevision() {
+	var rev = window.__selectedRevisionDetail;
+	if (!rev) return;
+
+	var pageIdEl = document.getElementById("pgContentId");
+	var pageId = parseInt(pageIdEl ? pageIdEl.value : 0, 10) || 0;
+	if (pageId <= 0) return;
+
+	var confirmMsg = "Are you sure you want to restore Version " + rev.versionNumber + " (" + (rev.createdAtFormatted || "Snapshot") + ")?\n\n" +
+	                 "In compliance with RCW 42.56 Public Records Act, an automatic safety backup of your CURRENT page state will be recorded before this rollback is applied.";
+
+	if (typeof window.adminConfirm === "function") {
+		window.adminConfirm({
+			title: "Roll Back to Version " + rev.versionNumber + "?",
+			message: confirmMsg,
+			confirmText: "Roll Back & Restore",
+			confirmClass: "btn-warning",
+			cancelText: "Cancel",
+			onConfirm: function() {
+				executeRollback(pageId, rev.id, rev.versionNumber);
+			}
+		});
+	} else if (confirm(confirmMsg)) {
+		executeRollback(pageId, rev.id, rev.versionNumber);
+	}
+}
+
+function executeRollback(pageId, revisionId, versionNumber) {
+	var restoreBtn = document.getElementById("btnRestoreRevision");
+	if (restoreBtn) {
+		restoreBtn.disabled = true;
+		restoreBtn.innerHTML = '<span class="admin-spinner-sm" style="margin-right:6px;" aria-hidden="true"></span> Restoring...';
+	}
+
+	fetch("/pages/restore-revision", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Accept": "application/json"
+		},
+		body: JSON.stringify({
+			pageId: pageId,
+			revisionId: revisionId
+		})
+	})
+	.then(function(res) { return res.json(); })
+	.then(function(data) {
+		if (restoreBtn) {
+			restoreBtn.disabled = false;
+			restoreBtn.innerHTML = '<span style="display:inline-flex; align-items:center; gap:0.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> <span>Restore this Version</span></span>';
+		}
+
+		if (!data || !data.success) {
+			if (typeof window.adminToast === "function") {
+				window.adminToast("Rollback failed: " + (data.message || "Unknown error"), "danger");
+			} else {
+				alert("Rollback failed: " + (data.message || "Unknown error"));
+			}
+			return;
+		}
+
+		// Update working editor fields with restored state
+		var pageObj = data.page || data.PAGE || {};
+		if (pageObj.title) {
+			var t = document.getElementById("pgTitle");
+			if (t) t.value = pageObj.title;
+			var bc = document.getElementById("pgBreadcrumbTitle");
+			if (bc) bc.textContent = pageObj.title;
+		}
+		if (pageObj.slug) {
+			var s = document.getElementById("pgSlug");
+			if (s) s.value = pageObj.slug;
+		}
+		if (pageObj.summary !== undefined) {
+			var sm = document.getElementById("pgSummary");
+			if (sm) sm.value = pageObj.summary;
+		}
+		if (pageObj.body !== undefined) {
+			var editor = (typeof JBDEditor !== "undefined") ? JBDEditor.get("#pgContent") : null;
+			if (editor && typeof editor.setHTML === "function") {
+				editor.setHTML(pageObj.body);
+				if (typeof editor.syncToTarget === "function") editor.syncToTarget();
+			} else {
+				var ta = document.getElementById("pgContent");
+				if (ta) ta.value = pageObj.body;
+			}
+		}
+
+		if (typeof window.adminToast === "function") {
+			window.adminToast("Successfully restored Version " + versionNumber + ". Safety backup recorded.", "success");
+		}
+
+		// Reload revisions timeline to show new rollback version at top
+		loadRevisionsTimeline();
+		closeRevisionsModal();
+	})
+	.catch(function(err) {
+		console.error("executeRollback error:", err);
+		if (restoreBtn) {
+			restoreBtn.disabled = false;
+			restoreBtn.innerHTML = '<span style="display:inline-flex; align-items:center; gap:0.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> <span>Restore this Version</span></span>';
+		}
+		if (typeof window.adminToast === "function") {
+			window.adminToast("Communication error while rolling back version.", "danger");
+		}
+	});
+}
+
+function createManualSnapshot() {
+	var pageIdEl = document.getElementById("pgContentId");
+	var pageId = parseInt(pageIdEl ? pageIdEl.value : 0, 10) || 0;
+	if (pageId <= 0) {
+		if (typeof window.adminToast === "function") {
+			window.adminToast("Please save the page before creating revision snapshots.", "warning");
+		} else {
+			alert("Please save the page before creating revision snapshots.");
+		}
+		return;
+	}
+
+	var note = prompt("Enter an optional description or note for this snapshot checkpoint:", "Manual checkpoint snapshot");
+	if (note === null) return;
+
+	var btn = document.getElementById("btnManualSnapshot");
+	if (btn) btn.disabled = true;
+
+	fetch("/pages/snapshot-revision", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Accept": "application/json"
+		},
+		body: JSON.stringify({
+			pageId: pageId,
+			changeSummary: note.trim() || "Manual checkpoint snapshot"
+		})
+	})
+	.then(function(res) { return res.json(); })
+	.then(function(data) {
+		if (btn) btn.disabled = false;
+		if (data && data.success) {
+			if (typeof window.adminToast === "function") {
+				window.adminToast(data.message || "Snapshot recorded.", "success");
+			}
+			loadRevisionsTimeline(data.revisionId);
+		} else {
+			if (typeof window.adminToast === "function") {
+				window.adminToast("Failed to create snapshot: " + (data.message || "Unknown error"), "danger");
+			}
+		}
+	})
+	.catch(function(err) {
+		console.error("createManualSnapshot error:", err);
+		if (btn) btn.disabled = false;
+		if (typeof window.adminToast === "function") {
+			window.adminToast("Network error creating snapshot.", "danger");
+		}
+	});
+}
+
 // Ensure any loading transition screen dismisses when editor DOM is ready
 if (typeof window.hidePageLoader === "function") window.hidePageLoader();
 if (typeof window.finishTopProgress === "function") window.finishTopProgress();
@@ -2187,3 +2834,87 @@ if (typeof window.finishTopProgress === "function") window.finishTopProgress();
 		<button type="button" class="btn btn-outline btn-sm" onclick="closeEmbedFormModal()">Close</button>
 	</div>
 </div>
+
+<!--- =========================================================================
+      Feature 2.2: Page Revision History & Rollback Studio Modal (RCW 42.56)
+      ========================================================================= --->
+<div id="pgRevisionsModalBackdrop" style="display:none;" onclick="closeRevisionsModal()" aria-hidden="true"></div>
+<div id="pgRevisionsModal" role="dialog" aria-modal="true" aria-labelledby="revisionsModalTitle" style="display:none;">
+	<div class="modal-header" style="padding:0.9rem 1.25rem; border-bottom:1px solid var(--admin-border-subtle); display:flex; justify-content:space-between; align-items:center; background:var(--admin-bg);">
+		<div style="display:flex; align-items:center; gap:0.65rem;">
+			<div style="width:34px; height:34px; border-radius:var(--radius-md); background:var(--admin-primary); color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+				<cfoutput>#svgIcon(name="clock", size=18)#</cfoutput>
+			</div>
+			<div>
+				<h2 id="revisionsModalTitle" style="margin:0; font-size:1.05rem; font-weight:700; color:var(--admin-text-main); display:flex; align-items:center; gap:0.5rem;">
+					<span>Revision History &amp; Rollback Studio</span>
+					<span class="badge badge-primary" style="font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem;">RCW 42.56</span>
+				</h2>
+				<div style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:2px;">
+					Public records audit trail of snapshot drafts &amp; published versions. Compare visual differences or restore any prior state.
+				</div>
+			</div>
+		</div>
+		<div style="display:flex; align-items:center; gap:0.5rem;">
+			<button type="button" class="btn btn-outline btn-sm" id="btnManualSnapshot" title="Record an immediate snapshot of current editor state" onclick="createManualSnapshot()">
+				<cfoutput>#svgIcon(name="plus", size=14)#</cfoutput>
+				<span>Snapshot Now</span>
+			</button>
+			<button type="button" class="btn btn-ghost btn-sm" onclick="closeRevisionsModal()" aria-label="Close Revisions Studio" style="font-size:1.25rem; line-height:1; padding:0.25rem 0.5rem;">
+				<cfoutput>#svgIcon(name="x", size=16)#</cfoutput>
+			</button>
+		</div>
+	</div>
+
+	<div class="rev-layout">
+		<!--- Left Column: Timeline List --->
+		<div class="rev-sidebar">
+			<div class="rev-sidebar-header">
+				<span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--admin-text-muted);">
+					Snapshots (<span id="revTimelineCount">0</span>)
+				</span>
+				<span style="font-size:0.72rem; color:var(--admin-text-muted);" title="Most recent version first">Newest &darr;</span>
+			</div>
+			<div id="revisionsTimelineList" class="rev-list" role="tablist" aria-orientation="vertical">
+				<div style="text-align:center; padding:2.5rem 1rem; color:var(--admin-text-muted); font-size:0.85rem;">
+					Loading revision snapshots...
+				</div>
+			</div>
+		</div>
+
+		<!--- Right Column: Comparison & Diff Stage --->
+		<div class="rev-stage">
+			<div class="rev-stage-toolbar">
+				<div style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
+					<strong id="revSelectedTitle" style="font-size:0.92rem; color:var(--admin-text-main);">Select a snapshot to compare</strong>
+					<div id="revDiffStats" style="display:flex; align-items:center; gap:0.35rem;"></div>
+				</div>
+
+				<div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+					<!--- View Mode Selector --->
+					<div class="pg-attr-tabs" role="tablist" aria-label="Revision Diff View Mode">
+						<button type="button" class="pg-attr-tab is-active" id="revModeVisual" data-mode="visual" onclick="setDiffViewMode('visual')">Visual Diff</button>
+						<button type="button" class="pg-attr-tab" id="revModeSplit" data-mode="split" onclick="setDiffViewMode('split')">Side-by-Side</button>
+						<button type="button" class="pg-attr-tab" id="revModePreview" data-mode="preview" onclick="setDiffViewMode('preview')">Snapshot Preview</button>
+						<button type="button" class="pg-attr-tab" id="revModeRaw" data-mode="raw" onclick="setDiffViewMode('raw')">HTML Code</button>
+					</div>
+
+					<!--- Restore / Rollback Action Button --->
+					<button type="button" class="btn btn-warning btn-sm" id="btnRestoreRevision" onclick="confirmRollbackRevision()" style="font-weight:700; display:flex; align-items:center; gap:0.35rem;" disabled>
+						<cfoutput>#svgIcon(name="refresh-cw", size=14)#</cfoutput>
+						<span>Restore this Version</span>
+					</button>
+				</div>
+			</div>
+
+			<div class="rev-stage-body" id="revStageContainer">
+				<div class="diff-pane" id="revDiffViewer">
+					<div style="text-align:center; padding:3rem 1rem; color:var(--admin-text-muted);">
+						Select a snapshot from the timeline on the left to review changes against your current working draft.
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
