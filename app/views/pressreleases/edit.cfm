@@ -131,7 +131,7 @@
 					<input type="datetime-local" id="releasedAt" name="released_at" class="form-control" value="#DateFormat(release.released_at ?: Now(), 'yyyy-mm-dd')#T#TimeFormat(release.released_at ?: Now(), 'HH:mm')#">
 				</div>
 
-				<input type="hidden" id="siteid" name="siteid" value="#EncodeForHTMLAttribute(release.siteid ?: 'global')#">
+				<input type="hidden" id="siteid" name="siteid" value="#EncodeForHTMLAttribute(Len(Trim(release.siteid ?: '')) ? release.siteid : (Len(Trim(activeWorkspaceId ?: '')) ? activeWorkspaceId : 'global'))#">
 
 				<button type="button" class="btn btn-primary" style="width:100%; justify-content:center; padding:0.6rem;" onclick="saveReleaseForm()" id="btnSaveSidebar">
 					#svgIcon(name="check-circle", size=15)#

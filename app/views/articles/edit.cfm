@@ -141,19 +141,7 @@
 					<input type="datetime-local" id="publishedAt" name="published_at" class="form-control" value="#DateFormat(article.published_at ?: Now(), 'yyyy-mm-dd')#T#TimeFormat(article.published_at ?: Now(), 'HH:mm')#">
 				</div>
 
-				<div style="margin-bottom:1.25rem;">
-					<label for="siteid" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.3rem; color:var(--admin-text-muted);">
-						Site / Department Workspace
-					</label>
-					<select id="siteid" name="siteid" class="form-control">
-						<option value="global" <cfif (article.siteid ?: "global") eq "global">selected</cfif>>Global (County-Wide Rollup)</option>
-						<cfloop array="#accessibleWorkspaces#" index="ws">
-							<cfif ws.id neq "all" and ws.id neq "global">
-								<option value="#ws.id#" <cfif (article.siteid ?: "") eq ws.id>selected</cfif>>#EncodeForHTML(ws.name)#</option>
-							</cfif>
-						</cfloop>
-					</select>
-				</div>
+				<input type="hidden" id="siteid" name="siteid" value="#EncodeForHTMLAttribute(Len(Trim(article.siteid ?: '')) ? article.siteid : (Len(Trim(activeWorkspaceId ?: '')) ? activeWorkspaceId : 'global'))#">
 
 				<button type="button" class="btn btn-primary" style="width:100%; justify-content:center; padding:0.6rem;" onclick="saveArticleForm()" id="btnSaveSidebar">
 					#svgIcon(name="check-circle", size=15)#
