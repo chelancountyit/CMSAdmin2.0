@@ -167,7 +167,7 @@
 					<select id="categoryId" name="category_id" class="form-control">
 						<option value="0">-- Select Category --</option>
 						<cfloop array="#categories#" index="cat">
-							<option value="#cat.id#" <cfif Val(article.category_id ?: 0) eq cat.id>selected</cfif>>#EncodeForHTML(cat.name)#</option>
+							<option value="#cat.id#" #(Val(article.category_id ?: 0) eq cat.id ? "selected" : "")#>#EncodeForHTML(cat.name)#</option>
 						</cfloop>
 					</select>
 				</div>
@@ -198,15 +198,11 @@
 
 				<div style="margin-bottom:0.75rem;">
 					<div id="featuredImgPreviewWrap" style="border:1.5px dashed var(--admin-border); border-radius:var(--radius-md); padding:0.5rem; text-align:center; min-height:120px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--admin-bg);">
-						<cfif Len(article.featured_image ?: "")>
-							<img id="featuredImgPreview" src="#EncodeForHTML(article.featured_image)#" alt="" style="max-width:100%; max-height:140px; object-fit:cover; border-radius:var(--radius-sm);">
-						<cfelse>
-							<img id="featuredImgPreview" src="" alt="" style="max-width:100%; max-height:140px; object-fit:cover; border-radius:var(--radius-sm); display:none;">
-							<div id="featuredImgPlaceholder" style="color:var(--admin-text-muted); font-size:0.8rem;">
-								#svgIcon(name="image", size=28)#
-								<div style="margin-top:0.35rem;">No cover image set</div>
-							</div>
-						</cfif>
+						<img id="featuredImgPreview" src="#EncodeForHTML(article.featured_image ?: '')#" alt="" style="max-width:100%; max-height:140px; object-fit:cover; border-radius:var(--radius-sm); #(Len(Trim(article.featured_image ?: '')) ? '' : 'display:none;')#" />
+						<div id="featuredImgPlaceholder" style="color:var(--admin-text-muted); font-size:0.8rem; #(Len(Trim(article.featured_image ?: '')) ? 'display:none;' : '')#">
+							#svgIcon(name="image", size=28)#
+							<div style="margin-top:0.35rem;">No cover image set</div>
+						</div>
 					</div>
 				</div>
 
