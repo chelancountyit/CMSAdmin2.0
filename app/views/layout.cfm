@@ -738,11 +738,11 @@
 											<cfoutput>#svgIcon(name="chevron-right", size=14, class="nav-caret")#</cfoutput>
 										</a>
 										<ul class="nav-submenu">
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'general' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='settings', action='general')#</cfoutput>" class="submenu-link">General Settings</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'seo' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='settings', action='seo')#</cfoutput>" class="submenu-link">Reading &amp; SEO</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'media' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='settings', action='media')#</cfoutput>" class="submenu-link">Media Sizes</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'system' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='settings', action='system')#</cfoutput>" class="submenu-link">System Info</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'startup' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='settings', action='startup')#</cfoutput>" class="submenu-link">Startup &amp; Front-End (.css)</a></li>
-											<li class="submenu-item"><a href="#settings-general" class="submenu-link">General Settings</a></li>
-											<li class="submenu-item"><a href="#settings-reading" class="submenu-link">Reading &amp; SEO</a></li>
-											<li class="submenu-item"><a href="#settings-media" class="submenu-link">Media Sizes</a></li>
-											<li class="submenu-item"><a href="#settings-system" class="submenu-link">System Info</a></li>
 										</ul>
 									</li>
 								</ul>

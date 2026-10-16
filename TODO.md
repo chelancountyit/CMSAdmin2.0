@@ -16,12 +16,12 @@ Essential fixes to replace placeholder navigation, resolve volatile storage patt
   - [x] **Articles & Posts Controller (`Articles.cfc`)**: Replace `#articles-all`, `#articles-new`, `#articles-categories`, `#articles-tags` in [`app/views/layout.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/layout.cfm#L633-L647) with working CRUD routes for news, county blog posts, categories, and tags.
   - [x] **Press Releases & Media Alerts**: Replace `#pio-press` with dedicated press release manager (embargo dates, media contacts, PDF attachments).
   - [x] **Emergency Alerts & Urgent Notices**: Replace `#pio-alerts` with an alert manager for public safety (wildfire levels, road closures, severe weather) — completed in Feature 2.1 (`/alerts`).
-- [ ] **1.2 Complete Administrative Settings Module (`Settings.cfc`)**
-  - [ ] Replace placeholder anchors in [`app/views/layout.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/layout.cfm#L708-L712) and expand [`Settings.cfc`](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Settings.cfc):
-    - [ ] `General Settings` (`/settings/general`): County title, global contact info, timezone, maintenance mode.
-    - [ ] `Reading & SEO` (`/settings/seo`): Default meta tags, OpenGraph/Twitter card defaults, Google Analytics / GTM IDs, robots.txt rules.
-    - [ ] `Media Sizes` (`/settings/media`): Automatic image thumbnail dimensions and max upload size caps.
-    - [ ] `System Info & Diagnostics` (`/settings/system`): Lucee version, JVM memory allocation, SQL Server connection health, disk storage telemetry.
+- [x] **1.2 Complete Administrative Settings Module (`Settings.cfc`)**
+  - [x] Replace placeholder anchors in [`app/views/layout.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/layout.cfm#L740-L746) and expand [`Settings.cfc`](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Settings.cfc):
+    - [x] `General Settings` (`/settings/general`): County title, global contact info, timezone, maintenance mode.
+    - [x] `Reading & SEO` (`/settings/seo`): Default meta tags, OpenGraph/Twitter card defaults, Google Analytics / GTM IDs, robots.txt rules.
+    - [x] `Media Sizes` (`/settings/media`): Automatic image thumbnail dimensions and max upload size caps.
+    - [x] `System Info & Diagnostics` (`/settings/system`): ColdFusion version, JVM memory allocation, SQL Server connection health, disk storage telemetry.
 - [ ] **1.3 Media Library Database Metadata Persistence (`dbo.media_assets`)**
   - [ ] Transition [`Media.cfc`](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Media.cfc) from filesystem-only directory scans to a persistent SQL Server table (`dbo.media_assets`).
   - [ ] Persist alt-text, captions, copyright/credit, ADA audit flags, and workspace ownership to SQL Server.

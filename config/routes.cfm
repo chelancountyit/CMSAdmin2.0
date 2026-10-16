@@ -162,8 +162,18 @@
 		.post(name="workspacesUpdate", pattern="workspaces/update", to="workspaces##update")
 
 		// Settings & Startup Routes
-		.get(name="settingsIndex", pattern="settings", to="settings##startup")
+		.get(name="settingsIndex", pattern="settings", to="settings##general")
 		.get(name="settingsStartup", pattern="settings/startup", to="settings##startup")
+		.get(name="settingsGeneral", pattern="settings/general", to="settings##general")
+		.post(name="settingsSaveGeneral", pattern="settings/save-general", to="settings##saveGeneral")
+		.post(name="settingsSaveGeneralDirect", pattern="settings/saveGeneral", to="settings##saveGeneral")
+		.get(name="settingsSeo", pattern="settings/seo", to="settings##seo")
+		.post(name="settingsSaveSeo", pattern="settings/save-seo", to="settings##saveSeo")
+		.post(name="settingsSaveSeoDirect", pattern="settings/saveSeo", to="settings##saveSeo")
+		.get(name="settingsMedia", pattern="settings/media", to="settings##media")
+		.post(name="settingsSaveMedia", pattern="settings/save-media", to="settings##saveMedia")
+		.post(name="settingsSaveMediaDirect", pattern="settings/saveMedia", to="settings##saveMedia")
+		.get(name="settingsSystem", pattern="settings/system", to="settings##system")
 
 		// Authentication & Security Routes
 		.get(name="login", pattern="login", to="sessions##new")
