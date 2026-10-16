@@ -87,7 +87,7 @@
 
 	<!--- End Mark --->
 	<div style="text-align:center; font-family:system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight:800; letter-spacing:0.5em; color:##64748b; margin:2.5rem 0;">
-		######
+		&##35;&##35;&##35;
 	</div>
 
 	<!--- Official Boilerplate --->
