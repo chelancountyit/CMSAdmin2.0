@@ -32,7 +32,6 @@
 .jbd-template .h4,
 .jbd-template p.h4,
 .jbd-template span.h4,
-p.jbd-panel-title,
 p.jbd-faq-question {
   margin: 0 0 0.4rem 0;
   font-size: 1.05rem;
@@ -40,15 +39,6 @@ p.jbd-faq-question {
   line-height: 1.35;
   color: inherit;
   display: block;
-}
-
-.jbd-template .h4,
-.jbd-template p.h4 {
-  position: relative;
-  top: 50%;
-  -ms-transform: translateY(-50%);
-  -webkit-transform: translateY(-50%);
-  transform: translateY(-50%);
 }
 
 /* Tables created by JBDEditor */
@@ -479,12 +469,24 @@ table.jbd-table th {
   stroke: currentColor;
 }
 
-.jbd-panel-title {
-  margin: 0;
+.jbd-panel-title,
+.jbd-panel-header p.jbd-panel-title,
+.jbd-panel-header .jbd-panel-title,
+.jbd-panel-header .h4,
+.jbd-panel-header p.h4 {
+  margin: 0 !important;
+  padding: 0;
   font-size: 14.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
   flex: 1;
+  line-height: 1.25;
+  align-self: center;
+  position: static;
+  top: auto;
+  transform: none;
+  -webkit-transform: none;
+  -ms-transform: none;
 }
 
 .jbd-panel-badge {

@@ -26,8 +26,8 @@
 
 			<!--- Our custom CMS Admin stylesheet inspired by Mashable Light --->
 			<link href="/stylesheets/admin-theme.css?v=3.0" media="all" rel="stylesheet" type="text/css">
-			<link href="/stylesheets/jbdeditor.css?v=1.6" media="all" rel="stylesheet" type="text/css">
-			<link href="/stylesheets/jbd-templates.css?v=1.3" media="all" rel="stylesheet" type="text/css">
+			<link href="/stylesheets/jbdeditor.css?v=1.7" media="all" rel="stylesheet" type="text/css">
+			<link href="/stylesheets/jbd-templates.css?v=1.4" media="all" rel="stylesheet" type="text/css">
 			<cfif structKeyExists(params, "controller") and params.controller eq "forms">
 				<link href="/stylesheets/form-builder.css?v=2.3" media="all" rel="stylesheet" type="text/css">
 			</cfif>
