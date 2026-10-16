@@ -26,6 +26,22 @@
   box-sizing: border-box;
 }
 
+/* Typography Utilities & Headings Alternative (.h4)
+   Allows block templates (Panels, FAQs, Grids, etc.) to use styled <p class="h4">
+   or <span class="h4"> without creating outline hierarchy violations in ADA audits. */
+.jbd-template .h4,
+.jbd-template p.h4,
+.jbd-template span.h4,
+p.jbd-panel-title,
+p.jbd-faq-question {
+  margin: 0 0 0.4rem 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: inherit;
+  display: block;
+}
+
 /* Tables created by JBDEditor */
 table.jbd-table {
   width: 100%;

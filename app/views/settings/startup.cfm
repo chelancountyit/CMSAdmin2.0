@@ -1,16 +1,18 @@
 <cfoutput>
 <div class="page-header d-flex justify-content-between align-items-center mb-4" style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem;">
 	<div>
-		<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem;">
+		<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
 			<span class="badge badge-primary" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em;">Settings &bull; Startup</span>
 			<span class="badge badge-success" style="font-size:0.72rem;">Bootstrap 5 Compatible</span>
+			<span class="badge badge-neutral" style="font-size:0.72rem;">WCAG 2.1 AA Compliant</span>
+			<span class="badge badge-info" style="font-size:0.72rem;">v2.3 Updated</span>
 		</div>
 		<h1 class="page-title" style="margin:0; font-size:1.5rem; font-weight:700;">Front-End Startup &amp; Template Styles (<code>jbd-templates.css</code>)</h1>
 		<p class="text-muted" style="margin:0.35rem 0 0; color:var(--admin-text-muted); font-size:0.92rem;">
-			The public front-end is full Bootstrap-themed. Import the standalone <code>jbd-templates.css</code> stylesheet in your front-end layout so all JBDEditor content blocks and subpage templates render identically outside the admin editor.
+			The public front-end is full Bootstrap-themed. Import the standalone <code>jbd-templates.css</code> stylesheet in your front-end layout so all JBDEditor content blocks, subpage templates, callouts, and non-heading typography (<code>.h4</code>) render identically outside the admin editor.
 		</p>
 	</div>
-	<div style="display:flex; gap:0.6rem; align-items:center;">
+	<div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
 		<a href="/stylesheets/jbd-templates.css" download="jbd-templates.css" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:0.45rem;">
 			#svgIcon(name="download", size=16)#
 			<span>Download <code>jbd-templates.css</code></span>
