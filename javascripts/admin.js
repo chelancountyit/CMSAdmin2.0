@@ -319,7 +319,7 @@ document.addEventListener("click", function (e) {
   if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
 
   const rawHref = link.getAttribute("href") || "";
-  if (rawHref.startsWith("#") || rawHref.startsWith("javascript:")) return;
+  if (rawHref.startsWith("#") || rawHref.startsWith("javascript:") || link.hasAttribute("data-confirm")) return;
 
   let url;
   try {

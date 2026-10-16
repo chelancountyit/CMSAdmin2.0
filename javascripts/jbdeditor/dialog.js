@@ -633,8 +633,11 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
         </select>
       </div>
       <div class="jbd-form-group">
-        <label for="jbd-table-caption">Table Caption (Accessibility Summary) <span aria-hidden="true" class="jbd-required-indicator">*</span></label>
-        <input type="text" id="jbd-table-caption" class="jbd-input" placeholder="e.g. Quarterly Performance Summary" required aria-required="true" />
+        <label for="jbd-table-caption">Table Caption (Accessibility Summary)</label>
+        <input type="text" id="jbd-table-caption" class="jbd-input" placeholder="e.g. Fee Schedule or Department Contact Directory" />
+        <small style="color:var(--jbd-color-muted, #64748b); font-size:11.5px; margin-top:4px; display:block;">
+          Recommended for WCAG 2.1 AA compliance to summarize table contents for screen readers.
+        </small>
       </div>
       <div class="jbd-form-group-checkbox">
         <label for="jbd-table-border">
@@ -653,24 +656,16 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
           label: 'Create Table',
           className: 'jbd-btn-primary',
           onClick: (d, overlay) => {
-            const rows = parseInt(overlay.querySelector('#jbd-table-rows').value, 10) || 3;
-            const cols = parseInt(overlay.querySelector('#jbd-table-cols').value, 10) || 3;
+            const rows = Math.max(1, Math.min(50, parseInt(overlay.querySelector('#jbd-table-rows').value, 10) || 3));
+            const cols = Math.max(1, Math.min(20, parseInt(overlay.querySelector('#jbd-table-cols').value, 10) || 3));
             const headerType = overlay.querySelector('#jbd-table-header-type').value;
             const captionInput = overlay.querySelector('#jbd-table-caption');
-            const caption = captionInput.value.trim();
-
-            if (!caption) {
-              captionInput.setAttribute('aria-invalid', 'true');
-              captionInput.style.borderColor = '#dc2626';
-              captionInput.focus();
-              return;
-            }
-
+            const caption = captionInput ? captionInput.value.trim() : '';
             const bordered = overlay.querySelector('#jbd-table-border').checked;
             const hasHeader = headerType !== 'none';
 
-            onConfirm({ rows, cols, headerType, hasHeader, caption, bordered });
             d.close(overlay);
+            onConfirm({ rows, cols, headerType, hasHeader, caption, bordered });
           }
         }
       ]

@@ -160,6 +160,8 @@
 		.post(name="workspacesCreate", pattern="workspaces/create", to="workspaces##create")
 		.get(name="workspacesEdit", pattern="workspaces/edit", to="workspaces##edit")
 		.post(name="workspacesUpdate", pattern="workspaces/update", to="workspaces##update")
+		.get(name="workspacesDelete", pattern="workspaces/delete", to="workspaces##delete")
+		.post(name="workspacesDeletePost", pattern="workspaces/delete", to="workspaces##delete")
 
 		// Settings & Startup Routes
 		.get(name="settingsIndex", pattern="settings", to="settings##general")

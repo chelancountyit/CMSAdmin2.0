@@ -12,6 +12,39 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 16, 2026 — JBDEditor Table Insertion & Table Tools Restoration Across All Instances
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Rich Text Editor (`javascripts/jbdeditor.js`, `stylesheets/jbdeditor.css`, `app/views/layout.cfm`, `javascripts/jbdeditor/*`, `vendor/jbdeditor/src/*`)
+- **Key Deliverables:**
+  1. **Restored Missing `Dialog.openTableDialog`, `Dialog.openImageDialog`, and `Dialog.openSpecialCharsDialog`:**
+     - Resolved `TypeError: Dialog.openTableDialog is not a function` in `javascripts/jbdeditor.js` where those static `Dialog` methods had been accidentally omitted from the main bundled editor script.
+  2. **Fixed `TableManager` Cell Creation & Active Cell Detection:**
+     - Replaced literal `'&nbsp;'` string children in `TableManager.addRowAbove`, `addRowBelow`, `addColLeft`, and `addColRight` with Unicode non-breaking space `'\u00A0'` so `createElement` (`document.createTextNode`) no longer prints literal `&nbsp;` text into added cells.
+     - Enhanced `TableManager.getActiveCell(container, savedRange)` to fall back to `savedSelectionRange` when toolbar clicks move focus, and added `Tab` / `Shift+Tab` keyboard cell navigation inside tables.
+     - Improved `openTableModal()` block-level insertion so tables are not nested inside `<p>` tags, always have a trailing paragraph `<p><br></p>` beneath them, and automatically focus the first cell on creation.
+  3. **Enabled Table Controls Across All Toolbar Presets & Styled All Editor Tables:**
+     - Added `'table', 'tableTools'` to `JBD_SUBPAGE_TOOLBAR` and `'tableTools'` to `JBD_ARTICLE_TOOLBAR`, and registered `subpage` in `CustomEditor.TOOLBAR_PRESETS` so Pages, Subpages, Articles, Press Releases, Job Descriptions, and Documentation editors all have full table support.
+     - Updated `stylesheets/jbdeditor.css` (`v=1.8`) and `javascripts/jbdeditor.js` (`v=1.7`) in `app/views/layout.cfm` so all `<table>` and `<caption>` elements inside `.jbd-editor-content` render with clear borders, cell padding, and header backgrounds.
+- **Verification:** Verified `node -c javascripts/jbdeditor.js` syntax check and synchronized all editor bundle copies.
+
+---
+
+### Session: October 16, 2026 — Workspace Deletion Fix & Adobe ColdFusion `DirectoryCreate` Compatibility
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Workspaces Module, Global Functions & Core Admin JS (`app/controllers/Workspaces.cfc`, `app/global/functions.cfm`, `app/views/workspaces/index.cfm`, `config/routes.cfm`, `javascripts/admin.js`, `app/views/layout.cfm`, `app/controllers/Forms.cfc`)
+- **Key Deliverables:**
+  1. **Adobe CF `DirectoryCreate` Fix:**
+     - Resolved `[coldfusion.compiler.validation.FunctionArgMismatchException] Parameter validation error for the DIRECTORYCREATE function` when compiling `Workspaces.cfc` and `Forms.cfc` on Adobe ColdFusion 2021.
+     - Replaced Lucee-specific 2-argument `DirectoryCreate(path, true)` calls with engine-agnostic `CreateObject("java", "java.io.File").init(path).mkdirs()`.
+  2. **Workspace Deletion & Re-Seeding Fix:**
+     - Fixed `getMasterWorkspaces()` and `ensureMasterWorkspacesTablePopulated()` in `app/global/functions.cfm` which previously forced a re-seed whenever active workspace count dropped below 16 (`arrayLen < 16` / `qCheck.cnt < 16`), causing deleted workspaces to immediately reappear or preventing cache refreshes.
+     - Prepended `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` to all `cms_workspaces` SQL Server queries in `Workspaces.cfc` and `functions.cfm`.
+     - Added explicit `workspacesDelete` routes in `config/routes.cfm` and exposed the **Delete** action button directly in the main workspace table row in `app/views/workspaces/index.cfm`.
+     - Updated `javascripts/admin.js` (`v=1.5`) so `a[data-confirm]` links do not prematurely trigger the global page loading overlay before the user confirms the modal dialog.
+- **Verification:** Verified workspace soft-deletion, cache invalidation, and clean compilation on `/workspaces`.
+
+---
+
 ### Session: October 16, 2026 — Articles ADA Pre-Flight Linter & Cover Image Media Browser
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** Articles & Posts Module (`Articles.cfc`, `app/views/articles/edit.cfm`)

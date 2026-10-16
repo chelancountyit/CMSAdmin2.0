@@ -461,21 +461,37 @@ body.jbd-noscroll {
 }
 
 /* Tables inside Editor */
+.jbd-editor-content table,
 .jbd-editor-content table.jbd-table {
   width: 100%;
   border-collapse: collapse;
   margin: 1em 0;
 }
 
+.jbd-editor-content table caption,
+.jbd-editor-content table .jbd-table-caption {
+  caption-side: top;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9em;
+  color: var(--jbd-color-muted, #475569);
+  padding: 0 0 6px 0;
+}
+
+.jbd-editor-content table th,
+.jbd-editor-content table td,
 .jbd-editor-content table.jbd-table th,
 .jbd-editor-content table.jbd-table td {
   padding: 8px 12px;
-  border: 1px solid var(--jbd-color-base-border);
+  border: 1px solid var(--jbd-color-base-border, #cbd5e1);
   text-align: left;
+  vertical-align: top;
+  min-width: 48px;
 }
 
+.jbd-editor-content table th,
 .jbd-editor-content table.jbd-table th {
-  background-color: var(--jbd-color-toolbar-background);
+  background-color: var(--jbd-color-toolbar-background, #f8fafc);
   font-weight: 600;
 }
 

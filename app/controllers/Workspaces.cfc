@@ -302,9 +302,9 @@ component extends="Controller" {
 			local.baseWsDir = "C:\inetpub\CMSAdmin2.0\files\" & local.cleanId;
 			local.targetMediaDir = local.baseWsDir & "\media";
 			local.targetDocsDir = local.baseWsDir & "\documents";
-			if (!DirectoryExists(local.baseWsDir)) DirectoryCreate(local.baseWsDir, true);
-			if (!DirectoryExists(local.targetMediaDir)) DirectoryCreate(local.targetMediaDir, true);
-			if (!DirectoryExists(local.targetDocsDir)) DirectoryCreate(local.targetDocsDir, true);
+			if (!DirectoryExists(local.baseWsDir)) CreateObject("java", "java.io.File").init(local.baseWsDir).mkdirs();
+			if (!DirectoryExists(local.targetMediaDir)) CreateObject("java", "java.io.File").init(local.targetMediaDir).mkdirs();
+			if (!DirectoryExists(local.targetDocsDir)) CreateObject("java", "java.io.File").init(local.targetDocsDir).mkdirs();
 		} catch (any err) {}
 
 		// Persist into SQL Server database
@@ -338,11 +338,13 @@ component extends="Controller" {
 			};
 
 			local.qExisting = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT id, code, deletedat FROM cms_workspaces WHERE code = :code
 			", { code: { value: local.cleanId, cfsqltype: "cf_sql_varchar" } }, { datasource: "ChelanCountyWebsite" });
 
 			if (local.qExisting.recordCount gt 0) {
 				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 					UPDATE cms_workspaces SET
 						name = :name,
 						alias = :alias,
@@ -374,6 +376,7 @@ component extends="Controller" {
 				", local.queryParams, { datasource: "ChelanCountyWebsite" });
 			} else {
 				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 					INSERT INTO cms_workspaces (
 						code, name, alias, type, badge, badge_class, icon, description,
 						folder_path, virtual_directory, redirect_url, department, department_category,
@@ -419,6 +422,7 @@ component extends="Controller" {
 
 		try {
 			local.qWs = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT id, code, name, alias, type, badge, badge_class, icon, description,
 				       folder_path, virtual_directory, redirect_url, department, department_category,
 				       contact_first_name, contact_last_name, contact_email, contact_phone, contact_fax,
@@ -604,9 +608,9 @@ component extends="Controller" {
 			local.baseWsDir = "C:\inetpub\CMSAdmin2.0\files\" & local.cleanId;
 			local.targetMediaDir = local.baseWsDir & "\media";
 			local.targetDocsDir = local.baseWsDir & "\documents";
-			if (!DirectoryExists(local.baseWsDir)) DirectoryCreate(local.baseWsDir, true);
-			if (!DirectoryExists(local.targetMediaDir)) DirectoryCreate(local.targetMediaDir, true);
-			if (!DirectoryExists(local.targetDocsDir)) DirectoryCreate(local.targetDocsDir, true);
+			if (!DirectoryExists(local.baseWsDir)) CreateObject("java", "java.io.File").init(local.baseWsDir).mkdirs();
+			if (!DirectoryExists(local.targetMediaDir)) CreateObject("java", "java.io.File").init(local.targetMediaDir).mkdirs();
+			if (!DirectoryExists(local.targetDocsDir)) CreateObject("java", "java.io.File").init(local.targetDocsDir).mkdirs();
 		} catch (any err) {}
 
 		local.type = local.existing.type;
@@ -625,6 +629,7 @@ component extends="Controller" {
 		// Persist update into SQL Server database
 		try {
 			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				UPDATE cms_workspaces SET
 					name = :name,
 					type = :type,
@@ -717,7 +722,8 @@ component extends="Controller" {
 		try {
 			// Check if workspace exists
 			local.qCheck = queryExecute("
-				SELECT id, code, name, is_system FROM cms_workspaces WHERE code = :code AND deletedat IS NULL
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT id, code, name, is_system FROM cms_workspaces WHERE (code = :code OR alias = :code) AND deletedat IS NULL
 			", { code: { value: local.targetId, cfsqltype: "cf_sql_varchar" } }, { datasource: "ChelanCountyWebsite" });
 
 			if (local.qCheck.recordCount eq 0) {
@@ -734,13 +740,19 @@ component extends="Controller" {
 
 			// Soft delete from database
 			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				UPDATE cms_workspaces SET deletedat = SYSUTCDATETIME(), is_active = 0 WHERE code = :code
-			", { code: { value: local.targetId, cfsqltype: "cf_sql_varchar" } }, { datasource: "ChelanCountyWebsite" });
+			", { code: { value: local.qCheck.code, cfsqltype: "cf_sql_varchar" } }, { datasource: "ChelanCountyWebsite" });
+
+			// If the deleted workspace was the currently active workspace cookie, reset to global
+			if (StructKeyExists(cookie, "cmsadmin_workspace") && LCase(Trim(cookie.cmsadmin_workspace)) eq LCase(local.qCheck.code)) {
+				cookie.cmsadmin_workspace = "global";
+			}
 
 			// Invalidate cache
 			StructDelete(application, "cmsWorkspacesList");
 
-			flashInsert(success="Workspace <strong>" & local.qCheck.name & "</strong> (<code>" & local.targetId & "</code>) was successfully deleted.");
+			flashInsert(success="Workspace <strong>" & local.qCheck.name & "</strong> (<code>" & local.qCheck.code & "</code>) was successfully deleted.");
 		} catch (any err) {
 			flashInsert(error="Failed to delete workspace: " & err.message);
 		}

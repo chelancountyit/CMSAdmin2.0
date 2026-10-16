@@ -8,11 +8,13 @@
 public void function ensureMasterWorkspacesTablePopulated() {
 	try {
 		var qCheck = queryExecute("
-			SELECT COUNT(1) AS cnt FROM cms_workspaces WHERE deletedat IS NULL
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			SELECT COUNT(1) AS cnt FROM cms_workspaces
 		", {}, { datasource: "ChelanCountyWebsite" });
 
-		if (qCheck.cnt < 16) {
+		if (qCheck.cnt == 0) {
 			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'global')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
 					VALUES ('global', 'All Workspaces', '', 'global', 'Global', 'badge-neutral', 'grid', 'County-wide unified view across all municipal divisions and portals', 'files/shared', 'shared', '', 'County-wide', 'County Administration', 1, 1, 0);
@@ -25,21 +27,15 @@ public void function ensureMasterWorkspacesTablePopulated() {
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
 					VALUES ('auditor', 'Auditor - Elections & Records', '', 'dept', 'Auditor', 'badge-purple', 'building', 'Elections, recording & licensing', 'files/auditor', 'auditor', 'https://www.chelancounty.gov/auditor', 'Auditor', 'Finance and Records', 1, 0, 20);
 
-				IF EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'human-resources' AND (deletedat IS NOT NULL OR is_active = 0))
-					UPDATE cms_workspaces SET is_active = 1, deletedat = NULL, is_system = 1 WHERE code = 'human-resources';
-				ELSE IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'human-resources')
+				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'human-resources')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
 					VALUES ('human-resources', 'Human Resources', 'hrm', 'dept', 'HRM', 'badge-purple', 'briefcase', 'Recruitment, personnel & benefits', 'files/hrm', 'hrm', 'https://www.chelancounty.gov/human-resources', 'Human Resources', 'Internal Services', 1, 1, 30);
 
-				IF EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'communications' AND (deletedat IS NOT NULL OR is_active = 0))
-					UPDATE cms_workspaces SET is_active = 1, deletedat = NULL, is_system = 1 WHERE code = 'communications';
-				ELSE IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'communications')
+				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'communications')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
 					VALUES ('communications', 'Public Information', 'pio', 'dept', 'PIO', 'badge-info', 'megaphone', 'Media alerts, press & notifications', 'files/pio', 'pio', 'https://www.chelancounty.gov/pio', 'Public Information', 'Community Outreach', 1, 1, 40);
 
-				IF EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'admin' AND (deletedat IS NOT NULL OR is_active = 0))
-					UPDATE cms_workspaces SET is_active = 1, deletedat = NULL, is_system = 1 WHERE code = 'admin';
-				ELSE IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'admin')
+				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'admin')
 					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
 					VALUES ('admin', 'County Administration', 'county-administration', 'dept', 'Admin', 'badge-neutral', 'building', 'Commissioners, executive & budget', 'files/admin', 'admin', 'https://www.chelancounty.gov/administration', 'County Administration', 'County Administration', 1, 1, 70);
 
@@ -88,7 +84,7 @@ public void function ensureMasterWorkspacesTablePopulated() {
 public array function getMasterWorkspaces() {
 	var shouldRefresh = (!structKeyExists(application, "cmsWorkspacesList") 
 		|| !isArray(application.cmsWorkspacesList) 
-		|| arrayLen(application.cmsWorkspacesList) < 16
+		|| arrayLen(application.cmsWorkspacesList) == 0
 		|| (structKeyExists(url, "reload") && (url.reload == "true" || url.reload == "1"))
 	);
 	if (shouldRefresh) {
@@ -96,6 +92,7 @@ public array function getMasterWorkspaces() {
 		var wsList = [];
 		try {
 			var qWs = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT id, code, name, alias, type, badge, badge_class, icon, description,
 				       folder_path, virtual_directory, redirect_url, department, department_category,
 				       contact_first_name, contact_last_name, contact_email, contact_phone, contact_fax,

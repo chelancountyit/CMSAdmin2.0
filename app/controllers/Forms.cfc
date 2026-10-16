@@ -1223,7 +1223,7 @@ component extends="Controller" {
 	/** Creates the per-submission upload folder (blocked from direct web access) */
 	private struct function ensureUploadDir(required string formKey, required string refId) {
 		local.rootAbs = ExpandPath("/") & "files\_form-uploads\";
-		if (!DirectoryExists(local.rootAbs)) DirectoryCreate(local.rootAbs, true);
+		if (!DirectoryExists(local.rootAbs)) CreateObject("java", "java.io.File").init(local.rootAbs).mkdirs();
 		if (!FileExists(local.rootAbs & "web.config")) {
 			FileWrite(local.rootAbs & "web.config", '<?xml version="1.0" encoding="UTF-8"?>' & Chr(10)
 				& '<!-- Citizen form uploads are private: block all direct HTTP access. -->' & Chr(10)
@@ -1231,7 +1231,7 @@ component extends="Controller" {
 		}
 		local.safeKey = REReplace(arguments.formKey, "[^A-Za-z0-9_\-]", "", "all");
 		local.abs = local.rootAbs & local.safeKey & "\" & arguments.refId & "\";
-		if (!DirectoryExists(local.abs)) DirectoryCreate(local.abs, true);
+		if (!DirectoryExists(local.abs)) CreateObject("java", "java.io.File").init(local.abs).mkdirs();
 		return { absolute: local.abs, relative: "files/_form-uploads/" & local.safeKey & "/" & arguments.refId & "/" };
 	}
 

@@ -477,6 +477,12 @@
 											#svgIcon(name="media", size=13)#
 											<span>Media</span>
 										</a>
+										<cfif !structKeyExists(local.w, "is_system") or !local.w.is_system>
+											<a href="#urlFor(controller='workspaces', action='delete', params='id=' & local.w.id)#" class="btn btn-outline-danger btn-sm" style="font-size:0.75rem; padding:0.25rem 0.5rem;" data-confirm="Are you sure you want to delete workspace '#EncodeForHTMLAttribute(local.w.name)#'?" data-confirm-title="Delete workspace?" data-confirm-accept="Delete" title="Delete Workspace">
+												#svgIcon(name="trash", size=12)#
+												<span>Delete</span>
+											</a>
+										</cfif>
 									</cfif>
 
 									<button type="button" class="btn btn-primary btn-sm btn-switch-ws"

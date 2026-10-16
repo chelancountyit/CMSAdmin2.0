@@ -107,7 +107,7 @@ export const JBD_SUBPAGE_TOOLBAR = [
   '|',
   ['ul', 'ol'],
   '|',
-  ['template', 'exitBlock'],
+  ['table', 'tableTools', 'template', 'exitBlock'],
   '|',
   ['undo', 'redo']
 ];
@@ -123,7 +123,7 @@ export const JBD_ARTICLE_TOOLBAR = [
   '|',
   ['ul', 'ol', 'outdent', 'indent'],
   '|',
-  ['link', 'unlink', 'image', 'table', 'template', 'exitBlock', 'hr', 'specialChar'],
+  ['link', 'unlink', 'image', 'table', 'tableTools', 'template', 'exitBlock', 'hr', 'specialChar'],
   '|',
   ['undo', 'redo', 'find'],
   '|',

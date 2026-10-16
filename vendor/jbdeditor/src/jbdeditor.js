@@ -1064,12 +1064,14 @@ class A11yValidator {
 
   class TableManager {
     static createTable({ rows = 3, cols = 3, headerType = null, hasHeader = true, caption = '', bordered = true }) {
+      rows = Math.max(1, parseInt(rows, 10) || 3);
+      cols = Math.max(1, parseInt(cols, 10) || 3);
       const hType = headerType || (hasHeader ? 'row' : 'none');
       const hasHeaderRow = (hType === 'row' || hType === 'both');
       const hasHeaderCol = (hType === 'col' || hType === 'both');
 
       const table = createElement('table', {
-        className: `jbd-table ${bordered ? 'jbd-table-bordered' : ''}`,
+        className: `jbd-table ${bordered ? 'jbd-table-bordered' : ''}`.trim(),
         style: { width: '100%', borderCollapse: 'collapse' }
       });
 
@@ -1080,6 +1082,7 @@ class A11yValidator {
 
       const tbody = createElement('tbody');
 
+      let bodyRows = rows;
       if (hasHeaderRow) {
         const thead = createElement('thead');
         const headerRow = createElement('tr');
@@ -1089,10 +1092,10 @@ class A11yValidator {
         }
         thead.appendChild(headerRow);
         table.appendChild(thead);
-        rows = rows - 1;
+        bodyRows = Math.max(1, rows - 1);
       }
 
-      for (let r = 0; r < Math.max(1, rows); r++) {
+      for (let r = 0; r < bodyRows; r++) {
         const tr = createElement('tr');
         for (let c = 0; c < cols; c++) {
           if (c === 0 && hasHeaderCol) {
@@ -1110,19 +1113,30 @@ class A11yValidator {
       return table;
     }
 
-    static getActiveCell(container) {
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) return null;
-      let node = selection.anchorNode;
-      if (!node) return null;
-      if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
-
-      while (node && node !== container) {
-        if (node.tagName === 'TD' || node.tagName === 'TH') {
-          return node;
+    static getActiveCell(container, savedRange = null) {
+      const findCellFromNode = (startNode) => {
+        if (!startNode) return null;
+        let node = startNode.nodeType === Node.TEXT_NODE ? startNode.parentNode : startNode;
+        while (node && node !== container && node !== document.body) {
+          if (node.tagName === 'TD' || node.tagName === 'TH') {
+            return container.contains(node) ? node : null;
+          }
+          node = node.parentNode;
         }
-        node = node.parentNode;
+        return null;
+      };
+
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const cell = findCellFromNode(selection.anchorNode) || findCellFromNode(selection.focusNode);
+        if (cell) return cell;
       }
+
+      if (savedRange) {
+        const cell = findCellFromNode(savedRange.startContainer) || findCellFromNode(savedRange.commonAncestorContainer);
+        if (cell) return cell;
+      }
+
       return null;
     }
 
@@ -1130,6 +1144,20 @@ class A11yValidator {
       if (!table) return false;
       const firstCells = table.querySelectorAll('tbody tr > :first-child');
       return Array.from(firstCells).some(c => c.tagName === 'TH');
+    }
+
+    static focusCell(cell) {
+      if (!cell) return;
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(cell);
+        range.collapse(true);
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } catch {}
     }
 
     static addRowAbove(cell) {
@@ -1144,15 +1172,16 @@ class A11yValidator {
       const cols = row.children.length;
       for (let i = 0; i < cols; i++) {
         if (isHead) {
-          newRow.appendChild(createElement('th', { scope: 'col' }, ['&nbsp;']));
+          newRow.appendChild(createElement('th', { scope: 'col' }, ['\u00A0']));
         } else if (i === 0 && hasRowHeaders) {
-          newRow.appendChild(createElement('th', { scope: 'row' }, ['&nbsp;']));
+          newRow.appendChild(createElement('th', { scope: 'row' }, ['\u00A0']));
         } else {
-          newRow.appendChild(createElement('td', {}, ['&nbsp;']));
+          newRow.appendChild(createElement('td', {}, ['\u00A0']));
         }
       }
 
       row.parentNode.insertBefore(newRow, row);
+      TableManager.focusCell(newRow.children[cell.cellIndex] || newRow.firstElementChild);
     }
 
     static addRowBelow(cell) {
@@ -1165,17 +1194,33 @@ class A11yValidator {
 
       const newRow = createElement('tr');
       const cols = row.children.length;
-      for (let i = 0; i < cols; i++) {
-        if (isHead) {
-          newRow.appendChild(createElement('th', { scope: 'col' }, ['&nbsp;']));
-        } else if (i === 0 && hasRowHeaders) {
-          newRow.appendChild(createElement('th', { scope: 'row' }, ['&nbsp;']));
-        } else {
-          newRow.appendChild(createElement('td', {}, ['&nbsp;']));
-        }
-      }
 
-      row.parentNode.insertBefore(newRow, row.nextSibling);
+      // If adding below a THEAD row, insert at the top of TBODY instead of adding a second THEAD row
+      if (isHead && table) {
+        let tbody = table.querySelector('tbody');
+        if (!tbody) {
+          tbody = createElement('tbody');
+          table.appendChild(tbody);
+        }
+        for (let i = 0; i < cols; i++) {
+          if (i === 0 && hasRowHeaders) {
+            newRow.appendChild(createElement('th', { scope: 'row' }, ['\u00A0']));
+          } else {
+            newRow.appendChild(createElement('td', {}, ['\u00A0']));
+          }
+        }
+        tbody.insertBefore(newRow, tbody.firstChild);
+      } else {
+        for (let i = 0; i < cols; i++) {
+          if (i === 0 && hasRowHeaders) {
+            newRow.appendChild(createElement('th', { scope: 'row' }, ['\u00A0']));
+          } else {
+            newRow.appendChild(createElement('td', {}, ['\u00A0']));
+          }
+        }
+        row.parentNode.insertBefore(newRow, row.nextSibling);
+      }
+      TableManager.focusCell(newRow.children[cell.cellIndex] || newRow.firstElementChild);
     }
 
     static addColLeft(cell) {
@@ -1190,9 +1235,9 @@ class A11yValidator {
         const isHeaderRow = r.parentElement && r.parentElement.tagName === 'THEAD';
         let newCell;
         if (isHeaderRow) {
-          newCell = createElement('th', { scope: 'col' }, ['&nbsp;']);
+          newCell = createElement('th', { scope: 'col' }, ['\u00A0']);
         } else {
-          newCell = createElement('td', {}, ['&nbsp;']);
+          newCell = createElement('td', {}, ['\u00A0']);
         }
 
         if (colIndex < r.children.length) {
@@ -1215,9 +1260,9 @@ class A11yValidator {
         const isHeaderRow = r.parentElement && r.parentElement.tagName === 'THEAD';
         let newCell;
         if (isHeaderRow) {
-          newCell = createElement('th', { scope: 'col' }, ['&nbsp;']);
+          newCell = createElement('th', { scope: 'col' }, ['\u00A0']);
         } else {
-          newCell = createElement('td', {}, ['&nbsp;']);
+          newCell = createElement('td', {}, ['\u00A0']);
         }
 
         const nextCell = r.children[colIndex + 1];
@@ -1234,9 +1279,18 @@ class A11yValidator {
       const row = cell.closest('tr');
       if (!row) return;
       const table = row.closest('table');
+      const nextFocusRow = row.nextElementSibling || row.previousElementSibling;
+      const colIdx = cell.cellIndex;
       row.remove();
-      if (table && table.querySelectorAll('tr').length === 0) {
-        table.remove();
+      if (table) {
+        const remainingRows = table.querySelectorAll('tr');
+        if (remainingRows.length === 0) {
+          table.remove();
+        } else if (nextFocusRow) {
+          TableManager.focusCell(nextFocusRow.children[Math.min(colIdx, nextFocusRow.children.length - 1)]);
+        } else {
+          TableManager.focusCell(remainingRows[0].firstElementChild);
+        }
       }
     }
 
@@ -1245,6 +1299,7 @@ class A11yValidator {
       const table = cell.closest('table');
       if (!table) return;
       const colIndex = cell.cellIndex;
+      const currentRow = cell.closest('tr');
 
       const rows = table.querySelectorAll('tr');
       rows.forEach(r => {
@@ -1253,8 +1308,11 @@ class A11yValidator {
         }
       });
 
-      if (table.querySelector('tr') && table.querySelector('tr').children.length === 0) {
+      const firstRow = table.querySelector('tr');
+      if (!firstRow || firstRow.children.length === 0) {
         table.remove();
+      } else if (currentRow && currentRow.children.length > 0) {
+        TableManager.focusCell(currentRow.children[Math.min(colIndex, currentRow.children.length - 1)]);
       }
     }
 
@@ -1792,6 +1850,215 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
   /**
    * Accessible Image insertion dialog
    */
+    static openImageDialog({ onConfirm }) {
+      const form = createElement('div', { className: 'jbd-form-grid' });
+
+      form.innerHTML = `
+        <div class="jbd-form-group">
+          <label for="jbd-image-url">Image Web URL <span aria-hidden="true">*</span></label>
+          <input type="url" id="jbd-image-url" class="jbd-input" placeholder="https://example.com/photo.jpg" required aria-required="true" />
+        </div>
+        <div class="jbd-form-group">
+          <label for="jbd-image-alt">Alternative Text (Alt Description) <span aria-hidden="true">*</span></label>
+          <input type="text" id="jbd-image-alt" class="jbd-input" placeholder="Brief description for screen readers" aria-required="true" />
+        </div>
+        <div class="jbd-form-group">
+          <label for="jbd-image-caption">Caption (optional)</label>
+          <input type="text" id="jbd-image-caption" class="jbd-input" placeholder="Visible photo caption..." />
+        </div>
+        <div class="jbd-form-row">
+          <div class="jbd-form-group">
+            <label for="jbd-image-align">Alignment</label>
+            <select id="jbd-image-align" class="jbd-dialog-select">
+              <option value="none">Default (Block)</option>
+              <option value="left">Left (Float)</option>
+              <option value="center">Center</option>
+              <option value="right">Right (Float)</option>
+            </select>
+          </div>
+          <div class="jbd-form-group">
+            <label for="jbd-image-width">Max Width</label>
+            <input type="text" id="jbd-image-width" class="jbd-input" value="100%" placeholder="100% or 400px" />
+          </div>
+        </div>
+      `;
+
+      Dialog.show({
+        title: 'Insert Image',
+        body: form,
+        buttons: [
+          { label: 'Cancel', className: 'jbd-btn-secondary' },
+          {
+            label: 'Insert Image',
+            className: 'jbd-btn-primary',
+            onClick: (d, overlay) => {
+              const urlInput = overlay.querySelector('#jbd-image-url');
+              const alt = overlay.querySelector('#jbd-image-alt').value.trim();
+              const caption = overlay.querySelector('#jbd-image-caption').value.trim();
+              const align = overlay.querySelector('#jbd-image-align').value;
+              const width = overlay.querySelector('#jbd-image-width').value.trim() || '100%';
+
+              const submit = (src) => {
+                if (src) {
+                  onConfirm({ src, alt: alt || caption || 'Image', caption, align, width });
+                }
+                d.close(overlay);
+              };
+
+              if (urlInput.value.trim()) {
+                submit(urlInput.value.trim());
+              } else {
+                urlInput.focus();
+                if (window.adminAlert) {
+                  window.adminAlert({ title: 'Image URL Required', message: 'Please provide an image URL.', type: 'warning' });
+                } else if (window.showToast) {
+                  window.showToast('Please provide an image URL.', 'warning');
+                }
+              }
+            }
+          }
+        ]
+      });
+    }
+
+    /**
+     * Accessible Table insertion dialog with WCAG scope attributes
+     */
+    static openTableDialog({ onConfirm }) {
+      const form = createElement('div', { className: 'jbd-form-grid' });
+
+      form.innerHTML = `
+        <div class="jbd-form-row">
+          <div class="jbd-form-group">
+            <label for="jbd-table-rows">Number of Rows</label>
+            <input type="number" id="jbd-table-rows" class="jbd-input" min="1" max="50" value="3" aria-required="true" />
+          </div>
+          <div class="jbd-form-group">
+            <label for="jbd-table-cols">Number of Columns</label>
+            <input type="number" id="jbd-table-cols" class="jbd-input" min="1" max="20" value="3" aria-required="true" />
+          </div>
+        </div>
+        <div class="jbd-form-group">
+          <label for="jbd-table-header-type">Header Type (WCAG scope attribute)</label>
+          <select id="jbd-table-header-type" class="jbd-dialog-select">
+            <option value="row" selected>First Row (Column Headers &lt;th scope="col"&gt;)</option>
+            <option value="col">First Column (Row Headers &lt;th scope="row"&gt;)</option>
+            <option value="both">Both (Row and Column Headers)</option>
+            <option value="none">No Headers (Standard Data Cells)</option>
+          </select>
+        </div>
+        <div class="jbd-form-group">
+          <label for="jbd-table-caption">Table Caption (Accessibility Summary)</label>
+          <input type="text" id="jbd-table-caption" class="jbd-input" placeholder="e.g. Fee Schedule or Department Contact Directory" />
+          <small style="color:var(--jbd-color-muted, #64748b); font-size:11.5px; margin-top:4px; display:block;">
+            Recommended for WCAG 2.1 AA compliance to summarize table contents for screen readers.
+          </small>
+        </div>
+        <div class="jbd-form-group-checkbox">
+          <label for="jbd-table-border">
+            <input type="checkbox" id="jbd-table-border" checked />
+            Add Styled Borders
+          </label>
+        </div>
+      `;
+
+      Dialog.show({
+        title: 'Insert Table',
+        body: form,
+        buttons: [
+          { label: 'Cancel', className: 'jbd-btn-secondary' },
+          {
+            label: 'Create Table',
+            className: 'jbd-btn-primary',
+            onClick: (d, overlay) => {
+              const rows = Math.max(1, Math.min(50, parseInt(overlay.querySelector('#jbd-table-rows').value, 10) || 3));
+              const cols = Math.max(1, Math.min(20, parseInt(overlay.querySelector('#jbd-table-cols').value, 10) || 3));
+              const headerType = overlay.querySelector('#jbd-table-header-type').value;
+              const captionInput = overlay.querySelector('#jbd-table-caption');
+              const caption = captionInput ? captionInput.value.trim() : '';
+              const bordered = overlay.querySelector('#jbd-table-border').checked;
+              const hasHeader = headerType !== 'none';
+
+              d.close(overlay);
+              onConfirm({ rows, cols, headerType, hasHeader, caption, bordered });
+            }
+          }
+        ]
+      });
+    }
+
+    /**
+     * Accessible Special characters / symbols modal
+     */
+    static openSpecialCharsDialog({ onSelect }) {
+      const charList = [
+        { char: '©', name: 'Copyright symbol' },
+        { char: '®', name: 'Registered trademark symbol' },
+        { char: '™', name: 'Trademark symbol' },
+        { char: '§', name: 'Section symbol' },
+        { char: '¶', name: 'Pilcrow paragraph symbol' },
+        { char: '•', name: 'Bullet symbol' },
+        { char: '–', name: 'En dash' },
+        { char: '—', name: 'Em dash' },
+        { char: '…', name: 'Ellipsis' },
+        { char: '‰', name: 'Per mille symbol' },
+        { char: '€', name: 'Euro currency' },
+        { char: '$', name: 'Dollar currency' },
+        { char: '£', name: 'Pound currency' },
+        { char: '¥', name: 'Yen currency' },
+        { char: '₹', name: 'Indian Rupee currency' },
+        { char: '¢', name: 'Cent currency' },
+        { char: '¤', name: 'Currency symbol' },
+        { char: '±', name: 'Plus-minus symbol' },
+        { char: '×', name: 'Multiplication sign' },
+        { char: '÷', name: 'Division sign' },
+        { char: '≠', name: 'Not equal sign' },
+        { char: '≤', name: 'Less-than or equal sign' },
+        { char: '≥', name: 'Greater-than or equal sign' },
+        { char: '≈', name: 'Almost equal sign' },
+        { char: '∞', name: 'Infinity symbol' },
+        { char: '√', name: 'Square root symbol' },
+        { char: 'π', name: 'Pi symbol' },
+        { char: 'µ', name: 'Micro sign' },
+        { char: '°', name: 'Degree symbol' },
+        { char: '¬', name: 'Logical negation' },
+        { char: '←', name: 'Left arrow' },
+        { char: '→', name: 'Right arrow' },
+        { char: '↑', name: 'Up arrow' },
+        { char: '↓', name: 'Down arrow' },
+        { char: '↔', name: 'Left-right arrow' },
+        { char: '↵', name: 'Return symbol' },
+        { char: '✓', name: 'Checkmark symbol' },
+        { char: '★', name: 'Black star' },
+        { char: '☆', name: 'White star' },
+        { char: '½', name: 'One half fraction' }
+      ];
+
+      const grid = createElement('div', { className: 'jbd-chars-grid', role: 'group', 'aria-label': 'Special characters' });
+      charList.forEach(item => {
+        const btn = createElement('button', {
+          type: 'button',
+          className: 'jbd-char-btn',
+          title: item.name,
+          'aria-label': item.name,
+          onClick: () => {
+            Dialog.closeAll();
+            onSelect(item.char);
+          }
+        }, [item.char]);
+        grid.appendChild(btn);
+      });
+
+      Dialog.show({
+        title: 'Special Characters & Symbols',
+        body: grid,
+        buttons: [{ label: 'Close', className: 'jbd-btn-secondary' }]
+      });
+    }
+
+    /**
+     * Accessible Find & Replace dialog
+     */
     static openFindReplaceDialog({ onFind, onReplace, onReplaceAll }) {
       const form = createElement('div', { className: 'jbd-form-grid' });
 
@@ -2546,7 +2813,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     '|',
     ['ul', 'ol', 'outdent', 'indent'],
     '|',
-    ['anchor', 'link', 'unlink', 'exitBlock', 'image', 'table', 'tableTools', 'template', 'exitBlock', 'hr', 'specialChar'],
+    ['anchor', 'link', 'unlink', 'image', 'table', 'tableTools', 'template', 'exitBlock', 'hr', 'specialChar'],
     '|',
     ['undo', 'redo', 'find'],
     '|',
@@ -2592,7 +2859,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     '|',
     ['ul', 'ol'],
     '|',
-    ['template', 'exitBlock'],
+    ['table', 'tableTools', 'template', 'exitBlock'],
     '|',
     ['undo', 'redo']
   ];
@@ -2608,7 +2875,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     '|',
     ['ul', 'ol', 'outdent', 'indent'],
     '|',
-    ['link', 'unlink', 'image', 'table', 'template', 'exitBlock', 'hr', 'specialChar'],
+    ['link', 'unlink', 'image', 'table', 'tableTools', 'template', 'exitBlock', 'hr', 'specialChar'],
     '|',
     ['undo', 'redo', 'find'],
     '|',
@@ -3802,6 +4069,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
       full: JBD_FULL_TOOLBAR,
       basic: JBD_BASIC_TOOLBAR,
       minimal: JBD_MINIMAL_TOOLBAR,
+      subpage: JBD_SUBPAGE_TOOLBAR,
       article: JBD_ARTICLE_TOOLBAR
     };
 
@@ -3810,6 +4078,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     static JBD_FULL_TOOLBAR = JBD_FULL_TOOLBAR;
     static JBD_BASIC_TOOLBAR = JBD_BASIC_TOOLBAR;
     static JBD_MINIMAL_TOOLBAR = JBD_MINIMAL_TOOLBAR;
+    static JBD_SUBPAGE_TOOLBAR = JBD_SUBPAGE_TOOLBAR;
     static JBD_ARTICLE_TOOLBAR = JBD_ARTICLE_TOOLBAR;
     static JBD_DEFAULT_INLINE_TOOLBAR = JBD_DEFAULT_INLINE_TOOLBAR;
 
@@ -4241,6 +4510,32 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
         return;
       }
 
+      // Tab / Shift+Tab inside a table cell navigates between cells
+      if (e.key === 'Tab') {
+        const activeCell = TableManager.getActiveCell(this.contentArea, this.savedSelectionRange);
+        if (activeCell) {
+          const table = activeCell.closest('table');
+          if (table) {
+            e.preventDefault();
+            const cells = Array.from(table.querySelectorAll('th, td'));
+            const idx = cells.indexOf(activeCell);
+            if (e.shiftKey) {
+              if (idx > 0) {
+                TableManager.focusCell(cells[idx - 1]);
+              }
+            } else {
+              if (idx >= 0 && idx < cells.length - 1) {
+                TableManager.focusCell(cells[idx + 1]);
+              } else if (idx === cells.length - 1) {
+                TableManager.addRowBelow(activeCell);
+                this._handleInput();
+              }
+            }
+            return;
+          }
+        }
+      }
+
       const isCtrl = e.ctrlKey || e.metaKey;
 
       if (isCtrl) {
@@ -4267,6 +4562,17 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
         } else if (key === 'f') {
           e.preventDefault();
           this.openFindReplaceModal();
+        }
+      } else if (e.shiftKey && e.key === 'Enter') {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          let node = sel.getRangeAt(0).startContainer;
+          if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+          const insideBlock = node && (node.closest('.jbd-template') || node.closest('.jbd-grid') || node.closest('.jbd-callout') || node.closest('.jbd-panel') || node.closest('.jbd-hero') || node.closest('table') || node.closest('blockquote') || node.closest('aside') || node.closest('section'));
+          if (insideBlock) {
+            e.preventDefault();
+            this.exitBlock();
+          }
         }
       } else if (e.key === 'Escape') {
         if (this.inlineToolbar && this.inlineToolbar.isVisible) {
@@ -4623,10 +4929,66 @@ openImageModal() {
 
     openTableModal() {
       if (this.isSourceMode) return;
+      const currentRange = saveSelection(this.contentArea) || this.savedSelectionRange;
+      if (currentRange) {
+        this.savedSelectionRange = currentRange;
+      }
       Dialog.openTableDialog({
         onConfirm: (options) => {
           const table = TableManager.createTable(options);
-          insertAtCursor(this.contentArea, table, this.savedSelectionRange);
+          this.contentArea.focus();
+          if (this.savedSelectionRange) {
+            restoreSelection(this.savedSelectionRange);
+          }
+
+          const selection = window.getSelection();
+          let inserted = false;
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            if (this.contentArea.contains(range.commonAncestorContainer)) {
+              let currentBlock = range.startContainer;
+              if (currentBlock.nodeType === Node.TEXT_NODE) {
+                currentBlock = currentBlock.parentNode;
+              }
+              while (currentBlock && currentBlock.parentNode !== this.contentArea && currentBlock !== this.contentArea) {
+                currentBlock = currentBlock.parentNode;
+              }
+
+              if (currentBlock && currentBlock !== this.contentArea && currentBlock.tagName === 'P') {
+                const text = currentBlock.textContent.trim();
+                if (text === '' && !currentBlock.querySelector('img, table, iframe')) {
+                  currentBlock.parentNode.insertBefore(table, currentBlock);
+                  currentBlock.remove();
+                  inserted = true;
+                } else {
+                  if (currentBlock.nextSibling) {
+                    currentBlock.parentNode.insertBefore(table, currentBlock.nextSibling);
+                  } else {
+                    currentBlock.parentNode.appendChild(table);
+                  }
+                  inserted = true;
+                }
+              }
+            }
+          }
+
+          if (!inserted) {
+            insertAtCursor(this.contentArea, table, this.savedSelectionRange);
+          }
+
+          // Ensure there is a trailing paragraph after the table if it's the last child
+          if (this.contentArea.lastElementChild === table) {
+            const p = document.createElement('p');
+            p.innerHTML = '<br>';
+            this.contentArea.appendChild(p);
+          }
+
+          const firstCell = table.querySelector('th, td');
+          if (firstCell) {
+            TableManager.focusCell(firstCell);
+            this.savedSelectionRange = saveSelection(this.contentArea);
+          }
+
           this._handleInput();
         }
       });
@@ -4634,6 +4996,10 @@ openImageModal() {
 
     openSpecialCharModal() {
       if (this.isSourceMode) return;
+      const currentRange = saveSelection(this.contentArea) || this.savedSelectionRange;
+      if (currentRange) {
+        this.savedSelectionRange = currentRange;
+      }
       Dialog.openSpecialCharsDialog({
         onSelect: (ch) => {
           insertAtCursor(this.contentArea, ch, this.savedSelectionRange);
@@ -4724,8 +5090,10 @@ openImageModal() {
           this.contentArea.focus();
           if (window.find) {
             window.find(findText, matchCase, false, true, false, false, false);
-          } else {
-            alert('Search is not supported in this browser environment.');
+          } else if (window.adminAlert) {
+            window.adminAlert({ title: 'Find Not Supported', message: 'Search is not supported in this browser environment.', type: 'warning' });
+          } else if (window.showToast) {
+            window.showToast('Search is not supported in this browser environment.', 'warning');
           }
         },
         onReplace: (findText, replaceText) => {
@@ -4748,38 +5116,72 @@ openImageModal() {
 
     // --- Table Operations ---
 
+    _getActiveTableCellWithWarning() {
+      const cell = TableManager.getActiveCell(this.contentArea, this.savedSelectionRange);
+      if (!cell) {
+        if (window.showToast) {
+          window.showToast('Please click inside a table cell first.', 'warning');
+        } else if (window.adminAlert) {
+          window.adminAlert({ title: 'No Table Cell Selected', message: 'Please place your cursor inside a table cell first.', type: 'info' });
+        }
+        return null;
+      }
+      return cell;
+    }
+
     tableAddRowAbove() {
-      TableManager.addRowAbove(TableManager.getActiveCell(this.contentArea));
+      const cell = this._getActiveTableCellWithWarning();
+      if (!cell) return;
+      TableManager.addRowAbove(cell);
+      this.savedSelectionRange = saveSelection(this.contentArea);
       this._handleInput();
     }
 
     tableAddRowBelow() {
-      TableManager.addRowBelow(TableManager.getActiveCell(this.contentArea));
+      const cell = this._getActiveTableCellWithWarning();
+      if (!cell) return;
+      TableManager.addRowBelow(cell);
+      this.savedSelectionRange = saveSelection(this.contentArea);
       this._handleInput();
     }
 
     tableAddColLeft() {
-      TableManager.addColLeft(TableManager.getActiveCell(this.contentArea));
+      const cell = this._getActiveTableCellWithWarning();
+      if (!cell) return;
+      TableManager.addColLeft(cell);
+      this.savedSelectionRange = saveSelection(this.contentArea);
       this._handleInput();
     }
 
     tableAddColRight() {
-      TableManager.addColRight(TableManager.getActiveCell(this.contentArea));
+      const cell = this._getActiveTableCellWithWarning();
+      if (!cell) return;
+      TableManager.addColRight(cell);
+      this.savedSelectionRange = saveSelection(this.contentArea);
       this._handleInput();
     }
 
     tableDeleteRow() {
-      TableManager.deleteRow(TableManager.getActiveCell(this.contentArea));
+      const cell = this._getActiveTableCellWithWarning();
+      if (!cell) return;
+      TableManager.deleteRow(cell);
+      this.savedSelectionRange = saveSelection(this.contentArea);
       this._handleInput();
     }
 
     tableDeleteCol() {
-      TableManager.deleteCol(TableManager.getActiveCell(this.contentArea));
+      const cell = this._getActiveTableCellWithWarning();
+      if (!cell) return;
+      TableManager.deleteCol(cell);
+      this.savedSelectionRange = saveSelection(this.contentArea);
       this._handleInput();
     }
 
     tableDeleteTable() {
-      TableManager.deleteTable(TableManager.getActiveCell(this.contentArea));
+      const cell = this._getActiveTableCellWithWarning();
+      if (!cell) return;
+      TableManager.deleteTable(cell);
+      this.savedSelectionRange = saveSelection(this.contentArea);
       this._handleInput();
     }
 
