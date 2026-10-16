@@ -137,6 +137,9 @@
 		flex-direction: column;
 		gap: 0.75rem;
 	}
+	.pg-a11y-drawer[hidden] {
+		display: none !important;
+	}
 	.pg-a11y-drawer-header {
 		display: flex;
 		justify-content: space-between;
@@ -442,10 +445,11 @@
 						<div id="articleA11yPublishSummary" style="font-size:0.75rem; color:var(--admin-text-muted); line-height:1.4;">
 							Article ready for public release. Meets ADA WCAG 2.1 AA.
 						</div>
-						<a href="javascript:void(0)" id="lnkInspectArticleA11y" onclick="window.ArticleA11yLinter.openDrawer()" style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; font-weight:600; color:var(--admin-primary); margin-top:0.35rem; text-decoration:none;">
-							<span>Inspect Diagnostics</span>
-							#svgIcon(name="chevron-down", size=12)#
-						</a>
+						<button type="button" id="lnkInspectArticleA11y" aria-expanded="false" onclick="if(window.ArticleA11yLinter){window.ArticleA11yLinter.toggleDrawer('publish');}return false;" style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; font-weight:600; color:var(--admin-primary); margin-top:0.35rem; background:none; border:none; padding:0; cursor:pointer; text-decoration:none;">
+							<span id="lnkInspectArticleA11yText">Inspect Diagnostics</span>
+							<span id="lnkInspectArticleA11yChevron" style="display:inline-flex; align-items:center; transition:transform 0.2s ease;">#svgIcon(name="chevron-down", size=12)#</span>
+						</button>
+						<div id="articleA11yPublishInlineList" style="display:none; margin-top:0.55rem; padding-top:0.55rem; border-top:1px solid var(--admin-border-subtle, #e2e8f0); flex-direction:column; gap:0.45rem; max-height:280px; overflow-y:auto;"></div>
 					</div>
 				</div>
 
@@ -1964,6 +1968,44 @@ window.ArticleA11yLinter = (function() {
 		});
 
 		listEl.innerHTML = html;
+		renderPublishInlineList();
+	}
+
+	function renderPublishInlineList() {
+		var inlineEl = document.getElementById("articleA11yPublishInlineList");
+		if (!inlineEl) return;
+
+		if (!_lastResults.issues || _lastResults.issues.length === 0) {
+			inlineEl.innerHTML = '<div style="padding:0.5rem 0.6rem; border-radius:6px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-size:0.74rem; line-height:1.35;">' +
+				'<strong>100% WCAG 2.1 AA Compliant</strong><br>No accessibility barriers detected.' +
+			'</div>';
+			return;
+		}
+
+		var inlineHtml = "";
+		_lastResults.issues.forEach(function(issue) {
+			var isErr = (issue.severity === "error");
+			var borderColor = isErr ? "#ef4444" : "#f59e0b";
+			var bgColor = isErr ? "#fffbfb" : "#fffdf9";
+			var tagBg = isErr ? "#fee2e2" : "#fef3c7";
+			var tagColor = isErr ? "#b91c1c" : "#b45309";
+			var tagLabel = isErr ? "CRITICAL" : "WARN";
+
+			inlineHtml += '<div style="border:1px solid var(--admin-border, #cbd5e1); border-left:3px solid ' + borderColor + '; border-radius:6px; padding:0.5rem 0.6rem; background:' + bgColor + '; display:flex; flex-direction:column; gap:0.3rem;">';
+			inlineHtml += '  <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">';
+			inlineHtml += '    <span style="font-size:0.62rem; font-weight:700; padding:0.08rem 0.35rem; border-radius:3px; background:' + tagBg + '; color:' + tagColor + ';">' + tagLabel + '</span>';
+			inlineHtml += '    <strong style="font-size:0.75rem; color:var(--admin-text-main); line-height:1.25;">' + escapeHtml(issue.title) + '</strong>';
+			inlineHtml += '  </div>';
+			inlineHtml += '  <div style="font-size:0.71rem; color:var(--admin-text-muted); line-height:1.3;">' + escapeHtml(issue.message) + '</div>';
+			inlineHtml += '  <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.15rem;">';
+			inlineHtml += '    <button type="button" class="btn btn-outline btn-xs" style="padding:0.15rem 0.45rem; font-size:0.68rem;" onclick="window.ArticleA11yLinter.locateIssue(\'' + issue.id + '\')">Locate</button>';
+			if (issue.quickFixType) {
+				inlineHtml += '    <button type="button" class="btn btn-primary btn-xs" style="padding:0.15rem 0.45rem; font-size:0.68rem; background:var(--admin-primary);" onclick="window.ArticleA11yLinter.applyQuickFix(\'' + issue.id + '\')">Quick Fix</button>';
+			}
+			inlineHtml += '  </div>';
+			inlineHtml += '</div>';
+		});
+		inlineEl.innerHTML = inlineHtml;
 	}
 
 	function locateIssue(issueId) {
@@ -2153,39 +2195,62 @@ window.ArticleA11yLinter = (function() {
 		}
 	}
 
-	function toggleDrawer() {
+	function syncDrawerState(isOpen) {
 		var drawer = document.getElementById("articleA11yIssuesDrawer");
 		var toggleBtn = document.getElementById("btnToggleA11yDrawer");
+		var inlineList = document.getElementById("articleA11yPublishInlineList");
+		var lnkInspect = document.getElementById("lnkInspectArticleA11y");
+		var lnkText = document.getElementById("lnkInspectArticleA11yText");
+		var lnkChevron = document.getElementById("lnkInspectArticleA11yChevron");
+
+		if (drawer) {
+			drawer.hidden = !isOpen;
+			drawer.style.display = isOpen ? "flex" : "none";
+		}
+		if (toggleBtn) {
+			toggleBtn.setAttribute("aria-expanded", String(isOpen));
+		}
+		if (inlineList) {
+			inlineList.style.display = isOpen ? "flex" : "none";
+		}
+		if (lnkInspect) {
+			lnkInspect.setAttribute("aria-expanded", String(isOpen));
+		}
+		if (lnkText) {
+			lnkText.textContent = isOpen ? "Hide Diagnostics" : "Inspect Diagnostics";
+		}
+		if (lnkChevron) {
+			lnkChevron.style.transform = isOpen ? "rotate(180deg)" : "rotate(0deg)";
+		}
+	}
+
+	function toggleDrawer(source) {
+		var drawer = document.getElementById("articleA11yIssuesDrawer");
 		if (!drawer) return;
 
 		var isHidden = drawer.hidden || drawer.style.display === "none";
 		if (isHidden) {
-			openDrawer();
+			openDrawer(source);
 		} else {
 			closeDrawer();
 		}
 	}
 
-	function openDrawer() {
+	function openDrawer(source) {
 		var drawer = document.getElementById("articleA11yIssuesDrawer");
-		var toggleBtn = document.getElementById("btnToggleA11yDrawer");
+		renderDrawerList();
+		syncDrawerState(true);
 		if (drawer) {
-			drawer.hidden = false;
-			drawer.style.display = "flex";
-			if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "true");
-			renderDrawerList();
-			drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			if (source !== "publish") {
+				drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			}
+			drawer.classList.add("jbd-a11y-pulse");
+			setTimeout(function() { drawer.classList.remove("jbd-a11y-pulse"); }, 2400);
 		}
 	}
 
 	function closeDrawer() {
-		var drawer = document.getElementById("articleA11yIssuesDrawer");
-		var toggleBtn = document.getElementById("btnToggleA11yDrawer");
-		if (drawer) {
-			drawer.hidden = true;
-			drawer.style.display = "none";
-			if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "false");
-		}
+		syncDrawerState(false);
 	}
 
 	function setFilter(filterName) {

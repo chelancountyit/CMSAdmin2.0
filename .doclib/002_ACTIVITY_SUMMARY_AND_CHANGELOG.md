@@ -120,3 +120,18 @@ This log maintains a chronological, permanent record of engineering milestones, 
   2. Executed database replacement queries across SQL Server tables (`emergency_alerts`, `how_do_i_items`, `cms_users`, `cms_workspaces`, `calendar_events`, `pages`, `job_applications`).
   3. Verified 0 remaining instances of legacy domain.
 
+---
+
+### Milestone 9: Adobe ColdFusion Compatibility, JBDEditor Table Overhaul & ADA Pre-Flight Inspect Diagnostics Fix
+- **Files Modified:**
+  - `app/controllers/Workspaces.cfc`, `app/controllers/Forms.cfc`, `app/helpers/functions.cfm`, `app/views/workspaces/index.cfm`, `config/routes.cfm`
+  - `javascripts/jbdeditor.js`, `stylesheets/jbdeditor.css`, `app/views/layout.cfm`, `javascripts/admin.js`
+  - `app/views/pages/edit.cfm`, `app/views/articles/edit.cfm`
+- **Root Causes & Engineering Solutions:**
+  1. **Adobe ColdFusion Tag/Function Compatibility:** Replaced 2-argument `DirectoryCreate(..., true)` with sequential parent directory checks and refactored `cfcookie(...)` in `cfscript` to a tag-based helper `setActiveWorkspaceCookie()`.
+  2. **JBDEditor Table Engine (`TableManager`):** Added custom modal table insertion dialog (rows, columns, headers, caption, width), Tab/Shift+Tab cell navigation, cell selection anchors, and full table styling (`stylesheets/jbdeditor.css`) across all editor presets.
+  3. **ADA Pre-Flight "Inspect Diagnostics" Toggle & Inline Scorecard (`pages/edit.cfm` & `articles/edit.cfm`):**
+     - Fixed `.pg-a11y-drawer { display: flex; }` overriding the HTML `[hidden]` attribute by adding `.pg-a11y-drawer[hidden] { display: none !important; }` and explicitly synchronizing `drawer.style.display` and `drawer.hidden` inside `syncDrawerState()`.
+     - Added an expandable inline diagnostics list (`#pgA11yPublishInlineList` and `#articleA11yPublishInlineList`) directly inside the sidebar **ADA Pre-Flight** Publish widget with `Locate` and `Quick Fix` buttons, synchronized chevron rotation (`Inspect Diagnostics` / `Hide Diagnostics`), and replaced all remaining native `prompt()` calls in `PageA11yLinter.applyQuickFix` with a custom accessible modal (`askA11yInputModal`).
+
+

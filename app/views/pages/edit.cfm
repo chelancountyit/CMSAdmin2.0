@@ -214,6 +214,9 @@
 		flex-direction: column;
 		gap: 0.75rem;
 	}
+	.pg-a11y-drawer[hidden] {
+		display: none !important;
+	}
 	.pg-a11y-drawer-header {
 		display: flex;
 		justify-content: space-between;
@@ -434,19 +437,19 @@
 							</div>
 
 							<div class="pg-a11y-bar-actions">
-								<button type="button" class="btn btn-outline btn-xs" id="btnToggleA11yDrawer" aria-expanded="false" aria-controls="pgA11yIssuesDrawer">
+								<button type="button" class="btn btn-outline btn-xs" id="btnToggleA11yDrawer" aria-expanded="false" aria-controls="pgA11yIssuesDrawer" onclick="if(window.PageA11yLinter){window.PageA11yLinter.toggleDrawer();}">
 									#svgIcon(name="eye", size=13)#
 									<span id="btnToggleA11yDrawerText">Audit Report</span>
 									<span class="badge badge-neutral" id="pgA11yIssueBadge" style="margin-left:2px; font-weight:700;">0</span>
 								</button>
-								<button type="button" class="btn btn-ghost btn-xs btn-icon-only" id="btnRescanA11y" title="Re-scan content for accessibility barriers" aria-label="Re-scan accessibility">
+								<button type="button" class="btn btn-ghost btn-xs btn-icon-only" id="btnRescanA11y" title="Re-scan content for accessibility barriers" aria-label="Re-scan accessibility" onclick="if(window.PageA11yLinter){window.PageA11yLinter.scan();}">
 									#svgIcon(name="refresh", size=13)#
 								</button>
 							</div>
 						</div>
 
 						<!--- Expandable Diagnostic & Quick-Fix Drawer --->
-						<div id="pgA11yIssuesDrawer" class="pg-a11y-drawer" hidden>
+						<div id="pgA11yIssuesDrawer" class="pg-a11y-drawer" style="display:none;" hidden>
 							<div class="pg-a11y-drawer-header">
 								<div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
 									<h4 class="pg-a11y-drawer-title" style="margin:0; font-size:0.875rem; font-weight:700;">Pre-Flight Audit Diagnostics</h4>
@@ -456,7 +459,7 @@
 										<button type="button" class="pg-attr-tab" id="tabA11yWarnings" data-filter="warnings" style="padding:0.2rem 0.55rem; font-size:0.75rem; color:##b45309;">Warnings (<span id="tabCountA11yWarnings">0</span>)</button>
 									</div>
 								</div>
-								<button type="button" class="btn btn-ghost btn-xs btn-icon-only" id="btnCloseA11yDrawer" aria-label="Collapse audit report">
+								<button type="button" class="btn btn-ghost btn-xs btn-icon-only" id="btnCloseA11yDrawer" aria-label="Collapse audit report" onclick="if(window.PageA11yLinter){window.PageA11yLinter.closeDrawer();}">
 									#svgIcon(name="x", size=14)#
 								</button>
 							</div>
@@ -681,10 +684,11 @@
 						<div id="pgA11yPublishSummary" style="font-size:0.75rem; color:var(--admin-text-muted); line-height:1.4;">
 							Content ready for public release.
 						</div>
-						<a href="javascript:void(0)" id="lnkInspectA11yDrawer" style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; font-weight:600; color:var(--admin-primary); margin-top:0.35rem; text-decoration:none;">
-							<span>Inspect Diagnostics</span>
-							#svgIcon(name="chevron-down", size=12)#
-						</a>
+						<button type="button" id="lnkInspectA11yDrawer" aria-expanded="false" onclick="if(window.PageA11yLinter){window.PageA11yLinter.toggleDrawer('publish');}return false;" style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; font-weight:600; color:var(--admin-primary); margin-top:0.35rem; background:none; border:none; padding:0; cursor:pointer; text-decoration:none;">
+							<span id="lnkInspectA11yText">Inspect Diagnostics</span>
+							<span id="lnkInspectA11yChevron" style="display:inline-flex; align-items:center; transition:transform 0.2s ease;">#svgIcon(name="chevron-down", size=12)#</span>
+						</button>
+						<div id="pgA11yPublishInlineList" style="display:none; margin-top:0.55rem; padding-top:0.55rem; border-top:1px solid var(--admin-border-subtle, ##e2e8f0); flex-direction:column; gap:0.45rem; max-height:280px; overflow-y:auto;"></div>
 					</div>
 				</div>
 
@@ -3808,6 +3812,102 @@ window.PageA11yLinter = (function() {
 		});
 
 		listEl.innerHTML = html;
+		renderPublishInlineList();
+	}
+
+	function renderPublishInlineList() {
+		var inlineEl = document.getElementById("pgA11yPublishInlineList");
+		if (!inlineEl) return;
+
+		if (!_lastResults.issues || _lastResults.issues.length === 0) {
+			inlineEl.innerHTML = '<div style="padding:0.5rem 0.6rem; border-radius:6px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-size:0.74rem; line-height:1.35;">' +
+				'<strong>100% WCAG 2.1 AA Compliant</strong><br>No accessibility barriers detected.' +
+			'</div>';
+			return;
+		}
+
+		var inlineHtml = "";
+		_lastResults.issues.forEach(function(issue) {
+			var isErr = (issue.severity === "error");
+			var borderColor = isErr ? "#ef4444" : "#f59e0b";
+			var bgColor = isErr ? "#fffbfb" : "#fffdf9";
+			var tagBg = isErr ? "#fee2e2" : "#fef3c7";
+			var tagColor = isErr ? "#b91c1c" : "#b45309";
+			var tagLabel = isErr ? "CRITICAL" : "WARN";
+
+			inlineHtml += '<div style="border:1px solid var(--admin-border, #cbd5e1); border-left:3px solid ' + borderColor + '; border-radius:6px; padding:0.5rem 0.6rem; background:' + bgColor + '; display:flex; flex-direction:column; gap:0.3rem;">';
+			inlineHtml += '  <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">';
+			inlineHtml += '    <span style="font-size:0.62rem; font-weight:700; padding:0.08rem 0.35rem; border-radius:3px; background:' + tagBg + '; color:' + tagColor + ';">' + tagLabel + '</span>';
+			inlineHtml += '    <strong style="font-size:0.75rem; color:var(--admin-text-main); line-height:1.25;">' + escapeHtml(issue.title) + '</strong>';
+			inlineHtml += '  </div>';
+			inlineHtml += '  <div style="font-size:0.71rem; color:var(--admin-text-muted); line-height:1.3;">' + escapeHtml(issue.message) + '</div>';
+			inlineHtml += '  <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.15rem;">';
+			inlineHtml += '    <button type="button" class="btn btn-outline btn-xs" style="padding:0.15rem 0.45rem; font-size:0.68rem;" onclick="window.PageA11yLinter.locateIssue(\'' + issue.id + '\')">Locate</button>';
+			if (issue.quickFixType) {
+				inlineHtml += '    <button type="button" class="btn btn-primary btn-xs" style="padding:0.15rem 0.45rem; font-size:0.68rem; background:var(--admin-primary);" onclick="window.PageA11yLinter.applyQuickFix(\'' + issue.id + '\')">Quick Fix</button>';
+			}
+			inlineHtml += '  </div>';
+			inlineHtml += '</div>';
+		});
+		inlineEl.innerHTML = inlineHtml;
+	}
+
+	function askA11yInputModal(titleText, labelText, defaultValue, onSubmit) {
+		var existing = document.getElementById("pgA11yQuickFixModalBackdrop");
+		if (existing) existing.remove();
+
+		var backdrop = document.createElement("div");
+		backdrop.id = "pgA11yQuickFixModalBackdrop";
+		backdrop.style.cssText = "position:fixed; inset:0; z-index:100005; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:1rem;";
+
+		var modal = document.createElement("div");
+		modal.setAttribute("role", "dialog");
+		modal.setAttribute("aria-modal", "true");
+		modal.style.cssText = "background:var(--admin-surface, #fff); border:1px solid var(--admin-border, #cbd5e1); border-radius:0.75rem; width:100%; max-width:440px; box-shadow:0 20px 50px rgba(15,23,42,0.25); overflow:hidden;";
+
+		modal.innerHTML =
+			'<div style="padding:0.85rem 1.1rem; border-bottom:1px solid var(--admin-border-subtle, #e2e8f0); display:flex; justify-content:space-between; align-items:center; background:var(--admin-bg, #f8fafc);">' +
+				'<strong style="font-size:0.92rem; color:var(--admin-text-main);">' + escapeHtml(titleText) + '</strong>' +
+				'<button type="button" id="pgA11yModalCloseBtn" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.4rem;">&times;</button>' +
+			'</div>' +
+			'<div style="padding:1rem 1.1rem;">' +
+				'<label for="pgA11yModalInput" style="display:block; font-size:0.8rem; font-weight:600; color:var(--admin-text-main); margin-bottom:0.4rem;">' + escapeHtml(labelText) + '</label>' +
+				'<input type="text" id="pgA11yModalInput" class="form-control" style="width:100%;" value="' + escapeHtml(defaultValue || "") + '">' +
+			'</div>' +
+			'<div style="padding:0.75rem 1.1rem; border-top:1px solid var(--admin-border-subtle, #e2e8f0); display:flex; justify-content:flex-end; gap:0.5rem; background:var(--admin-bg, #f8fafc);">' +
+				'<button type="button" id="pgA11yModalCancelBtn" class="btn btn-outline btn-sm">Cancel</button>' +
+				'<button type="button" id="pgA11yModalApplyBtn" class="btn btn-primary btn-sm">Apply Fix</button>' +
+			'</div>';
+
+		backdrop.appendChild(modal);
+		document.body.appendChild(backdrop);
+
+		var input = document.getElementById("pgA11yModalInput");
+		var closeBtn = document.getElementById("pgA11yModalCloseBtn");
+		var cancelBtn = document.getElementById("pgA11yModalCancelBtn");
+		var applyBtn = document.getElementById("pgA11yModalApplyBtn");
+
+		function close() {
+			if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+		}
+		function submit() {
+			var val = input ? input.value : "";
+			close();
+			if (typeof onSubmit === "function") onSubmit(val);
+		}
+
+		if (closeBtn) closeBtn.onclick = close;
+		if (cancelBtn) cancelBtn.onclick = close;
+		if (applyBtn) applyBtn.onclick = submit;
+		backdrop.onclick = function(e) { if (e.target === backdrop) close(); };
+		if (input) {
+			input.focus();
+			input.select();
+			input.onkeydown = function(e) {
+				if (e.key === "Enter") { e.preventDefault(); submit(); }
+				if (e.key === "Escape") { e.preventDefault(); close(); }
+			};
+		}
 	}
 
 	function locateIssue(issueId) {
@@ -3887,27 +3987,29 @@ window.PageA11yLinter = (function() {
 
 		switch (issue.quickFixType) {
 			case "set-alt":
-				var promptVal = prompt("Enter descriptive alternative text for this image (or click Cancel):", issue.meta ? (issue.meta.currentAlt || "") : "");
-				if (promptVal !== null) {
-					var trimmed = promptVal.trim();
-					if (trimmed.length > 0) {
-						targetNode.setAttribute("alt", trimmed);
-						targetNode.removeAttribute("role");
-						targetNode.removeAttribute("aria-hidden");
-					} else {
-						// Mark decorative if empty string entered
-						targetNode.setAttribute("alt", "");
-						targetNode.setAttribute("role", "presentation");
+				askA11yInputModal(
+					"Image Alternative Text (WCAG 1.1.1)",
+					"Enter descriptive alt text (or leave blank to mark decorative):",
+					issue.meta ? (issue.meta.currentAlt || "") : "",
+					function(promptVal) {
+						var trimmed = (promptVal || "").trim();
+						if (trimmed.length > 0) {
+							targetNode.setAttribute("alt", trimmed);
+							targetNode.removeAttribute("role");
+							targetNode.removeAttribute("aria-hidden");
+						} else {
+							targetNode.setAttribute("alt", "");
+							targetNode.setAttribute("role", "presentation");
+						}
+						syncChanges();
 					}
-					syncChanges();
-				}
+				);
 				break;
 
 			case "change-heading":
 				var newTag = (issue.meta && issue.meta.targetTag) ? issue.meta.targetTag : "h2";
 				var replacementHeading = document.createElement(newTag);
 				replacementHeading.innerHTML = targetNode.innerHTML;
-				// Copy attributes
 				Array.from(targetNode.attributes).forEach(function(attr) {
 					replacementHeading.setAttribute(attr.name, attr.value);
 				});
@@ -3922,11 +4024,17 @@ window.PageA11yLinter = (function() {
 
 			case "add-aria-label":
 				var existingLabel = targetNode.getAttribute("aria-label") || (targetNode.textContent || "").trim();
-				var newLabel = prompt("Enter an accessible description / aria-label for this link:", existingLabel);
-				if (newLabel !== null && newLabel.trim().length > 0) {
-					targetNode.setAttribute("aria-label", newLabel.trim());
-					syncChanges();
-				}
+				askA11yInputModal(
+					"Accessible Link Label (WCAG 2.4.4)",
+					"Enter an accessible description / aria-label for this link:",
+					existingLabel,
+					function(newLabel) {
+						if (newLabel && newLabel.trim().length > 0) {
+							targetNode.setAttribute("aria-label", newLabel.trim());
+							syncChanges();
+						}
+					}
+				);
 				break;
 
 			case "add-new-tab-notice":
@@ -3977,15 +4085,21 @@ window.PageA11yLinter = (function() {
 
 			case "add-table-caption":
 				var existingCaption = targetNode.querySelector("caption");
-				var captionPrompt = prompt("Enter a brief title or caption summarizing this table:", "Data Summary Table");
-				if (captionPrompt !== null && captionPrompt.trim().length > 0) {
-					if (!existingCaption) {
-						existingCaption = document.createElement("caption");
-						targetNode.insertBefore(existingCaption, targetNode.firstChild);
+				askA11yInputModal(
+					"Table Caption (WCAG 1.3.1)",
+					"Enter a brief title or caption summarizing this table:",
+					existingCaption ? existingCaption.textContent : "Data Summary Table",
+					function(captionPrompt) {
+						if (captionPrompt && captionPrompt.trim().length > 0) {
+							if (!existingCaption) {
+								existingCaption = document.createElement("caption");
+								targetNode.insertBefore(existingCaption, targetNode.firstChild);
+							}
+							existingCaption.textContent = captionPrompt.trim();
+							syncChanges();
+						}
 					}
-					existingCaption.textContent = captionPrompt.trim();
-					syncChanges();
-				}
+				);
 				break;
 
 			case "remove-style-color":
@@ -4015,11 +4129,17 @@ window.PageA11yLinter = (function() {
 				break;
 
 			case "edit-link-href":
-				var promptHref = prompt("Enter destination URL or path for this link:", (issue.meta && issue.meta.currentHref) ? issue.meta.currentHref : "https://");
-				if (promptHref !== null && promptHref.trim().length > 0) {
-					targetNode.setAttribute("href", promptHref.trim());
-					syncChanges();
-				}
+				askA11yInputModal(
+					"Edit Link Destination (WCAG 2.4.4)",
+					"Enter destination URL or path for this link:",
+					(issue.meta && issue.meta.currentHref) ? issue.meta.currentHref : "https://",
+					function(promptHref) {
+						if (promptHref && promptHref.trim().length > 0) {
+							targetNode.setAttribute("href", promptHref.trim());
+							syncChanges();
+						}
+					}
+				);
 				break;
 
 			default:
@@ -4027,39 +4147,62 @@ window.PageA11yLinter = (function() {
 		}
 	}
 
-	function toggleDrawer() {
+	function syncDrawerState(isOpen) {
 		var drawer = document.getElementById("pgA11yIssuesDrawer");
 		var toggleBtn = document.getElementById("btnToggleA11yDrawer");
-		if (!drawer) return;
+		var inlineList = document.getElementById("pgA11yPublishInlineList");
+		var lnkInspect = document.getElementById("lnkInspectA11yDrawer");
+		var lnkText = document.getElementById("lnkInspectA11yText");
+		var lnkChevron = document.getElementById("lnkInspectA11yChevron");
 
-		var isHidden = drawer.hidden;
-		drawer.hidden = !isHidden;
-		if (toggleBtn) {
-			toggleBtn.setAttribute("aria-expanded", String(!isHidden));
+		if (drawer) {
+			drawer.hidden = !isOpen;
+			drawer.style.display = isOpen ? "flex" : "none";
 		}
-		if (!drawer.hidden) {
-			renderDrawerList();
+		if (toggleBtn) {
+			toggleBtn.setAttribute("aria-expanded", String(isOpen));
+		}
+		if (inlineList) {
+			inlineList.style.display = isOpen ? "flex" : "none";
+		}
+		if (lnkInspect) {
+			lnkInspect.setAttribute("aria-expanded", String(isOpen));
+		}
+		if (lnkText) {
+			lnkText.textContent = isOpen ? "Hide Diagnostics" : "Inspect Diagnostics";
+		}
+		if (lnkChevron) {
+			lnkChevron.style.transform = isOpen ? "rotate(180deg)" : "rotate(0deg)";
 		}
 	}
 
-	function openDrawer() {
+	function toggleDrawer(source) {
 		var drawer = document.getElementById("pgA11yIssuesDrawer");
-		var toggleBtn = document.getElementById("btnToggleA11yDrawer");
+		if (!drawer) return;
+
+		var isHidden = drawer.hidden || drawer.style.display === "none";
+		if (isHidden) {
+			openDrawer(source);
+		} else {
+			closeDrawer();
+		}
+	}
+
+	function openDrawer(source) {
+		var drawer = document.getElementById("pgA11yIssuesDrawer");
+		renderDrawerList();
+		syncDrawerState(true);
 		if (drawer) {
-			drawer.hidden = false;
-			if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "true");
-			renderDrawerList();
-			drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			if (source !== "publish") {
+				drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			}
+			drawer.classList.add("jbd-a11y-pulse");
+			setTimeout(function() { drawer.classList.remove("jbd-a11y-pulse"); }, 2400);
 		}
 	}
 
 	function closeDrawer() {
-		var drawer = document.getElementById("pgA11yIssuesDrawer");
-		var toggleBtn = document.getElementById("btnToggleA11yDrawer");
-		if (drawer) {
-			drawer.hidden = true;
-			if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "false");
-		}
+		syncDrawerState(false);
 	}
 
 	function setFilter(filterName) {
@@ -4092,34 +4235,38 @@ window.PageA11yLinter = (function() {
 	}
 
 	function init() {
-		// Wire UI Controls
+		// Wire UI Controls using .onclick to avoid duplicate listeners with inline onclick attributes
 		var btnToggle = document.getElementById("btnToggleA11yDrawer");
-		if (btnToggle) btnToggle.addEventListener("click", toggleDrawer);
+		if (btnToggle) btnToggle.onclick = function() { toggleDrawer(); };
 
 		var btnClose = document.getElementById("btnCloseA11yDrawer");
-		if (btnClose) btnClose.addEventListener("click", closeDrawer);
+		if (btnClose) btnClose.onclick = function() { closeDrawer(); };
 
 		var btnRescan = document.getElementById("btnRescanA11y");
-		if (btnRescan) btnRescan.addEventListener("click", function() { scan(); });
+		if (btnRescan) btnRescan.onclick = function() { scan(); };
 
 		var lnkInspect = document.getElementById("lnkInspectA11yDrawer");
-		if (lnkInspect) lnkInspect.addEventListener("click", openDrawer);
+		if (lnkInspect) lnkInspect.onclick = function(e) {
+			if (e) e.preventDefault();
+			toggleDrawer("publish");
+			return false;
+		};
 
 		// Wire Filter Tabs
 		var tabAll = document.getElementById("tabA11yAll");
-		if (tabAll) tabAll.addEventListener("click", function() { setFilter("all"); });
+		if (tabAll) tabAll.onclick = function() { setFilter("all"); };
 		var tabErrors = document.getElementById("tabA11yErrors");
-		if (tabErrors) tabErrors.addEventListener("click", function() { setFilter("errors"); });
+		if (tabErrors) tabErrors.onclick = function() { setFilter("errors"); };
 		var tabWarnings = document.getElementById("tabA11yWarnings");
-		if (tabWarnings) tabWarnings.addEventListener("click", function() { setFilter("warnings"); });
+		if (tabWarnings) tabWarnings.onclick = function() { setFilter("warnings"); };
 
 		// Wire Category Chips
 		var chips = document.querySelectorAll(".pg-a11y-chip");
 		chips.forEach(function(chip) {
-			chip.addEventListener("click", function() {
+			chip.onclick = function() {
 				var cat = chip.getAttribute("data-cat");
 				setFilter(cat);
-			});
+			};
 		});
 
 		// Bind reactive editor input listeners
