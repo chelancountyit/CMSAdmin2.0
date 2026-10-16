@@ -594,7 +594,11 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
             if (urlInput.value.trim()) {
               submit(urlInput.value.trim());
             } else {
-              alert('Please provide an image URL.');
+              if (window.adminAlert) {
+                window.adminAlert({ title: 'Image URL Required', message: 'Please provide an image URL.', type: 'warning' });
+              } else {
+                alert('Please provide an image URL.');
+              }
             }
           }
         }

@@ -129,6 +129,31 @@
 		.get(name="alertsApiActiveAll", pattern="api/v1/alerts", to="alerts##apiActive")
 		.get(name="alertsActive", pattern="alerts/active", to="alerts##active")
 
+		// Articles & News Posts Routes
+		.get(name="articlesIndex", pattern="articles", to="articles##index")
+		.get(name="articlesNew", pattern="articles/new", to="articles##new")
+		.get(name="articlesEdit", pattern="articles/edit", to="articles##edit")
+		.post(name="articlesSave", pattern="articles/save", to="articles##save")
+		.post(name="articlesDelete", pattern="articles/delete", to="articles##delete")
+		.post(name="articlesToggleStatus", pattern="articles/toggle-status", to="articles##toggleStatus")
+		.get(name="articlesCategories", pattern="articles/categories", to="articles##categories")
+		.post(name="articlesCategorySave", pattern="articles/category/save", to="articles##saveCategory")
+		.post(name="articlesCategoryDelete", pattern="articles/category/delete", to="articles##deleteCategory")
+		.get(name="articlesTags", pattern="articles/tags", to="articles##tags")
+		.post(name="articlesTagSave", pattern="articles/tag/save", to="articles##saveTag")
+		.post(name="articlesTagDelete", pattern="articles/tag/delete", to="articles##deleteTag")
+		.get(name="articlesApi", pattern="api/v1/articles", to="articles##api")
+
+		// Press Releases & Media Alerts Routes
+		.get(name="pressReleasesIndex", pattern="press-releases", to="pressReleases##index")
+		.get(name="pressReleasesNew", pattern="press-releases/new", to="pressReleases##new")
+		.get(name="pressReleasesEdit", pattern="press-releases/edit", to="pressReleases##edit")
+		.get(name="pressReleasesView", pattern="press-releases/view", to="pressReleases##view")
+		.post(name="pressReleasesSave", pattern="press-releases/save", to="pressReleases##save")
+		.post(name="pressReleasesDelete", pattern="press-releases/delete", to="pressReleases##delete")
+		.post(name="pressReleasesToggleStatus", pattern="press-releases/toggle-status", to="pressReleases##toggleStatus")
+		.get(name="pressReleasesApi", pattern="api/v1/press-releases", to="pressReleases##api")
+
 		// Workspaces Administration Routes (Admin Only)
 		.get(name="workspacesIndex", pattern="workspaces", to="workspaces##index")
 		.get(name="workspacesNew", pattern="workspaces/new", to="workspaces##new")

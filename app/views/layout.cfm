@@ -649,7 +649,7 @@
 							<div class="nav-group">
 								<div class="nav-group-title">PIO</div>
 								<ul class="sidebar-nav">
-									<li class="nav-item has-submenu <cfoutput>#(structKeyExists(params, 'dept') and params.dept eq 'pio' ? 'open active' : '')#</cfoutput>">
+									<li class="nav-item has-submenu <cfoutput>#((structKeyExists(params, 'dept') and params.dept eq 'pio') or (structKeyExists(params, 'controller') and listFindNoCase('pressreleases,press-releases', params.controller)) ? 'open active' : '')#</cfoutput>">
 										<a href="javascript:void(0)" class="nav-link">
 											<span class="nav-link-main">
 												<span class="nav-icon"><cfoutput>#svgIcon(name="megaphone", size=18)#</cfoutput></span>
@@ -659,7 +659,7 @@
 										</a>
 										<ul class="nav-submenu">
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'dept') and params.dept eq 'pio' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='forms', action='index', params='dept=pio')#</cfoutput>" class="submenu-link">PIO Forms &amp; Inquiries</a></li>
-											<li class="submenu-item"><a href="#pio-press" class="submenu-link">Press Releases &amp; Media</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and listFindNoCase('pressreleases,press-releases', params.controller) ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='pressReleases', action='index')#</cfoutput>" class="submenu-link">Press Releases &amp; Media</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'alerts' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='alerts', action='index')#</cfoutput>" class="submenu-link">Emergency Alerts &amp; News</a></li>
 										</ul>
 									</li>
@@ -673,10 +673,10 @@
 											<cfoutput>#svgIcon(name="chevron-right", size=14, class="nav-caret")#</cfoutput>
 										</a>
 										<ul class="nav-submenu">
-											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'articles' ? 'active' : '')#</cfoutput>"><a href="#articles-all" class="submenu-link">All Articles</a></li>
-											<li class="submenu-item"><a href="#articles-new" class="submenu-link">Add New Article</a></li>
-											<li class="submenu-item"><a href="#articles-categories" class="submenu-link">Categories</a></li>
-											<li class="submenu-item"><a href="#articles-tags" class="submenu-link">Tags</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'articles' and (not structKeyExists(params, 'action') or params.action eq 'index') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='articles', action='index')#</cfoutput>" class="submenu-link">All Articles</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'articles' and structKeyExists(params, 'action') and params.action eq 'new' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='articles', action='new')#</cfoutput>" class="submenu-link">Add New Article</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'articles' and structKeyExists(params, 'action') and params.action eq 'categories' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='articles', action='categories')#</cfoutput>" class="submenu-link">Categories</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'articles' and structKeyExists(params, 'action') and params.action eq 'tags' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='articles', action='tags')#</cfoutput>" class="submenu-link">Tags</a></li>
 										</ul>
 									</li>
 								</ul>

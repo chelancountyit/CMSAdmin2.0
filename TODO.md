@@ -12,9 +12,9 @@
 
 Essential fixes to replace placeholder navigation, resolve volatile storage patterns, and complete stubbed controllers.
 
-- [ ] **1.1 Scaffold PIO Division Modules (Replace Placeholder Anchors)**
-  - [ ] **Articles & Posts Controller (`Articles.cfc`)**: Replace `#articles-all`, `#articles-new`, `#articles-categories`, `#articles-tags` in [`app/views/layout.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/layout.cfm#L633-L647) with working CRUD routes for news, county blog posts, categories, and tags.
-  - [ ] **Press Releases & Media Alerts**: Replace `#pio-press` with dedicated press release manager (embargo dates, media contacts, PDF attachments).
+- [x] **1.1 Scaffold PIO Division Modules (Replace Placeholder Anchors)**
+  - [x] **Articles & Posts Controller (`Articles.cfc`)**: Replace `#articles-all`, `#articles-new`, `#articles-categories`, `#articles-tags` in [`app/views/layout.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/layout.cfm#L633-L647) with working CRUD routes for news, county blog posts, categories, and tags.
+  - [x] **Press Releases & Media Alerts**: Replace `#pio-press` with dedicated press release manager (embargo dates, media contacts, PDF attachments).
   - [x] **Emergency Alerts & Urgent Notices**: Replace `#pio-alerts` with an alert manager for public safety (wildfire levels, road closures, severe weather) — completed in Feature 2.1 (`/alerts`).
 - [ ] **1.2 Complete Administrative Settings Module (`Settings.cfc`)**
   - [ ] Replace placeholder anchors in [`app/views/layout.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/layout.cfm#L708-L712) and expand [`Settings.cfc`](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Settings.cfc):

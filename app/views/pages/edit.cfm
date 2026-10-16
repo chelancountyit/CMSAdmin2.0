@@ -1806,13 +1806,10 @@
 							document.getElementById("pageEditForm").dispatchEvent(new Event("submit", { cancelable: true }));
 						}
 					});
-				} else if (confirm(confirmMsg)) {
+				} else {
 					window.PageA11yLinter.openDrawer();
 					status.style.cssText = "background:var(--admin-warning-light, #fffbeb); color:var(--admin-warning, #92400e); border:1px solid var(--admin-warning, #fde68a); padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem;";
 					status.textContent = "Publishing paused: please address the highlighted accessibility issues in the Pre-Flight drawer.";
-				} else {
-					window.__cmsBypassA11yOnce = true;
-					document.getElementById("pageEditForm").dispatchEvent(new Event("submit", { cancelable: true }));
 				}
 				return;
 			}
@@ -2946,7 +2943,7 @@ function confirmRollbackRevision() {
 				executeRollback(pageId, rev.id, rev.versionNumber);
 			}
 		});
-	} else if (confirm(confirmMsg)) {
+	} else {
 		executeRollback(pageId, rev.id, rev.versionNumber);
 	}
 }
@@ -2977,11 +2974,7 @@ function executeRollback(pageId, revisionId, versionNumber) {
 		}
 
 		if (!data || !data.success) {
-			if (typeof window.adminToast === "function") {
-				window.adminToast("Rollback failed: " + (data.message || "Unknown error"), "danger");
-			} else {
-				alert("Rollback failed: " + (data.message || "Unknown error"));
-			}
+			window.adminAlert({ title: "Rollback Failed", message: (data.message || "Unknown error"), type: "danger" });
 			return;
 		}
 
@@ -3036,11 +3029,7 @@ function createManualSnapshot() {
 	var pageIdEl = document.getElementById("pgContentId");
 	var pageId = parseInt(pageIdEl ? pageIdEl.value : 0, 10) || 0;
 	if (pageId <= 0) {
-		if (typeof window.adminToast === "function") {
-			window.adminToast("Please save the page before creating revision snapshots.", "warning");
-		} else {
-			alert("Please save the page before creating revision snapshots.");
-		}
+		window.adminAlert({ title: "Save Required", message: "Please save the page before creating revision snapshots.", type: "warning" });
 		return;
 	}
 
@@ -3884,7 +3873,7 @@ window.PageA11yLinter = (function() {
 		}
 
 		if (!contentArea) {
-			alert("Quick fix requires the rich text editor to be loaded.");
+			window.adminAlert({ title: "Editor Not Loaded", message: "Quick fix requires the rich text editor to be loaded.", type: "warning" });
 			return;
 		}
 
@@ -3892,7 +3881,7 @@ window.PageA11yLinter = (function() {
 		var targetNode = targets[issue.index] || targets[0];
 
 		if (!targetNode && issue.quickFixType !== "remove-empty-spacers") {
-			alert("Unable to locate element in editor for quick fix.");
+			window.adminAlert({ title: "Element Not Found", message: "Unable to locate element in editor for quick fix.", type: "warning" });
 			return;
 		}
 

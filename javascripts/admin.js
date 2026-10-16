@@ -108,6 +108,11 @@ function showNextAdminPrompt() {
     cancel.removeEventListener("click", onCancel);
     backdrop.removeEventListener("click", onBackdropClick);
     if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    if (result && typeof current.options.onConfirm === "function") {
+      try { current.options.onConfirm(); } catch (e) { console.error(e); }
+    } else if (!result && typeof current.options.onCancel === "function") {
+      try { current.options.onCancel(); } catch (e) { console.error(e); }
+    }
     current.resolve(result);
     adminPromptActive = false;
     showNextAdminPrompt();
@@ -160,6 +165,11 @@ window.adminConfirm = function (messageOrOptions, options = {}) {
     return showAdminPrompt({ ...options, ...messageOrOptions, kind: "confirm" });
   }
   return showAdminPrompt({ ...options, kind: "confirm", message: messageOrOptions });
+};
+
+// Global polyfill for native window.alert to automatically route through CMSAdmin modal alert
+window.alert = function (messageOrOptions, options = {}) {
+  return window.adminAlert(messageOrOptions, options);
 };
 
 /**

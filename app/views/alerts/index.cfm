@@ -658,11 +658,7 @@ function handleAlertFormSubmit(e) {
 	};
 
 	if (!payload.title || !payload.message) {
-		if (window.adminAlert) {
-			window.adminAlert({ title: 'Validation Error', message: 'Headline and advisory message are required.', type: 'danger' });
-		} else {
-			alert('Headline and advisory message are required.');
-		}
+		window.adminAlert({ title: 'Validation Error', message: 'Headline and advisory message are required.', type: 'danger' });
 		return;
 	}
 
@@ -686,20 +682,12 @@ function handleAlertFormSubmit(e) {
 			if (window.showToast) window.showToast(data.message || 'Alert saved successfully.', 'success');
 			setTimeout(function() { window.location.reload(); }, 600);
 		} else {
-			if (window.adminAlert) {
-				window.adminAlert({ title: 'Error', message: data.message || 'Unable to save alert.', type: 'danger' });
-			} else {
-				alert(data.message || 'Unable to save alert.');
-			}
+			window.adminAlert({ title: 'Error', message: data.message || 'Unable to save alert.', type: 'danger' });
 		}
 	})
 	.catch(function(err) {
 		submitBtn.disabled = false;
-		if (window.adminAlert) {
-			window.adminAlert({ title: 'System Error', message: err.message, type: 'danger' });
-		} else {
-			alert('System error: ' + err.message);
-		}
+		window.adminAlert({ title: 'System Error', message: err.message, type: 'danger' });
 	});
 }
 
@@ -720,26 +708,20 @@ function toggleAlert(id) {
 			if (window.showToast) window.showToast(data.message, 'success');
 			setTimeout(function() { window.location.reload(); }, 500);
 		} else {
-			if (window.adminAlert) {
-				window.adminAlert({ title: 'Error', message: data.message, type: 'danger' });
-			}
+			window.adminAlert({ title: 'Error', message: data.message, type: 'danger' });
 		}
 	});
 }
 
-function deleteAlert(id, title) {
-	if (window.adminConfirm) {
-		window.adminConfirm({
-			title: 'Delete Emergency Broadcast?',
-			message: 'Are you sure you want to remove <strong>"' + title + '"</strong> from broadcast history?',
-			type: 'danger',
-			confirmText: 'Delete Alert',
-			cancelText: 'Keep Broadcast',
-			onConfirm: function() {
-				executeDeleteAlert(id);
-			}
-		});
-	} else if (confirm('Are you sure you want to delete this alert?')) {
+async function deleteAlert(id, title) {
+	const ok = await window.adminConfirm({
+		title: 'Delete Emergency Broadcast?',
+		message: 'Are you sure you want to remove "' + title + '" from broadcast history?',
+		type: 'danger',
+		confirmText: 'Delete Alert',
+		cancelText: 'Keep Broadcast'
+	});
+	if (ok) {
 		executeDeleteAlert(id);
 	}
 }
