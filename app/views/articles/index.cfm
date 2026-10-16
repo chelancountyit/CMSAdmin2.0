@@ -182,7 +182,7 @@
 									<cfif Len(art.tags)>
 										<cfloop list="#art.tags#" index="t">
 											<span class="badge badge-neutral" style="font-size:0.68rem; padding:0.1rem 0.4rem;">
-												###Trim(t)#
+												&##35;#EncodeForHTML(Trim(t))#
 											</span>
 										</cfloop>
 									</cfif>

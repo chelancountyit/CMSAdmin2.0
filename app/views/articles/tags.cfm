@@ -94,7 +94,7 @@
 							<tr style="border-bottom:1px solid var(--admin-border-subtle);" id="tag-row-#tg.id#" data-tag-name="#LCase(tg.name)#">
 								<td style="padding:0.7rem 1rem; vertical-align:middle; font-weight:600; color:var(--admin-text-main);">
 									<span class="badge badge-neutral" style="font-size:0.8rem; padding:0.25rem 0.55rem;">
-										###EncodeForHTML(tg.name)#
+										&##35;#EncodeForHTML(tg.name)#
 									</span>
 								</td>
 								<td style="padding:0.7rem 1rem; vertical-align:middle; font-size:0.8rem; font-family:monospace; color:var(--admin-text-muted);">
