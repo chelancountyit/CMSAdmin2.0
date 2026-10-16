@@ -1166,7 +1166,6 @@ body.jbd-noscroll {
 
 .jbd-template .h4,
 .jbd-template p.h4 {
-  text-align: center;
   position: relative;
   top: 50%;
   -ms-transform: translateY(-50%);
