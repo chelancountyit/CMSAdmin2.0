@@ -63,7 +63,6 @@
 					</cfif>
 				</span>
 			</div>
-		</cfif>
 	</div>
 
 	<!--- Release Headline --->
