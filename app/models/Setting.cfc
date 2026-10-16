@@ -7,3 +7,4 @@ component extends="Model" {
 	}
 
 }
+

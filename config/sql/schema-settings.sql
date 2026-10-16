@@ -72,3 +72,4 @@ BEGIN
     (N'media_allowed_extensions', N'jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,csv', N'media', N'Comma-separated list of allowed file upload extensions');
 END;
 GO
+
