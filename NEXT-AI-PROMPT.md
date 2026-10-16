@@ -24,7 +24,8 @@ We recently completed and verified:
    - Dedicated password change tab with current password verification, length checks, and match validation.
    - Linked to top-header user menu.
 
-Reference documentation:
+Reference documentation & Official System Library:
+- **`.doclib/000_SERIES_INDEX.md`**: Master Book of Documentation for Chelan County CMSAdmin 2.0 (MANDATORY READ)
 - `STATUS.md`: Complete system status, active routes, and module matrix
 - `CHECKPOINT.md`: Latest engineering milestone details and verification checklist
 - `TODO.md`: 4-phase engineering roadmap and technical debt checklist

@@ -1,5 +1,9 @@
 # Wheels Framework Reference Docs
 
+> [!NOTE]
+> For Chelan County CMSAdmin 2.0 application documentation, system architecture, database standards, and activity changelogs, please refer to the primary Document Library:
+> 👉 **[`.doclib/000_SERIES_INDEX.md`](file:///c:/inetpub/CMSAdmin2.0/.doclib/000_SERIES_INDEX.md)**
+
 Maintainer-only deep reference. Claude Code searches this tree on demand —
 see the root `CLAUDE.md` for the always-loaded invariants and the
 "Reference Docs" index at its end.

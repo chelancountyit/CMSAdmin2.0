@@ -1,4 +1,11 @@
-# Wheels Framework
+# Chelan County CMSAdmin 2.0 (Wheels Framework)
+
+> [!IMPORTANT]
+> **MANDATORY FOR ALL AI AGENTS & CLAUDE CODE:**
+> Always reference the official system documentation library in **`.doclib/`** before and during your work:
+> 👉 [`.doclib/000_SERIES_INDEX.md`](file:///c:/inetpub/CMSAdmin2.0/.doclib/000_SERIES_INDEX.md)
+>
+> Invariants: Zero external CDNs, no native dialogs (`alert`, `confirm`, `prompt`), and always use `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` for SQL Server queries touching filtered indexes.
 
 CFML MVC framework with ActiveRecord ORM. The framework itself lives in `vendor/wheels/` (NOT a dependency — this repo IS the framework). The repo also contains a demo app under `app/` you can hand-test against.
 

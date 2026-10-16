@@ -156,6 +156,24 @@ component extends="Controller" {
 		variables.activeWorkspaceId = LCase(Trim(variables.activeWsObj.id ?: "global"));
 		variables.accessibleWorkspaces = getUserAccessibleWorkspaces(local.role);
 
+		if ((variables.activeWorkspaceId == "global" || !Len(variables.activeWorkspaceId)) && ArrayLen(variables.accessibleWorkspaces) > 0) {
+			local.foundWs = false;
+			for (local.w in variables.accessibleWorkspaces) {
+				if (local.w.id == "pio" || local.w.id == "communications") {
+					variables.activeWsObj = local.w;
+					variables.activeWorkspaceId = local.w.id;
+					local.foundWs = true;
+					break;
+				}
+			}
+			if (!local.foundWs) {
+				variables.activeWsObj = variables.accessibleWorkspaces[1];
+				variables.activeWorkspaceId = variables.accessibleWorkspaces[1].id;
+			}
+		}
+
+		ensureArticlesTableColumns();
+
 		variables.article = {
 			id: 0,
 			title: "",
@@ -166,6 +184,10 @@ component extends="Controller" {
 			tags: "",
 			featured_image: "",
 			featured_image_alt: "",
+			featured_image_caption: "",
+			featured_image_description: "",
+			featured_image_credit: "",
+			featured_image_decorative: 0,
 			author_name: StructKeyExists(session, "user") && IsStruct(session.user) ? (session.user.full_name ?: "Public Information Officer") : "Public Information Officer",
 			author_title: "Public Information Office",
 			status: "published",
@@ -198,6 +220,8 @@ component extends="Controller" {
 		variables.isAdmin = (local.role == "admin");
 		variables.isPIO = (local.role == "pio");
 
+		ensureArticlesTableColumns();
+
 		local.requestedWs = (StructKeyExists(params, "ws") && Len(Trim(params.ws))) ? Trim(params.ws)
 			: ((StructKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace))) ? Trim(cookie.cmsadmin_workspace) : "global");
 		variables.activeWsObj = resolveUserActiveWorkspace(requestedWs = local.requestedWs, role = local.role);
@@ -207,7 +231,8 @@ component extends="Controller" {
 		try {
 			local.q = queryExecute("
 				SELECT id, title, slug, summary, content_html, category_id, tags,
-				       featured_image, featured_image_alt, author_name, author_title,
+				       featured_image, featured_image_alt, featured_image_caption, featured_image_description, featured_image_credit, featured_image_decorative,
+				       author_name, author_title,
 				       status, siteid, published_at, meta_title, meta_description,
 				       created_by, modified_by, createdat, updatedat
 				FROM articles
@@ -220,6 +245,20 @@ component extends="Controller" {
 				return;
 			}
 
+			local.artWs = LCase(Trim(local.q.siteid ?: ""));
+			if (Len(local.artWs) && local.artWs neq "global" && (!StructKeyExists(params, "ws") || !Len(Trim(params.ws)))) {
+				variables.activeWsObj = resolveUserActiveWorkspace(requestedWs = local.artWs, role = local.role);
+				variables.activeWorkspaceId = LCase(Trim(variables.activeWsObj.id ?: local.artWs));
+			} else if ((variables.activeWorkspaceId == "global" || !Len(variables.activeWorkspaceId)) && ArrayLen(variables.accessibleWorkspaces) > 0) {
+				for (local.w in variables.accessibleWorkspaces) {
+					if (local.w.id == "pio" || local.w.id == "communications") {
+						variables.activeWsObj = local.w;
+						variables.activeWorkspaceId = local.w.id;
+						break;
+					}
+				}
+			}
+
 			variables.article = {
 				id: local.q.id,
 				title: local.q.title,
@@ -230,10 +269,14 @@ component extends="Controller" {
 				tags: local.q.tags ?: "",
 				featured_image: local.q.featured_image ?: "",
 				featured_image_alt: local.q.featured_image_alt ?: "",
+				featured_image_caption: local.q.featured_image_caption ?: "",
+				featured_image_description: local.q.featured_image_description ?: "",
+				featured_image_credit: local.q.featured_image_credit ?: "",
+				featured_image_decorative: Val(local.q.featured_image_decorative ?: 0),
 				author_name: local.q.author_name ?: "",
 				author_title: local.q.author_title ?: "",
 				status: local.q.status ?: "published",
-				siteid: local.q.siteid ?: "global",
+				siteid: Len(local.artWs) ? local.artWs : variables.activeWorkspaceId,
 				published_at: local.q.published_at ?: Now(),
 				meta_title: local.q.meta_title ?: "",
 				meta_description: local.q.meta_description ?: ""
@@ -253,6 +296,8 @@ component extends="Controller" {
 	function save() {
 		local.body = readJsonOrParams();
 
+		ensureArticlesTableColumns();
+
 		local.id = Val(local.body.id ?: 0);
 		local.title = Left(Trim(local.body.title ?: ""), 255);
 		local.slug = generateSlug(Len(Trim(local.body.slug ?: "")) ? local.body.slug : local.title);
@@ -262,6 +307,10 @@ component extends="Controller" {
 		local.tags = Left(Trim(local.body.tags ?: ""), 500);
 		local.featuredImage = Left(Trim(local.body.featured_image ?: ""), 1000);
 		local.featuredImageAlt = Left(Trim(local.body.featured_image_alt ?: ""), 500);
+		local.featuredImageCaption = Left(Trim(local.body.featured_image_caption ?: ""), 1000);
+		local.featuredImageDescription = Left(Trim(local.body.featured_image_description ?: ""), 2000);
+		local.featuredImageCredit = Left(Trim(local.body.featured_image_credit ?: ""), 255);
+		local.featuredImageDecorative = Val(local.body.featured_image_decorative ?: 0) ? 1 : 0;
 		local.authorName = Left(Trim(local.body.author_name ?: "Public Information Officer"), 255);
 		local.authorTitle = Left(Trim(local.body.author_title ?: ""), 255);
 		local.status = LCase(Trim(local.body.status ?: "published"));
@@ -299,6 +348,10 @@ component extends="Controller" {
 					    tags = :tags,
 					    featured_image = :featured_image,
 					    featured_image_alt = :featured_image_alt,
+					    featured_image_caption = :featured_image_caption,
+					    featured_image_description = :featured_image_description,
+					    featured_image_credit = :featured_image_credit,
+					    featured_image_decorative = :featured_image_decorative,
 					    author_name = :author_name,
 					    author_title = :author_title,
 					    status = :status,
@@ -319,6 +372,10 @@ component extends="Controller" {
 					tags: { value: local.tags, cfsqltype: "cf_sql_varchar", null: !Len(local.tags) },
 					featured_image: { value: local.featuredImage, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImage) },
 					featured_image_alt: { value: local.featuredImageAlt, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImageAlt) },
+					featured_image_caption: { value: local.featuredImageCaption, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImageCaption) },
+					featured_image_description: { value: local.featuredImageDescription, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImageDescription) },
+					featured_image_credit: { value: local.featuredImageCredit, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImageCredit) },
+					featured_image_decorative: { value: local.featuredImageDecorative, cfsqltype: "cf_sql_bit" },
 					author_name: { value: local.authorName, cfsqltype: "cf_sql_varchar" },
 					author_title: { value: local.authorTitle, cfsqltype: "cf_sql_varchar", null: !Len(local.authorTitle) },
 					status: { value: local.status, cfsqltype: "cf_sql_varchar" },
@@ -334,12 +391,14 @@ component extends="Controller" {
 					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 					INSERT INTO articles (
 						title, slug, summary, content_html, category_id, tags,
-						featured_image, featured_image_alt, author_name, author_title,
+						featured_image, featured_image_alt, featured_image_caption, featured_image_description, featured_image_credit, featured_image_decorative,
+						author_name, author_title,
 						status, siteid, published_at, meta_title, meta_description,
 						created_by, modified_by, createdat, updatedat
 					) VALUES (
 						:title, :slug, :summary, :content_html, :category_id, :tags,
-						:featured_image, :featured_image_alt, :author_name, :author_title,
+						:featured_image, :featured_image_alt, :featured_image_caption, :featured_image_description, :featured_image_credit, :featured_image_decorative,
+						:author_name, :author_title,
 						:status, :siteid, :published_at, :meta_title, :meta_description,
 						:created_by, :modified_by, SYSUTCDATETIME(), SYSUTCDATETIME()
 					);
@@ -353,6 +412,10 @@ component extends="Controller" {
 					tags: { value: local.tags, cfsqltype: "cf_sql_varchar", null: !Len(local.tags) },
 					featured_image: { value: local.featuredImage, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImage) },
 					featured_image_alt: { value: local.featuredImageAlt, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImageAlt) },
+					featured_image_caption: { value: local.featuredImageCaption, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImageCaption) },
+					featured_image_description: { value: local.featuredImageDescription, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImageDescription) },
+					featured_image_credit: { value: local.featuredImageCredit, cfsqltype: "cf_sql_varchar", null: !Len(local.featuredImageCredit) },
+					featured_image_decorative: { value: local.featuredImageDecorative, cfsqltype: "cf_sql_bit" },
 					author_name: { value: local.authorName, cfsqltype: "cf_sql_varchar" },
 					author_title: { value: local.authorTitle, cfsqltype: "cf_sql_varchar", null: !Len(local.authorTitle) },
 					status: { value: local.status, cfsqltype: "cf_sql_varchar" },
@@ -847,6 +910,29 @@ component extends="Controller" {
 			local.envelope[UCase(local.k)] = arguments.data[local.k];
 		}
 		renderText(text=SerializeJSON(local.envelope), contentType="application/json", layout=false, status=arguments.statusCode);
+	}
+
+	/**
+	 * Automatically verifies and adds ADA image metadata columns to articles table
+	 */
+	private void function ensureArticlesTableColumns() {
+		try {
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('articles') AND name = 'featured_image_caption')
+					ALTER TABLE articles ADD featured_image_caption NVARCHAR(1000) NULL;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('articles') AND name = 'featured_image_description')
+					ALTER TABLE articles ADD featured_image_description NVARCHAR(2000) NULL;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('articles') AND name = 'featured_image_credit')
+					ALTER TABLE articles ADD featured_image_credit NVARCHAR(255) NULL;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('articles') AND name = 'featured_image_decorative')
+					ALTER TABLE articles ADD featured_image_decorative BIT NOT NULL CONSTRAINT DF_articles_featured_image_decorative DEFAULT 0;
+			", {}, { datasource: "ChelanCountyWebsite" });
+		} catch (any e) {}
 	}
 
 }
