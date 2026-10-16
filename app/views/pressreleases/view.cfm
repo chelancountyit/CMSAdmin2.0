@@ -95,6 +95,7 @@
 		<strong style="color:##0f172a;">About Chelan County:</strong> Located in North Central Washington, Chelan County encompasses over 2,900 square miles of pristine mountains, rivers, apple orchards, and vibrant communities from Wenatchee and Leavenworth to Lake Chelan. For more information, visit <a href="https://www.co.chelan.wa.us" target="_blank" style="color:##0284c7; text-decoration:none;">www.co.chelan.wa.us</a>.
 	</footer>
 </div>
+</cfoutput>
 
 <style>
 @media print {
@@ -102,8 +103,8 @@
 		display: none !important;
 	}
 	body {
-		background: ##ffffff !important;
-		color: ##000000 !important;
+		background: #ffffff !important;
+		color: #000000 !important;
 		margin: 0 !important;
 		padding: 0 !important;
 	}
@@ -116,4 +117,3 @@
 	}
 }
 </style>
-</cfoutput>
