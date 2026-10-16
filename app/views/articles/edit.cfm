@@ -92,28 +92,26 @@
 				<textarea id="articleContent" name="content_html" data-jbd-editor data-jbd-toolbar="basic" data-jbd-inline-toolbar="true" data-jbd-height="420px" data-jbd-placeholder="Type or paste formatted article text here...">#EncodeForHTML(article.content_html ?: "")#</textarea>
 			</div>
 
-			<!--- SEO & Search Engine Metadata (Open by Default) --->
+			<!--- SEO & Search Engine Metadata --->
 			<div class="admin-card" style="padding:1.25rem;">
-				<details open style="cursor:pointer;">
-					<summary style="font-weight:600; font-size:0.95rem; color:var(--admin-text-main); display:flex; align-items:center; gap:0.5rem; outline:none;">
-						#svgIcon(name="globe", size=16)#
-						<span>Search Engine Optimization (SEO &amp; Open Graph)</span>
-					</summary>
-					<div style="padding-top:1rem; display:flex; flex-direction:column; gap:0.9rem;">
-						<div>
-							<label for="metaTitle" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.25rem; color:var(--admin-text-muted);">
-								Custom Meta Title (Defaults to headline if blank)
-							</label>
-							<input type="text" id="metaTitle" name="meta_title" class="form-control" maxlength="255" value="#EncodeForHTML(article.meta_title ?: "")#" placeholder="Headline | Chelan County, WA">
-						</div>
-						<div>
-							<label for="metaDescription" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.25rem; color:var(--admin-text-muted);">
-								Meta Description (Defaults to summary if blank)
-							</label>
-							<textarea id="metaDescription" name="meta_description" class="form-control" rows="2" maxlength="500" placeholder="Meta description for search engine snippets...">#EncodeForHTML(article.meta_description ?: "")#</textarea>
-						</div>
+				<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; border-bottom:1px solid var(--admin-border-subtle); padding-bottom:0.5rem;">
+					<span style="color:var(--admin-primary);">#svgIcon(name="globe", size=16)#</span>
+					<h3 style="margin:0; font-size:0.95rem; font-weight:700; color:var(--admin-text-main);">Search Engine Optimization (SEO &amp; Open Graph)</h3>
+				</div>
+				<div style="display:flex; flex-direction:column; gap:0.9rem;">
+					<div>
+						<label for="metaTitle" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.25rem; color:var(--admin-text-muted);">
+							Custom Meta Title (Defaults to headline if blank)
+						</label>
+						<input type="text" id="metaTitle" name="meta_title" class="form-control" maxlength="255" value="#EncodeForHTML(article.meta_title ?: "")#" placeholder="Headline | Chelan County, WA">
 					</div>
-				</details>
+					<div>
+						<label for="metaDescription" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.25rem; color:var(--admin-text-muted);">
+							Meta Description (Defaults to summary if blank)
+						</label>
+						<textarea id="metaDescription" name="meta_description" class="form-control" rows="2" maxlength="500" placeholder="Meta description for search engine snippets...">#EncodeForHTML(article.meta_description ?: "")#</textarea>
+					</div>
+				</div>
 			</div>
 		</div>
 
