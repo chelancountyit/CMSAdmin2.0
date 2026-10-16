@@ -2104,11 +2104,11 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     description: 'Semantic 2-column layout section for paired text or comparisons.',
     html: `<section class="jbd-template jbd-grid jbd-grid-2col" aria-label="Two column content section">
   <div class="jbd-grid-col">
-    <h3>Left Column</h3>
+    <p class="h4" style="margin:0 0 0.5rem 0; font-weight:700;">Left Column</p>
     <p>Describe your first topic, bullet points, or media content here.</p>
   </div>
   <div class="jbd-grid-col">
-    <h3>Right Column</h3>
+    <p class="h4" style="margin:0 0 0.5rem 0; font-weight:700;">Right Column</p>
     <p>Describe your second topic, comparison points, or supporting details here.</p>
   </div>
 </section>`
@@ -2121,15 +2121,15 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     description: 'Independent semantic article cards for highlighting services or features.',
     html: `<section class="jbd-template jbd-grid jbd-grid-3col" aria-label="Feature highlights">
   <article class="jbd-card">
-    <h4>Feature One</h4>
+    <p class="h4" style="margin:0 0 0.5rem 0; font-weight:700;">Feature One</p>
     <p>Highlight the primary benefit and key advantage for users.</p>
   </article>
   <article class="jbd-card">
-    <h4>Feature Two</h4>
+    <p class="h4" style="margin:0 0 0.5rem 0; font-weight:700;">Feature Two</p>
     <p>Detail how this capability operates smoothly out of the box.</p>
   </article>
   <article class="jbd-card">
-    <h4>Feature Three</h4>
+    <p class="h4" style="margin:0 0 0.5rem 0; font-weight:700;">Feature Three</p>
     <p>Explain performance metrics, compliance, and developer speed.</p>
   </article>
 </section>`
@@ -2141,7 +2141,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#db2777" stroke-width="2" aria-hidden="true" focusable="false"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="9" x2="18" y2="9"/><line x1="6" y1="13" x2="14" y2="13"/></svg>',
     description: 'Prominent header banner with headline, description, and action button.',
     html: `<header class="jbd-template jbd-hero" aria-label="Featured announcement">
-  <h2 class="jbd-hero-title">Engage Your Audience</h2>
+  <p class="jbd-hero-title h4" style="font-size:1.5rem; font-weight:700; margin:0 0 0.5rem 0;">Engage Your Audience</p>
   <p class="jbd-hero-lead">Create rich, impactful documents with standalone vanilla components.</p>
   <div class="jbd-hero-actions">
     <a href="#learn-more" class="jbd-btn jbd-btn-primary" aria-label="Get Started Now with our platform">Get Started Now</a>
@@ -2159,7 +2159,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     <span class="jbd-panel-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
     </span>
-    <h4 class="jbd-panel-title">System Information</h4>
+    <p class="jbd-panel-title h4">System Information</p>
     <span class="jbd-panel-badge" aria-hidden="true">INFO</span>
   </div>
   <div class="jbd-panel-body">
@@ -2178,7 +2178,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     <span class="jbd-panel-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     </span>
-    <h4 class="jbd-panel-title">Attention Required</h4>
+    <p class="jbd-panel-title h4">Attention Required</p>
     <span class="jbd-panel-badge" aria-hidden="true">WARNING</span>
   </div>
   <div class="jbd-panel-body">
@@ -2197,7 +2197,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     <span class="jbd-panel-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
     </span>
-    <h4 class="jbd-panel-title">Process Complete</h4>
+    <p class="jbd-panel-title h4">Process Complete</p>
     <span class="jbd-panel-badge" aria-hidden="true">SUCCESS</span>
   </div>
   <div class="jbd-panel-body">
@@ -2216,7 +2216,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     <span class="jbd-panel-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     </span>
-    <h4 class="jbd-panel-title">Critical Notice</h4>
+    <p class="jbd-panel-title h4">Critical Notice</p>
     <span class="jbd-panel-badge" aria-hidden="true">ALERT</span>
   </div>
   <div class="jbd-panel-body">
@@ -2247,7 +2247,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
   <div class="jbd-faq-item">
     <div class="jbd-faq-header">
       <span class="jbd-faq-badge" aria-hidden="true">Q:</span>
-      <h4 class="jbd-faq-question">What makes this editor unique?</h4>
+      <p class="jbd-faq-question h4">What makes this editor unique?</p>
     </div>
     <div class="jbd-faq-answer">
       <p>It is 100% Vanilla JavaScript with zero dependencies, full keyboard navigation, and WCAG 2.2 Level AA compliance.</p>
@@ -2256,7 +2256,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
   <div class="jbd-faq-item">
     <div class="jbd-faq-header">
       <span class="jbd-faq-badge" aria-hidden="true">Q:</span>
-      <h4 class="jbd-faq-question">How does accessibility work in these templates?</h4>
+      <p class="jbd-faq-question h4">How does accessibility work in these templates?</p>
     </div>
     <div class="jbd-faq-answer">
       <p>All templates use semantic landmark elements (&lt;section&gt;, &lt;aside&gt;, &lt;header&gt;), proper heading structures, and high-contrast color ratios.</p>
@@ -4799,7 +4799,7 @@ openImageModal() {
       newItem.innerHTML = `
         <div class="jbd-faq-header">
           <span class="jbd-faq-badge" aria-hidden="true">Q:</span>
-          <h4 class="jbd-faq-question">New Question Title</h4>
+          <p class="jbd-faq-question h4">New Question Title</p>
         </div>
         <div class="jbd-faq-answer">
           <p>Enter your answer explanation here.</p>

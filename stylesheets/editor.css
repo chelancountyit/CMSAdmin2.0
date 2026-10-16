@@ -1181,9 +1181,12 @@ body.jbd-noscroll {
   box-sizing: border-box;
 }
 
-.jbd-editor-content .jbd-grid-2col > .jbd-grid-col h3 {
+.jbd-editor-content .jbd-grid-2col > .jbd-grid-col h3,
+.jbd-editor-content .jbd-grid-2col > .jbd-grid-col .h4 {
   margin-top: 0;
   font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .jbd-editor-content .jbd-grid-3col {
@@ -1203,9 +1206,11 @@ body.jbd-noscroll {
   box-sizing: border-box;
 }
 
-.jbd-editor-content .jbd-grid-3col > .jbd-card h4 {
+.jbd-editor-content .jbd-grid-3col > .jbd-card h4,
+.jbd-editor-content .jbd-grid-3col > .jbd-card .h4 {
   margin-top: 0;
   font-size: 15px;
+  font-weight: 700;
   color: #1e293b;
 }
 
