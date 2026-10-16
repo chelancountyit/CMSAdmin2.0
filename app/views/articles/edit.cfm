@@ -92,9 +92,9 @@
 				<textarea id="articleContent" name="content_html" data-jbd-editor data-jbd-toolbar="basic" data-jbd-inline-toolbar="true" data-jbd-height="420px" data-jbd-placeholder="Type or paste formatted article text here...">#EncodeForHTML(article.content_html ?: "")#</textarea>
 			</div>
 
-			<!--- SEO & Search Engine Metadata (Collapsible) --->
+			<!--- SEO & Search Engine Metadata (Open by Default) --->
 			<div class="admin-card" style="padding:1.25rem;">
-				<details style="cursor:pointer;">
+				<details open style="cursor:pointer;">
 					<summary style="font-weight:600; font-size:0.95rem; color:var(--admin-text-main); display:flex; align-items:center; gap:0.5rem; outline:none;">
 						#svgIcon(name="globe", size=16)#
 						<span>Search Engine Optimization (SEO &amp; Open Graph)</span>
