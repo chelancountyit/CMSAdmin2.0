@@ -34,7 +34,7 @@
 </div>
 
 <!--- Metric Cards --->
-<div class="grid grid-4" style="margin-bottom:1.5rem; gap:1rem;">
+<div class="grid grid-4" style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:1rem; margin-bottom:1.5rem;">
 	<div class="admin-card" style="padding:1.1rem; display:flex; align-items:center; gap:1rem; border-left:4px solid var(--admin-primary);">
 		<div style="width:42px; height:42px; border-radius:var(--radius-md); background:rgba(2, 132, 199, 0.1); display:flex; align-items:center; justify-content:center; color:var(--admin-primary);">
 			#svgIcon(name="megaphone", size=22)#
