@@ -8,9 +8,9 @@
 
 The CMSAdmin 2.0 Media Library provides file browsing, upload, document management, and image selection for editors. 
 
-Files are partitioned by **department workspace** on disk:
+The authoritative main repository for documents and workspace assets is permanently assigned to:
 ```
-c:\inetpub\CMSAdmin2.0\files\
+c:\inetpub\chelan-county\files\
 ├── pio\
 │   ├── images\          # Photos, cover art, press images
 │   └── documents\       # PDFs, official notices, ordinances
@@ -23,13 +23,15 @@ c:\inetpub\CMSAdmin2.0\files\
 └── ...
 ```
 
+In CMSAdmin 2.0, `c:\inetpub\CMSAdmin2.0\files\` is an NTFS directory junction linking directly to `c:\inetpub\chelan-county\files\`, enabling IIS to serve `/files/...` seamlessly from the county repository.
+
 Additionally, a county-wide shared photo repository (`shared images`) is linked into every department workspace via NTFS directory junctions pointing to `c:\inetpub\chelan-county\images\picjumbo`:
 ```
-c:\inetpub\CMSAdmin2.0\files\<workspace>\shared images\  ->  c:\inetpub\chelan-county\images\picjumbo
-c:\inetpub\CMSAdmin2.0\images\picjumbo\                  ->  c:\inetpub\chelan-county\images\picjumbo
+c:\inetpub\chelan-county\files\<workspace>\shared images\  ->  c:\inetpub\chelan-county\images\picjumbo
+c:\inetpub\CMSAdmin2.0\images\picjumbo\                    ->  c:\inetpub\chelan-county\images\picjumbo
 ```
 - Web URLs resolve to `/images/picjumbo/<filename>` when selected.
-- The `shared images` directory is strictly **Read-Only** for all users across the entire system.
+- The `shared images` directory is permanently strictly **Read-Only** for all users across the entire system.
 
 ---
 

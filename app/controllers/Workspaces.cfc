@@ -96,7 +96,7 @@ component extends="Controller" {
 			}
 
 			// Disk path check
-			local.targetDiskPath = "C:\inetpub\CMSAdmin2.0\" & (StructKeyExists(local.w, "folderPath") ? local.w.folderPath : "files/" & local.w.id);
+			local.targetDiskPath = "C:\inetpub\chelan-county\" & (StructKeyExists(local.w, "folderPath") ? local.w.folderPath : "files/" & local.w.id);
 			local.w.diskExists = DirectoryExists(local.targetDiskPath);
 		}
 
@@ -297,14 +297,15 @@ component extends="Controller" {
 			created_at: DateFormat(Now(), "mmm d, yyyy")
 		};
 
-		// Automatically create files/[cleanId] on disk with media and documents subfolders
+		// Automatically create files/[cleanId] on disk with images, documents, and shared images junction
 		try {
-			local.baseWsDir = "C:\inetpub\CMSAdmin2.0\files\" & local.cleanId;
-			local.targetMediaDir = local.baseWsDir & "\media";
+			local.baseWsDir = "C:\inetpub\chelan-county\files\" & local.cleanId;
+			local.targetMediaDir = local.baseWsDir & "\images";
 			local.targetDocsDir = local.baseWsDir & "\documents";
 			if (!DirectoryExists(local.baseWsDir)) CreateObject("java", "java.io.File").init(local.baseWsDir).mkdirs();
 			if (!DirectoryExists(local.targetMediaDir)) CreateObject("java", "java.io.File").init(local.targetMediaDir).mkdirs();
 			if (!DirectoryExists(local.targetDocsDir)) CreateObject("java", "java.io.File").init(local.targetDocsDir).mkdirs();
+			ensureSharedImagesJunction(local.baseWsDir);
 		} catch (any err) {}
 
 		// Persist into SQL Server database
@@ -605,12 +606,13 @@ component extends="Controller" {
 
 		// Ensure disk folder exists
 		try {
-			local.baseWsDir = "C:\inetpub\CMSAdmin2.0\files\" & local.cleanId;
-			local.targetMediaDir = local.baseWsDir & "\media";
+			local.baseWsDir = "C:\inetpub\chelan-county\files\" & local.cleanId;
+			local.targetMediaDir = local.baseWsDir & "\images";
 			local.targetDocsDir = local.baseWsDir & "\documents";
 			if (!DirectoryExists(local.baseWsDir)) CreateObject("java", "java.io.File").init(local.baseWsDir).mkdirs();
 			if (!DirectoryExists(local.targetMediaDir)) CreateObject("java", "java.io.File").init(local.targetMediaDir).mkdirs();
 			if (!DirectoryExists(local.targetDocsDir)) CreateObject("java", "java.io.File").init(local.targetDocsDir).mkdirs();
+			ensureSharedImagesJunction(local.baseWsDir);
 		} catch (any err) {}
 
 		local.type = local.existing.type;
@@ -758,6 +760,26 @@ component extends="Controller" {
 		}
 
 		redirectTo(controller="workspaces", action="index");
+	}
+
+	/**
+	 * Ensures the 'shared images' junction exists pointing to c:\inetpub\chelan-county\images\picjumbo
+	 */
+	private void function ensureSharedImagesJunction(required string wsDisk) {
+		local.targetPath = "C:\inetpub\chelan-county\images\picjumbo";
+		local.juncPath = arguments.wsDisk & "\shared images";
+		try {
+			if (!DirectoryExists(local.targetPath)) {
+				DirectoryCreate(local.targetPath);
+			}
+			if (!DirectoryExists(local.juncPath)) {
+				local.pb = createObject("java", "java.lang.ProcessBuilder").init([
+					"cmd.exe", "/c", "mklink", "/J", local.juncPath, local.targetPath
+				]);
+				local.p = local.pb.start();
+				local.p.waitFor();
+			}
+		} catch (any ignore) {}
 	}
 
 }

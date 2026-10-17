@@ -47,7 +47,7 @@ component output="false" {
 
 	private void function loadConfig() {
 		var cfg = {
-			filesRoot   : "C:\inetpub\cmsadmin2.0\files\",
+			filesRoot   : "C:\inetpub\chelan-county\files\",
 			webBase     : "/files/",
 			serverName  : "WEB-01",
 			systemDepth : 2,

@@ -15,6 +15,6 @@
 check_snippet*.ps1
 
 # Media Library junctions / external mounts
-/files/*/shared images/
-/files/shared images/
+/files/
+!/files/.gitkeep
 /images/picjumbo/

@@ -236,20 +236,26 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ---
 
-### Milestone 12: Media Library Shared Images Repository & Strict Read-Only Governance
+### Milestone 12: Media Library Permanent Repository Assignment (`chelan-county\files` & `picjumbo`) & Strict Read-Only Governance
 - **Files Modified:**
-  - `api/Files.cfc`, `app/controllers/Media.cfc`
+  - `api/Application.cfc`, `api/Files.cfc`, `app/controllers/Media.cfc`, `app/controllers/Main.cfc`, `app/controllers/Pages.cfc`, `app/controllers/Workspaces.cfc`
+  - `app/views/media/upload.cfm`, `app/views/pages/edit.cfm`, `app/views/pages/folderExplorer.cfm`
   - `javascripts/filexplorer/explorer.js`, `stylesheets/filexplorer/explorer.css`
   - `.gitignore`, `.doclib/004_MEDIA_LIBRARY_AND_FILE_EXPLORER.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`
 - **Key Deliverables & Engineering Solutions:**
-  1. **County-Wide Shared Image Repository (`picjumbo`):**
-     - Linked county-wide photo library `c:\inetpub\chelan-county\images\picjumbo` to `c:\inetpub\CMSAdmin2.0\images\picjumbo` and `c:\inetpub\CMSAdmin2.0\files\<workspace>\shared images` using NTFS directory junctions.
-     - Implemented runtime auto-provisioning helper `ensureSharedImagesJunction(wsDisk)` in both `api/Files.cfc` and `app/controllers/Media.cfc` to automatically create junction links via `ProcessBuilder` if missing.
-  2. **Multi-Layer Read-Only Enforcement (All Users):**
+  1. **Permanent Main Repository (`c:\inetpub\chelan-county\files\`):**
+     - Assigned `c:\inetpub\chelan-county\files\` as the authoritative permanent repository for all county documents and workspace assets across `CMSAdmin 2.0`.
+     - Mirrored `c:\inetpub\CMSAdmin2.0\files\` to `c:\inetpub\chelan-county\files\` via an NTFS directory junction, allowing IIS to serve `/files/...` directly from the public county web root with zero delay or duplication.
+     - Updated controllers (`Media.cfc`, `Main.cfc`, `Workspaces.cfc`, `Pages.cfc`) and API services (`api/Application.cfc`, `api/Files.cfc`) to target `c:\inetpub\chelan-county\files\` as `filesRoot`.
+  2. **County-Wide Shared Image Library (`c:\inetpub\chelan-county\images\picjumbo`):**
+     - Permanently established `c:\inetpub\chelan-county\images\picjumbo` as the centralized county stock image repository.
+     - Linked `picjumbo` into each workspace directory (`c:\inetpub\chelan-county\files\<workspace>\shared images`) and root (`c:\inetpub\CMSAdmin2.0\images\picjumbo`) via directory junctions.
+     - Implemented runtime auto-provisioning helper `ensureSharedImagesJunction(wsDisk)` in `api/Files.cfc`, `Media.cfc`, and `Workspaces.cfc` to automatically wire missing junctions.
+  3. **Strict Multi-Layer Read-Only Enforcement (All Users):**
      - **UI Layer:** Disabled "New Folder" / "Upload" actions when navigating within `shared images`. Suppressed the folder delete button, and surfaced `READ-ONLY` and `RO` visual chips in tree and file views.
-     - **Files API (`api/Files.cfc`):** In `createFolder()` and `deleteFolder()`, blocked any mutation operations targeting `shared images` or its subpaths with explicit read-only errors. Set `canCreate: false` and `canDelete: false` in list payloads.
+     - **Files API (`api/Files.cfc`):** In `createFolder()` and `deleteFolder()`, blocked any mutation operations targeting `shared images` or its subpaths with explicit read-only errors. Set `canCreate: false` and `canDelete: false` in list payloads. Allowed `picjumbo` canonical path verification in `resolvePath()`.
      - **Media Controller (`app/controllers/Media.cfc`):** In `processUpload()` and `updateMeta()`, strictly rejected uploads and metadata modifications targeting `shared images`.
-  3. **Media Picker Asset Resolution:**
+  4. **Media Picker Asset Resolution:**
      - In `javascripts/filexplorer/explorer.js`, enhanced `selectForPicker()` to detect assets originating from `shared images` or `picjumbo` and resolve clean, public web paths `/images/picjumbo/<filename>`.
-  4. **Git Repository Isolation:**
-     - Configured `.gitignore` to ignore `/files/*/shared images/`, `/files/shared images/`, and `/images/picjumbo/`, ensuring local NTFS junction points and external image assets are not committed into version control.
+  5. **Git Repository Isolation:**
+     - Configured `.gitignore` to ignore `/files/` and `/images/picjumbo/` while retaining `/files/.gitkeep`, ensuring local NTFS junction points and external image assets are not committed into version control.

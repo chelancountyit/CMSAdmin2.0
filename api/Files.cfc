@@ -7,7 +7,7 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 	// Errors: HTTP 200 + { "ok": false, "error": "..." }. No stack traces.
 	// ==================================================================
 
-	remote struct function ping(string ws = "", any _ = "") returnformat="json" {
+	remote struct function ping(string ws = "", any _ = "", any reinit = "") returnformat="json" {
 		noCache();
 		local.cfg = getConfig();
 		return {
@@ -306,9 +306,14 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 
 		local.rootCanon = canonical(local.root);
 		local.absCanon  = canonical(local.abs);
+		local.picjumboCanon = canonical("C:\inetpub\chelan-county\images\picjumbo");
 
-		if (compareNoCase(local.absCanon, local.rootCanon) != 0
-			&& compareNoCase(left(local.absCanon, len(local.rootCanon) + 1), local.rootCanon & "\") != 0) {
+		local.isRootSafe = (compareNoCase(local.absCanon, local.rootCanon) == 0
+			|| compareNoCase(left(local.absCanon, len(local.rootCanon) + 1), local.rootCanon & "\") == 0);
+		local.isPicjumboSafe = (compareNoCase(local.absCanon, local.picjumboCanon) == 0
+			|| compareNoCase(left(local.absCanon, len(local.picjumboCanon) + 1), local.picjumboCanon & "\") == 0);
+
+		if (!local.isRootSafe && !local.isPicjumboSafe) {
 			userError("Invalid path.");
 		}
 
@@ -475,7 +480,7 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 	private struct function getConfig() {
 		if (!structKeyExists(application, "fx")) {
 			local.cfg = {
-				"filesRoot"   : "C:\inetpub\cmsadmin2.0\files\",
+				"filesRoot"   : "C:\inetpub\chelan-county\files\",
 				"webBase"     : "/files/",
 				"serverName"  : "WEB-01",
 				"systemDepth" : 2,

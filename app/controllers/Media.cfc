@@ -54,7 +54,7 @@ component extends="Controller" {
 		if (!Len(local.vDir)) {
 			local.targetFolders = getFoldersForWorkspace(variables.currentWs);
 			for (local.f in local.targetFolders) {
-				if (DirectoryExists("C:\inetpub\CMSAdmin2.0\files\" & local.f)) {
+				if (DirectoryExists("C:\inetpub\chelan-county\files\" & local.f)) {
 					local.vDir = local.f;
 					break;
 				}
@@ -65,7 +65,7 @@ component extends="Controller" {
 		}
 
 		// Ensure \files\[workspace.virtual_directory]\images|documents|shared images exists on disk
-		local.rootDisk = "C:\inetpub\CMSAdmin2.0\files\";
+		local.rootDisk = "C:\inetpub\chelan-county\files\";
 		local.vDir = Replace(Replace(Trim(local.vDir), "\", "/", "all"), "/", "", "all");
 		if (!Len(local.vDir)) {
 			local.vDir = "community-development";
@@ -193,7 +193,7 @@ component extends="Controller" {
 		if (!Len(local.vDir)) {
 			local.targetFolders = getFoldersForWorkspace(variables.currentWs);
 			for (local.f in local.targetFolders) {
-				if (DirectoryExists("C:\inetpub\cmsadmin2.0\files\" & local.f)) {
+				if (DirectoryExists("C:\inetpub\chelan-county\files\" & local.f)) {
 					local.vDir = local.f;
 					break;
 				}
@@ -204,7 +204,7 @@ component extends="Controller" {
 		}
 
 		// Ensure \files\[workspace.virtual_directory]\images|documents exists on disk
-		local.rootDisk = "C:\inetpub\cmsadmin2.0\files\";
+		local.rootDisk = "C:\inetpub\chelan-county\files\";
 		local.vDir = Replace(Replace(Trim(local.vDir), "\", "/", "all"), "/", "", "all");
 		if (!Len(local.vDir)) {
 			local.vDir = "community-development";
@@ -309,7 +309,7 @@ component extends="Controller" {
 		local.title = StructKeyExists(params, "title") ? Trim(params.title) : "";
 
 		// Ensure target directory exists on disk
-		local.targetDir = "C:\inetpub\CMSAdmin2.0\files\" & local.ws & "\" & local.subfolder;
+		local.targetDir = "C:\inetpub\chelan-county\files\" & local.ws & "\" & local.subfolder;
 		if (!DirectoryExists(local.targetDir)) {
 			DirectoryCreate(local.targetDir);
 		}
@@ -717,7 +717,7 @@ component extends="Controller" {
 										"dateFormatted": DateFormat(local.fileRow.dateLastModified, "mmm dd, yyyy") & " at " & TimeFormat(local.fileRow.dateLastModified, "h:mm tt"),
 										"relativePath": "files/" & local.wsName & "/" & local.folderName & "/" & local.fileRow.name,
 										"webUrl": "/files/" & local.wsName & "/" & local.folderName & "/" & local.fileRow.name,
-										"absolutePath": "C:\inetpub\CMSAdmin2.0\files\" & local.wsName & "\" & local.folderName & "\" & local.fileRow.name,
+										"absolutePath": "C:\inetpub\chelan-county\files\" & local.wsName & "\" & local.folderName & "\" & local.fileRow.name,
 										"author": local.author,
 										"tags": local.tags
 									};
@@ -960,7 +960,7 @@ component extends="Controller" {
 				"dateFormatted": DateFormat(Now(), "mmm dd, yyyy") & " at " & TimeFormat(Now(), "h:mm tt"),
 				"relativePath": "files/assessors/media/chelan-county-aerial-orthophoto.jpg",
 				"webUrl": "/images/apple.png",
-				"absolutePath": "C:\inetpub\CMSAdmin2.0\files\assessors\media\chelan-county-aerial-orthophoto.jpg",
+				"absolutePath": "C:\inetpub\chelan-county\files\assessors\media\chelan-county-aerial-orthophoto.jpg",
 				"author": "GIS Department",
 				"tags": "aerial, parcel, map, orthophoto, gis"
 			},
@@ -983,7 +983,7 @@ component extends="Controller" {
 				"dateFormatted": DateFormat(DateAdd("d", -2, Now()), "mmm dd, yyyy") & " at 11:20 AM",
 				"relativePath": "files/shared/media/lake-chelan-scenic-panorama.jpg",
 				"webUrl": "/images/apple.png",
-				"absolutePath": "C:\inetpub\CMSAdmin2.0\files\shared\media\lake-chelan-scenic-panorama.jpg",
+				"absolutePath": "C:\inetpub\chelan-county\files\shared\media\lake-chelan-scenic-panorama.jpg",
 				"author": "PIO Office",
 				"tags": "lake chelan, tourism, mountains, scenic, hero"
 			},
@@ -1006,7 +1006,7 @@ component extends="Controller" {
 				"dateFormatted": DateFormat(DateAdd("d", -1, Now()), "mmm dd, yyyy") & " at 9:45 AM",
 				"relativePath": "files/pio/media/commissioners-press-briefing.jpg",
 				"webUrl": "/images/logo.png",
-				"absolutePath": "C:\inetpub\CMSAdmin2.0\files\pio\media\commissioners-press-briefing.jpg",
+				"absolutePath": "C:\inetpub\chelan-county\files\pio\media\commissioners-press-briefing.jpg",
 				"author": "PIO Media Desk",
 				"tags": "commissioners, press, briefing, government, chambers"
 			}

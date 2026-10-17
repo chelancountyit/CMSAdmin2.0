@@ -707,7 +707,7 @@ component extends="Controller" {
 		variables.pageTitle = "Add Folder Explorer";
 		variables.explorer = {
 			title: StructKeyExists(params, "title") ? Trim(params.title) : "",
-			absolutePath: StructKeyExists(params, "absolutePath") ? Trim(params.absolutePath) : "C:\inetpub\CMSAdmin2.0\files\assessors",
+			absolutePath: StructKeyExists(params, "absolutePath") ? Trim(params.absolutePath) : "C:\inetpub\chelan-county\files\assessors",
 			relativePath: StructKeyExists(params, "relativePath") ? Trim(params.relativePath) : "files/assessors",
 			layout: StructKeyExists(params, "layout") && (params.layout eq "Full" or params.layout eq "3/9") ? Trim(params.layout) : "3/9",
 			allowedExtensions: "pdf,doc,docx,xls,xlsx,jpg,png,zip",

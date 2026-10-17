@@ -78,7 +78,7 @@
 				<div class="upload-path-preview">
 					#svgIcon(name="hard-drive", size=16)#
 					<span>Target Destination:</span>
-					<strong id="destinationPathText">C:\inetpub\CMSAdmin2.0\files\#variables.defaultWs#\#variables.defaultFolder#</strong>
+					<strong id="destinationPathText">C:\inetpub\chelan-county\files\#variables.defaultWs#\#variables.defaultFolder#</strong>
 				</div>
 			</div>
 		</div>
@@ -164,7 +164,7 @@
 	function updatePathPreview() {
 		const ws = document.getElementById('selectWs').value;
 		const folder = document.getElementById('selectSubfolder').value;
-		document.getElementById('destinationPathText').textContent = `C:\\inetpub\\CMSAdmin2.0\\files\\${ws}\\${folder}`;
+		document.getElementById('destinationPathText').textContent = `C:\\inetpub\\chelan-county\\files\\${ws}\\${folder}`;
 	}
 
 	function handleFileChange(input) {

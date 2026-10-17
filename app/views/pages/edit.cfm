@@ -835,7 +835,7 @@
 			<!--- 2. Server Absolute Path --->
 			<div class="pg-field" style="margin-bottom:1.1rem;">
 				<label for="pgFolderItemAbsolutePath" class="form-label" style="font-weight:600;">Server Absolute Path <span style="color:var(--admin-danger);" aria-hidden="true">*</span></label>
-				<input type="text" id="pgFolderItemAbsolutePath" class="form-control" style="width:100%; font-family:monospace; font-size:0.85rem;" placeholder="C:\inetpub\CMSAdmin2.0\files\assessors" required aria-required="true" aria-describedby="pgFolderItemAbsHelp">
+				<input type="text" id="pgFolderItemAbsolutePath" class="form-control" style="width:100%; font-family:monospace; font-size:0.85rem;" placeholder="C:\inetpub\chelan-county\files\assessors" required aria-required="true" aria-describedby="pgFolderItemAbsHelp">
 				<div id="pgFolderItemAbsHelp" class="pg-help">Physical server directory or network UNC path on the filesystem.</div>
 			</div>
 

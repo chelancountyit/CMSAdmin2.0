@@ -203,13 +203,13 @@
 						<span class="sr-only">(required)</span>
 					</label>
 					<div class="fe-path-group">
-						<input type="text" id="feAbsolutePath" name="absolutePath" class="form-control" placeholder="C:\inetpub\CMSAdmin2.0\files\assessors" required aria-required="true" value="#EncodeForHTMLAttribute(explorer.absolutePath)#" aria-describedby="feAbsoluteHelp">
+						<input type="text" id="feAbsolutePath" name="absolutePath" class="form-control" placeholder="C:\inetpub\chelan-county\files\assessors" required aria-required="true" value="#EncodeForHTMLAttribute(explorer.absolutePath)#" aria-describedby="feAbsoluteHelp">
 						<button type="button" id="btnVerifyPath" class="btn btn-outline btn-sm" title="Verify path format on server" style="white-space:nowrap;">
 							#svgIcon(name="check", size=14)#
 							<span>Verify Path</span>
 						</button>
 					</div>
-					<div id="feAbsoluteHelp" class="fe-help">Physical drive or UNC network path on the server where documents reside (e.g. <code>C:\inetpub\CMSAdmin2.0\files\assessors</code> or <code>\\server\share\records</code>).</div>
+					<div id="feAbsoluteHelp" class="fe-help">Physical drive or UNC network path on the server where documents reside (e.g. <code>C:\inetpub\chelan-county\files\assessors</code> or <code>\\server\share\records</code>).</div>
 					<div id="fePathFeedback" style="display:none; margin-top:0.4rem; font-size:0.8rem; font-weight:600;" role="status"></div>
 				</div>
 

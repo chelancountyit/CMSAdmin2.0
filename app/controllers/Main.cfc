@@ -258,7 +258,7 @@ component extends="Controller" {
 
 		// 4. Media Storage Scan for the Active Workspace
 		try {
-			local.mediaDir = "C:\inetpub\CMSAdmin2.0\files\" & (variables.hasWorkspace ? variables.activeWorkspaceId : "shared");
+			local.mediaDir = "C:\inetpub\chelan-county\files\" & (variables.hasWorkspace ? variables.activeWorkspaceId : "shared");
 			variables.stats.mediaBytes = 0;
 			variables.stats.mediaCount = 0;
 			variables.mediaBreakdown = {
