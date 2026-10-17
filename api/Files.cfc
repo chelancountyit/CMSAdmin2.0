@@ -27,19 +27,21 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			local.cfg = getConfig();
 			local.cleanWs = trim(arguments.ws);
 
-			// If ws is specified, restrict navigation strictly inside the workspace
+			// If ws is specified, restrict navigation strictly inside the workspace, or to shared images
 			local.reqPath = trim(arguments.path);
+			ensureSharedImagesJunction(local.cfg.filesRoot);
+
 			if (len(local.cleanWs)) {
-				// Ensure \files\[workspace.virtual_directory]\images, documents, and shared images exist
+				// Ensure \files\[workspace.virtual_directory]\images and documents exist
 				local.wsDisk = local.cfg.filesRoot & local.cleanWs;
 				try {
 					if (!directoryExists(local.wsDisk)) directoryCreate(local.wsDisk);
 					if (!directoryExists(local.wsDisk & "\images")) directoryCreate(local.wsDisk & "\images");
 					if (!directoryExists(local.wsDisk & "\documents")) directoryCreate(local.wsDisk & "\documents");
-					ensureSharedImagesJunction(local.wsDisk);
 				} catch (any dirErr) {}
 
-				if (!len(local.reqPath) || (local.reqPath neq local.cleanWs && left(local.reqPath, len(local.cleanWs) + 1) neq local.cleanWs & "/")) {
+				local.isSharedImagesReq = (compareNoCase(local.reqPath, "shared images") == 0 || left(local.reqPath, 14) == "shared images/");
+				if (!len(local.reqPath) || (!local.isSharedImagesReq && local.reqPath neq local.cleanWs && left(local.reqPath, len(local.cleanWs) + 1) neq local.cleanWs & "/")) {
 					local.reqPath = local.cleanWs;
 				}
 			}
@@ -148,21 +150,39 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				}
 			}
 
+			// --- shared stock photography library (outside workspace folder) ---
+			local.sharedTree = {};
+			local.sharedRootAbs = local.cfg.filesRoot & "shared images";
+			if (directoryExists(local.sharedRootAbs)) {
+				local.shCounts = countChildren(local.sharedRootAbs);
+				local.sharedTree = {
+					"name"       : "Shared Images",
+					"path"       : "shared images",
+					"dirs"       : local.shCounts.dirs,
+					"files"      : local.shCounts.files,
+					"count"      : (local.shCounts.dirs + local.shCounts.files),
+					"isShared"   : true,
+					"isReadOnly" : true,
+					"children"   : buildFolderTree(local.sharedRootAbs, "shared images")
+				};
+			}
+
 			return {
-				"ok"        : true,
-				"path"      : javaCast("string", local.target.rel),
-				"depth"     : local.target.depth,
-				"canCreate" : (local.target.depth >= local.cfg.systemDepth && !local.isSharedImages),
-				"canDelete" : (local.target.depth > local.cfg.systemDepth && !local.isSharedImages),
-				"isReadOnly": local.isSharedImages,
-				"diskPath"  : diskPathOf(local.target.segments, true),
-				"webPath"   : webPathOf(local.target.rel, true),
-				"webBase"   : local.cfg.webBase,
-				"filesRoot" : local.cfg.filesRoot,
-				"ws"        : javaCast("string", local.cleanWs),
-				"branches"  : local.branches,
-				"tree"      : local.tree,
-				"items"     : local.items
+				"ok"         : true,
+				"path"       : javaCast("string", local.target.rel),
+				"depth"      : local.target.depth,
+				"canCreate"  : (local.target.depth >= local.cfg.systemDepth && !local.isSharedImages),
+				"canDelete"  : (local.target.depth > local.cfg.systemDepth && !local.isSharedImages),
+				"isReadOnly" : local.isSharedImages,
+				"diskPath"   : diskPathOf(local.target.segments, true),
+				"webPath"    : webPathOf(local.target.rel, true),
+				"webBase"    : local.cfg.webBase,
+				"filesRoot"  : local.cfg.filesRoot,
+				"ws"         : javaCast("string", local.cleanWs),
+				"branches"   : local.branches,
+				"tree"       : local.tree,
+				"sharedTree" : local.sharedTree,
+				"items"      : local.items
 			};
 		} catch (any e) {
 			return handleError(e);

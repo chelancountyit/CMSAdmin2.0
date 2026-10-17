@@ -96,7 +96,7 @@ component extends="Controller" {
 			if (!DirectoryExists(local.wsDisk & "\documents")) {
 				DirectoryCreate(local.wsDisk & "\documents");
 			}
-			ensureSharedImagesJunction(local.wsDisk);
+			ensureSharedImagesJunction(local.rootDisk);
 		} catch (any dirErr) {
 			try {
 				WriteLog(file="media_explorer", type="warning", text="Workspace directory setup warning: " & dirErr.message);
@@ -234,7 +234,7 @@ component extends="Controller" {
 			if (!DirectoryExists(local.wsDisk & "\documents")) {
 				DirectoryCreate(local.wsDisk & "\documents");
 			}
-			ensureSharedImagesJunction(local.wsDisk);
+			ensureSharedImagesJunction(local.rootDisk);
 		} catch (any dirErr) {}
 
 		variables.activeWsFolder = local.vDir;
@@ -399,7 +399,9 @@ component extends="Controller" {
 	 */
 	private void function ensureSharedImagesJunction(required string wsDisk) {
 		local.targetPath = "C:\inetpub\chelan-county\images\picjumbo";
-		local.juncPath = arguments.wsDisk & "\shared images";
+		local.juncPath = arguments.wsDisk;
+		if (right(local.juncPath, 1) != "\") local.juncPath &= "\";
+		local.juncPath &= "shared images";
 		try {
 			if (!DirectoryExists(local.targetPath)) {
 				DirectoryCreate(local.targetPath);

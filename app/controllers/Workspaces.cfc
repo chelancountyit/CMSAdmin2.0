@@ -305,7 +305,7 @@ component extends="Controller" {
 			if (!DirectoryExists(local.baseWsDir)) CreateObject("java", "java.io.File").init(local.baseWsDir).mkdirs();
 			if (!DirectoryExists(local.targetMediaDir)) CreateObject("java", "java.io.File").init(local.targetMediaDir).mkdirs();
 			if (!DirectoryExists(local.targetDocsDir)) CreateObject("java", "java.io.File").init(local.targetDocsDir).mkdirs();
-			ensureSharedImagesJunction(local.baseWsDir);
+			ensureSharedImagesJunction("C:\inetpub\chelan-county\files");
 		} catch (any err) {}
 
 		// Persist into SQL Server database
@@ -612,7 +612,7 @@ component extends="Controller" {
 			if (!DirectoryExists(local.baseWsDir)) CreateObject("java", "java.io.File").init(local.baseWsDir).mkdirs();
 			if (!DirectoryExists(local.targetMediaDir)) CreateObject("java", "java.io.File").init(local.targetMediaDir).mkdirs();
 			if (!DirectoryExists(local.targetDocsDir)) CreateObject("java", "java.io.File").init(local.targetDocsDir).mkdirs();
-			ensureSharedImagesJunction(local.baseWsDir);
+			ensureSharedImagesJunction("C:\inetpub\chelan-county\files");
 		} catch (any err) {}
 
 		local.type = local.existing.type;
@@ -767,7 +767,9 @@ component extends="Controller" {
 	 */
 	private void function ensureSharedImagesJunction(required string wsDisk) {
 		local.targetPath = "C:\inetpub\chelan-county\images\picjumbo";
-		local.juncPath = arguments.wsDisk & "\shared images";
+		local.juncPath = arguments.wsDisk;
+		if (right(local.juncPath, 1) != "\") local.juncPath &= "\";
+		local.juncPath &= "shared images";
 		try {
 			if (!DirectoryExists(local.targetPath)) {
 				DirectoryCreate(local.targetPath);

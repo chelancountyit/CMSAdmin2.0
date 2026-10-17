@@ -247,10 +247,12 @@ This log maintains a chronological, permanent record of engineering milestones, 
      - Assigned `c:\inetpub\chelan-county\files\` as the authoritative permanent repository for all county documents and workspace assets across `CMSAdmin 2.0`.
      - Mirrored `c:\inetpub\CMSAdmin2.0\files\` to `c:\inetpub\chelan-county\files\` via an NTFS directory junction, allowing IIS to serve `/files/...` directly from the public county web root with zero delay or duplication.
      - Updated controllers (`Media.cfc`, `Main.cfc`, `Workspaces.cfc`, `Pages.cfc`) and API services (`api/Application.cfc`, `api/Files.cfc`) to target `c:\inetpub\chelan-county\files\` as `filesRoot`.
-  2. **County-Wide Shared Image Library (`c:\inetpub\chelan-county\images\picjumbo`):**
+  2. **County-Wide Shared Image Library Outside Workspace Folders (`picjumbo`):**
      - Permanently established `c:\inetpub\chelan-county\images\picjumbo` as the centralized county stock image repository.
-     - Linked `picjumbo` into each workspace directory (`c:\inetpub\chelan-county\files\<workspace>\shared images`) and root (`c:\inetpub\CMSAdmin2.0\images\picjumbo`) via directory junctions.
-     - Implemented runtime auto-provisioning helper `ensureSharedImagesJunction(wsDisk)` in `api/Files.cfc`, `Media.cfc`, and `Workspaces.cfc` to automatically wire missing junctions.
+     - Positioned `shared images` directly at the files root (`c:\inetpub\chelan-county\files\shared images`), strictly outside all workspace folders.
+     - Workspace directories remain cleanly partitioned containing only department folders (`images`, `documents`).
+     - Rendered `Shared Images` in the left Explorer tree as a dedicated root-level library node with a visual divider, camera icon, and `RO` badge.
+     - Implemented runtime auto-provisioning helper `ensureSharedImagesJunction(rootDisk)` in `api/Files.cfc`, `Media.cfc`, and `Workspaces.cfc`.
   3. **Strict Multi-Layer Read-Only Enforcement (All Users):**
      - **UI Layer:** Disabled "New Folder" / "Upload" actions when navigating within `shared images`. Suppressed the folder delete button, and surfaced `READ-ONLY` and `RO` visual chips in tree and file views.
      - **Files API (`api/Files.cfc`):** In `createFolder()` and `deleteFolder()`, blocked any mutation operations targeting `shared images` or its subpaths with explicit read-only errors. Set `canCreate: false` and `canDelete: false` in list payloads. Allowed `picjumbo` canonical path verification in `resolvePath()`.

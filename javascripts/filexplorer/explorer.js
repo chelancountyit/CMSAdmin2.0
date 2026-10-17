@@ -83,6 +83,11 @@
 		return out;
 	}
 	function webHref(p) {
+		var low = (p || '').toLowerCase();
+		if (low.indexOf('shared images/') === 0 || low === 'shared images') {
+			var rel = p.substring(13).replace(/^\//, '');
+			return '/images/picjumbo/' + segs(rel).map(encodeURIComponent).join('/');
+		}
 		return state.cfg.webBase + segs(p).map(encodeURIComponent).join('/');
 	}
 
@@ -318,9 +323,10 @@
 			}).join('/');
 		}
 
-		// When scoped to a workspace, ensure navigation cannot go outside it
+		// When scoped to a workspace, ensure navigation cannot go outside it, except to shared images
 		if (state.ws) {
-			if (!p || (p !== state.ws && p.indexOf(state.ws + '/') !== 0)) {
+			var isShared = (p && (p.toLowerCase() === 'shared images' || p.toLowerCase().indexOf('shared images/') === 0));
+			if (!isShared && (!p || (p !== state.ws && p.indexOf(state.ws + '/') !== 0))) {
 				if (state.initialFolder) {
 					return state.ws + '/' + state.initialFolder;
 				}
@@ -333,7 +339,8 @@
 	function hashFor(p) { return '#/' + segs(p).map(encodeURIComponent).join('/'); }
 
 	function navigate(p, selectName) {
-		if (state.ws && (!p || (p !== state.ws && p.indexOf(state.ws + '/') !== 0))) {
+		var isShared = (p && (p.toLowerCase() === 'shared images' || p.toLowerCase().indexOf('shared images/') === 0));
+		if (state.ws && !isShared && (!p || (p !== state.ws && p.indexOf(state.ws + '/') !== 0))) {
 			p = state.ws;
 		}
 		var target = hashFor(p);
@@ -470,8 +477,9 @@
 				'</li>';
 		}
 
+		var treeHtml = '';
 		if (d.tree && d.tree.name) {
-			el.tree.innerHTML = renderNode(d.tree, 0);
+			treeHtml += renderNode(d.tree, 0);
 		} else if (state.ws) {
 			var wsNode = {
 				name: state.ws,
@@ -484,12 +492,41 @@
 					return { name: dn, path: joinPath(state.ws, dn), count: '', children: [] };
 				});
 			}
-			el.tree.innerHTML = renderNode(wsNode, 0);
+			treeHtml += renderNode(wsNode, 0);
 		}
+
+		if (d.sharedTree && d.sharedTree.name) {
+			treeHtml += '<li class="tree-divider" style="margin: 10px 0; border-top: 1px solid var(--admin-border, #e2e8f0); list-style: none;" aria-hidden="true"></li>';
+			treeHtml += renderNode(d.sharedTree, 0);
+		}
+
+		el.tree.innerHTML = treeHtml;
 	}
 
 	function renderCrumbs() {
 		var s = segs(state.path);
+		var isSharedView = (state.path.toLowerCase() === 'shared images' || state.path.toLowerCase().indexOf('shared images/') === 0);
+
+		if (isSharedView) {
+			var isSharedRoot = (state.path.toLowerCase() === 'shared images');
+			var html = isSharedRoot
+				? '<span class="root" aria-current="page">Shared Images</span><span class="sep" aria-hidden="true">\\</span>'
+				: '<button type="button" data-path="shared images" class="root" title="Shared Images">Shared Images</button><span class="sep" aria-hidden="true">\\</span>';
+
+			var acc = 'shared images';
+			for (var i = 1; i < s.length; i++) {
+				var seg = s[i];
+				acc = joinPath(acc, seg);
+				var last = i === s.length - 1;
+				html += last
+					? '<span aria-current="page">' + esc(seg) + '</span><span class="sep" aria-hidden="true">\\</span>'
+					: '<button type="button" data-path="' + esc(acc) + '">' + esc(seg) + '</button><span class="sep" aria-hidden="true">\\</span>';
+			}
+			el.crumbs.innerHTML = html;
+			el.up.disabled = isSharedRoot;
+			return;
+		}
+
 		if (state.ws) {
 			var wsTitle = state.wsName || friendly(state.ws);
 			var isWsRoot = state.path.toLowerCase() === state.ws.toLowerCase();
@@ -500,12 +537,11 @@
 			var acc = state.ws;
 			for (var i = 1; i < s.length; i++) {
 				var seg = s[i];
-				var segLabel = (seg.toLowerCase() === 'shared images') ? 'Shared Images' : seg;
 				acc = joinPath(acc, seg);
 				var last = i === s.length - 1;
 				html += last
-					? '<span aria-current="page">' + esc(segLabel) + '</span><span class="sep" aria-hidden="true">\\</span>'
-					: '<button type="button" data-path="' + esc(acc) + '">' + esc(segLabel) + '</button><span class="sep" aria-hidden="true">\\</span>';
+					? '<span aria-current="page">' + esc(seg) + '</span><span class="sep" aria-hidden="true">\\</span>'
+					: '<button type="button" data-path="' + esc(acc) + '">' + esc(seg) + '</button><span class="sep" aria-hidden="true">\\</span>';
 			}
 			el.crumbs.innerHTML = html;
 			el.up.disabled = isWsRoot;
@@ -1050,6 +1086,10 @@
 	});
 
 	el.up.addEventListener('click', function () {
+		if (state.path.toLowerCase() === 'shared images') {
+			navigate(state.ws || '');
+			return;
+		}
 		if (state.ws && state.path.toLowerCase() === state.ws.toLowerCase()) {
 			return; // At workspace root, cannot go higher
 		}

@@ -25,11 +25,13 @@ c:\inetpub\chelan-county\files\
 
 In CMSAdmin 2.0, `c:\inetpub\CMSAdmin2.0\files\` is an NTFS directory junction linking directly to `c:\inetpub\chelan-county\files\`, enabling IIS to serve `/files/...` seamlessly from the county repository.
 
-Additionally, a county-wide shared photo repository (`shared images`) is linked into every department workspace via NTFS directory junctions pointing to `c:\inetpub\chelan-county\images\picjumbo`:
+Additionally, a county-wide shared photo repository (`shared images`) is located **outside** all workspace folders at the files root via an NTFS directory junction pointing to `c:\inetpub\chelan-county\images\picjumbo`:
 ```
-c:\inetpub\chelan-county\files\<workspace>\shared images\  ->  c:\inetpub\chelan-county\images\picjumbo
-c:\inetpub\CMSAdmin2.0\images\picjumbo\                    ->  c:\inetpub\chelan-county\images\picjumbo
+c:\inetpub\chelan-county\files\shared images\  ->  c:\inetpub\chelan-county\images\picjumbo
+c:\inetpub\CMSAdmin2.0\images\picjumbo\        ->  c:\inetpub\chelan-county\images\picjumbo
 ```
+- Workspace folders only host department-specific folders (`images`, `documents`).
+- `shared images` resides at the root level outside any workspace folder and is rendered as its own dedicated library in the explorer tree.
 - Web URLs resolve to `/images/picjumbo/<filename>` when selected.
 - The `shared images` directory is permanently strictly **Read-Only** for all users across the entire system.
 
