@@ -449,7 +449,7 @@
 							<span id="lnkInspectArticleA11yText">Inspect Diagnostics</span>
 							<span id="lnkInspectArticleA11yChevron" style="display:inline-flex; align-items:center; transition:transform 0.2s ease;">#svgIcon(name="chevron-down", size=12)#</span>
 						</button>
-						<div id="articleA11yPublishInlineList" style="display:none; margin-top:0.55rem; padding-top:0.55rem; border-top:1px solid var(--admin-border-subtle, #e2e8f0); flex-direction:column; gap:0.45rem; max-height:280px; overflow-y:auto;"></div>
+						<div id="articleA11yPublishInlineList" style="display:none; margin-top:0.55rem; padding-top:0.55rem; border-top:1px solid var(--admin-border-subtle, ##e2e8f0); flex-direction:column; gap:0.45rem; max-height:280px; overflow-y:auto;"></div>
 					</div>
 				</div>
 

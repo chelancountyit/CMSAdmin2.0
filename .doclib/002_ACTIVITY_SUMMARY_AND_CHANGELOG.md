@@ -12,6 +12,18 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 16, 2026 — Articles CFML Compilation Fix (`articles/edit.cfm`)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Articles Module (`app/views/articles/edit.cfm`)
+- **Root Cause & Resolution:**
+  - Resolved `Wheels failed to initialize. [coldfusion.util.RuntimeWrapper] Invalid CFML construct found on line 452 at column 205` preventing `/articles`, `/articles/new`, and `/articles/edit` from loading.
+  - Line 452 had an unescaped CSS hex color `#e2e8f0` within a `<cfoutput>` block (`border-top:1px solid var(--admin-border-subtle, #e2e8f0)`).
+  - Adobe ColdFusion parsed `#e2e8f0` as an open CFML expression variable, resulting in an unclosed CFML construct syntax error during template compilation.
+  - Escaped the hex code as `##e2e8f0`. Verified clean template compilation, tested authenticated access to `/articles` and `/articles/new` returning HTTP 200, and verified zero runtime errors in `wheels.log`.
+
+---
+
+
 ### Session: October 16, 2026 — RFP & Municipal Solicitations Manager Module (TODO 3.5)
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** Database Schema (`config/sql/schema-rfp-manager.sql`), Core Controller (`app/controllers/Rfps.cfc`), Base Controller & Public Security (`app/controllers/Controller.cfc`), Scheduled Transitions Integration (`app/global/functions.cfm`), Admin Views (`app/views/rfps/index.cfm`, `app/views/rfps/edit.cfm`), Public Views (`app/views/rfps/publicList.cfm`, `app/views/rfps/publicView.cfm`), Routes (`config/routes.cfm`), Sidebar Navigation (`app/views/layout.cfm`), View Helpers (`app/views/helpers.cfm`), Documentation Series (`.doclib/011_RFP_AND_SOLICITATIONS_MANAGER.md`, `.doclib/000_SERIES_INDEX.md`).
