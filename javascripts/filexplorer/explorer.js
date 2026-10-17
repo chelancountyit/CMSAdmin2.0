@@ -72,12 +72,27 @@
 	function depthOf(p) { return segs(p).length; }
 
 	function diskPath(p, isDir) {
+		var s = segs(p);
+		if (s.length > 0 && s[0].toLowerCase() === 'shared images') {
+			var sub = s.slice(1);
+			var picRoot = 'C:\\inetpub\\chelan-county\\images\\picjumbo';
+			var out = sub.length ? picRoot + '\\' + sub.join('\\') : picRoot;
+			if (isDir && out.slice(-1) !== '\\') out += '\\';
+			return out;
+		}
 		var root = state.cfg.filesRoot;
-		var out = root + segs(p).join('\\');
+		var out = root + s.join('\\');
 		if (isDir && out.slice(-1) !== '\\') out += '\\';
 		return out;
 	}
 	function webPath(p, isDir) {
+		var low = (p || '').toLowerCase();
+		if (low.indexOf('shared images/') === 0 || low === 'shared images') {
+			var rel = p.substring(13).replace(/^\//, '');
+			var out = '/images/picjumbo/' + (rel ? segs(rel).join('/') : '');
+			if (isDir && out.slice(-1) !== '/') out += '/';
+			return out;
+		}
 		var out = state.cfg.webBase + p;
 		if (isDir && out.slice(-1) !== '/') out += '/';
 		return out;
@@ -86,7 +101,7 @@
 		var low = (p || '').toLowerCase();
 		if (low.indexOf('shared images/') === 0 || low === 'shared images') {
 			var rel = p.substring(13).replace(/^\//, '');
-			return '/images/picjumbo/' + segs(rel).map(encodeURIComponent).join('/');
+			return '/images/picjumbo/' + (rel ? segs(rel).map(encodeURIComponent).join('/') : '');
 		}
 		return state.cfg.webBase + segs(p).map(encodeURIComponent).join('/');
 	}
@@ -128,7 +143,7 @@
 
 	function rulesNote(depth) {
 		if (state.path && state.path.toLowerCase().indexOf('shared images') >= 0) {
-			return 'Shared stock photography library (c:/inetpub/chelan-county/images/picjumbo) is read-only. Adding, renaming, or deleting folders/files is disabled for all users.';
+			return 'Shared stock photography library (C:\\inetpub\\chelan-county\\images\\picjumbo) is read-only. Adding, renaming, or deleting folders/files is disabled for all users.';
 		}
 		if (depth <= 1) return 'This is your workspace root folder. Folders can be created inside images (or media) and documents.';
 		if (depth <= state.cfg.systemDepth) return 'System folder. You can create subfolders inside it, but it cannot be renamed or deleted.';

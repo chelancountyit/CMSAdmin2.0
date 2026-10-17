@@ -108,5 +108,5 @@
 	<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=2.8"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=2.9"></script>
 </cfoutput>

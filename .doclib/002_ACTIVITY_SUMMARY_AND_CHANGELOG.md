@@ -12,6 +12,22 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 16, 2026 — Media Explorer: Shared Images Server Path Resolution (`C:\inetpub\chelan-county\images\picjumbo`)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Files API (`api/Files.cfc`), Media Explorer Client (`javascripts/filexplorer/explorer.js`), Media Views (`app/views/media/index.cfm`, `app/views/media/picker.cfm`), Documentation (`.doclib/004_MEDIA_LIBRARY_AND_FILE_EXPLORER.md`)
+- **Key Deliverables:**
+  1. **Canonical Server Path Resolution (`api/Files.cfc`):**
+     - Updated `diskPathOf()` in `api/Files.cfc` so requests for `shared images` or its subfolders explicitly return the physical server path `C:\inetpub\chelan-county\images\picjumbo\` instead of the intermediate junction path.
+     - Updated `webPathOf()` in `api/Files.cfc` so web URLs resolve cleanly to `/images/picjumbo/`.
+  2. **Client-Side Explorer Synchronization (`javascripts/filexplorer/explorer.js`):**
+     - Updated `diskPath()` in `explorer.js` so all inspector dialogs, file details sidebars, and item properties show `Server path: C:\inetpub\chelan-county\images\picjumbo\...`.
+     - Updated `webPath()` and `webHref()` so `Web URL` consistently shows `/images/picjumbo/...`.
+     - Standardized `rulesNote()` and bumped cachebuster to `v=2.9` in `media/index.cfm` and `media/picker.cfm`.
+- **Verification:** Verified `api/Files.cfc?method=list&path=shared images` returns `diskPath: C:\inetpub\chelan-county\images\picjumbo\` and `webPath: /images/picjumbo/`. Syntax checked `explorer.js` via `node -c`.
+
+---
+
+
 ### Session: October 16, 2026 — Documentation Hub: User Guide PDF & Technical Manual Integration
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** Documentation Module (`app/controllers/Documentation.cfc`, `app/views/documentation/index.cfm`, `app/views/documentation/userGuide.cfm`, `config/routes.cfm`, `app/views/layout.cfm`, `miscellaneous/docs/`, `c:\inetpub\chelan-county\files\shared\documents\`)

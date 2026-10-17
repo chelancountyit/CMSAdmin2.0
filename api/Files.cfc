@@ -459,12 +459,34 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 
 	private string function diskPathOf(required array segments, boolean trailing = true) {
 		local.cfg = getConfig();
+		if (arrayLen(arguments.segments) > 0 && lcase(arguments.segments[1]) == "shared images") {
+			local.picRoot = "C:\inetpub\chelan-county\images\picjumbo";
+			if (arrayLen(arguments.segments) == 1) {
+				local.p = local.picRoot;
+			} else {
+				local.subSegs = [];
+				for (local.i = 2; local.i <= arrayLen(arguments.segments); local.i++) {
+					arrayAppend(local.subSegs, arguments.segments[local.i]);
+				}
+				local.p = local.picRoot & "\" & arrayToList(local.subSegs, "\");
+			}
+			if (arguments.trailing && right(local.p, 1) != "\") local.p &= "\";
+			return local.p;
+		}
 		local.p = local.cfg.filesRoot & arrayToList(arguments.segments, "\");
 		if (arguments.trailing && right(local.p, 1) != "\") local.p &= "\";
 		return local.p;
 	}
 
 	private string function webPathOf(required string rel, boolean trailing = true) {
+		local.low = lcase(trim(arguments.rel));
+		if (local.low == "shared images" || left(local.low, 14) == "shared images/") {
+			local.remainder = trim(mid(arguments.rel, 14, len(arguments.rel)));
+			if (left(local.remainder, 1) == "/") local.remainder = mid(local.remainder, 2, len(local.remainder));
+			local.p = "/images/picjumbo/" & local.remainder;
+			if (arguments.trailing && right(local.p, 1) != "/") local.p &= "/";
+			return local.p;
+		}
 		local.cfg = getConfig();
 		local.p = local.cfg.webBase & arguments.rel;
 		if (arguments.trailing && right(local.p, 1) != "/") local.p &= "/";

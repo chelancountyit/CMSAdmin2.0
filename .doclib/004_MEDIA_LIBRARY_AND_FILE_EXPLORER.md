@@ -32,6 +32,7 @@ c:\inetpub\CMSAdmin2.0\images\picjumbo\        ->  c:\inetpub\chelan-county\imag
 ```
 - Workspace folders only host department-specific folders (`images`, `documents`).
 - `shared images` resides at the root level outside any workspace folder and is rendered as its own dedicated library in the explorer tree.
+- The physical server path for Shared Images is `C:\inetpub\chelan-county\images\picjumbo` (displayed in the file explorer details panel, API envelopes, and diagnostics).
 - Web URLs resolve to `/images/picjumbo/<filename>` when selected.
 - The `shared images` directory is permanently strictly **Read-Only** for all users across the entire system.
 
