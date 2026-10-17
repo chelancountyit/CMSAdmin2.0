@@ -23,6 +23,14 @@ c:\inetpub\CMSAdmin2.0\files\
 └── ...
 ```
 
+Additionally, a county-wide shared photo repository (`shared images`) is linked into every department workspace via NTFS directory junctions pointing to `c:\inetpub\chelan-county\images\picjumbo`:
+```
+c:\inetpub\CMSAdmin2.0\files\<workspace>\shared images\  ->  c:\inetpub\chelan-county\images\picjumbo
+c:\inetpub\CMSAdmin2.0\images\picjumbo\                  ->  c:\inetpub\chelan-county\images\picjumbo
+```
+- Web URLs resolve to `/images/picjumbo/<filename>` when selected.
+- The `shared images` directory is strictly **Read-Only** for all users across the entire system.
+
 ---
 
 ## 2. Modal Overlay & Picker Integration
@@ -83,4 +91,20 @@ The asset payload adheres to the following interface:
    - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.svg`.
    - Documents: `.pdf`, `.docx`, `.xlsx`, `.pptx`, `.txt`, `.csv`.
    - Executable extensions (`.exe`, `.cfm`, `.cfc`, `.jsp`, `.asp`, `.bat`, `.ps1`) are strictly rejected on upload.
+
+---
+
+## 5. Read-Only Shared Images Governance
+
+To share county-wide stock photography without risking file deletion or modification:
+1. **Physical Repository:** `c:\inetpub\chelan-county\images\picjumbo`
+2. **Auto-Provisioning (`ensureSharedImagesJunction`):**
+   - Both `api/Files.cfc` and `app/controllers/Media.cfc` automatically inspect the workspace root upon folder listing.
+   - If `shared images` junction does not exist, an NTFS directory junction is provisioned at runtime via `mklink /J`.
+3. **Four-Layer Enforcement:**
+   - **UI Layer:** The "New Folder" / "Upload" actions are disabled when navigating into `shared images`. Folder deletion button is hidden. `READ-ONLY` and `RO` badges visually clarify immutable access.
+   - **Files API (`api/Files.cfc`):** Both `createFolder()` and `deleteFolder()` explicitly check if the path resolves to or inside `shared images` and abort with an informative error message.
+   - **Media Controller (`app/controllers/Media.cfc`):** `processUpload()` and `updateMeta()` block any upload or metadata modification targeted at `shared images`.
+   - **Git Isolation:** `.gitignore` explicitly ignores `/files/*/shared images/`, `/files/shared images/`, and `/images/picjumbo/` to prevent external media files from entering version control.
+
 

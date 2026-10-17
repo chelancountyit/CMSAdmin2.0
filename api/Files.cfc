@@ -30,12 +30,13 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			// If ws is specified, restrict navigation strictly inside the workspace
 			local.reqPath = trim(arguments.path);
 			if (len(local.cleanWs)) {
-				// Ensure \files\[workspace.virtual_directory]\images and documents exist
+				// Ensure \files\[workspace.virtual_directory]\images, documents, and shared images exist
 				local.wsDisk = local.cfg.filesRoot & local.cleanWs;
 				try {
 					if (!directoryExists(local.wsDisk)) directoryCreate(local.wsDisk);
 					if (!directoryExists(local.wsDisk & "\images")) directoryCreate(local.wsDisk & "\images");
 					if (!directoryExists(local.wsDisk & "\documents")) directoryCreate(local.wsDisk & "\documents");
+					ensureSharedImagesJunction(local.wsDisk);
 				} catch (any dirErr) {}
 
 				if (!len(local.reqPath) || (local.reqPath neq local.cleanWs && left(local.reqPath, len(local.cleanWs) + 1) neq local.cleanWs & "/")) {
@@ -48,6 +49,8 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			if (!directoryExists(local.target.abs)) {
 				return fail("That folder does not exist.");
 			}
+
+			local.isSharedImages = (FindNoCase("shared images", local.target.rel) > 0);
 
 			// --- items in the current folder (folders first, then files) ---
 			local.q     = readDir(local.target.abs);
@@ -69,14 +72,30 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 					local.item["type"]  = "dir";
 					local.item["dirs"]  = local.counts.dirs;
 					local.item["files"] = local.counts.files;
+					if (compareNoCase(local.name, "shared images") == 0) {
+						local.item["isShared"]   = true;
+						local.item["isReadOnly"] = true;
+						local.item["label"]      = "Shared Images";
+					}
 					arrayAppend(local.dirs, local.item);
 				} else {
 					local.item["type"] = "file";
 					local.item["size"] = val(local.q.size[local.i]);
 					local.item["ext"]  = (find(".", local.name) ? lCase(listLast(local.name, ".")) : "");
+					if (local.isSharedImages) {
+						local.item["isReadOnly"] = true;
+					}
 					arrayAppend(local.files, local.item);
 				}
 			}
+
+			// Sort directories: images, documents, shared images, then alphabetical
+			arraySort(local.dirs, function(a, b) {
+				local.orderA = (compareNoCase(a.name, "images") == 0 || compareNoCase(a.name, "media") == 0 ? 1 : (compareNoCase(a.name, "documents") == 0 ? 2 : (compareNoCase(a.name, "shared images") == 0 ? 3 : 99)));
+				local.orderB = (compareNoCase(b.name, "images") == 0 || compareNoCase(b.name, "media") == 0 ? 1 : (compareNoCase(b.name, "documents") == 0 ? 2 : (compareNoCase(b.name, "shared images") == 0 ? 3 : 99)));
+				if (local.orderA != local.orderB) return local.orderA < local.orderB ? -1 : 1;
+				return compareNoCase(a.name, b.name);
+			});
 
 			local.items = local.dirs;
 			for (local.f in local.files) arrayAppend(local.items, local.f);
@@ -133,8 +152,9 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				"ok"        : true,
 				"path"      : javaCast("string", local.target.rel),
 				"depth"     : local.target.depth,
-				"canCreate" : (local.target.depth >= local.cfg.systemDepth),
-				"canDelete" : (local.target.depth > local.cfg.systemDepth),
+				"canCreate" : (local.target.depth >= local.cfg.systemDepth && !local.isSharedImages),
+				"canDelete" : (local.target.depth > local.cfg.systemDepth && !local.isSharedImages),
+				"isReadOnly": local.isSharedImages,
 				"diskPath"  : diskPathOf(local.target.segments, true),
 				"webPath"   : webPathOf(local.target.rel, true),
 				"webBase"   : local.cfg.webBase,
@@ -160,6 +180,10 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				if (arguments.path neq local.cleanWs && left(arguments.path, len(local.cleanWs) + 1) neq local.cleanWs & "/") {
 					return fail("Folders can only be created inside your active workspace.");
 				}
+			}
+
+			if (FindNoCase("shared images", arguments.path) > 0) {
+				return fail("The shared images folder is read-only. Adding subfolders is not permitted for any user.");
 			}
 
 			local.parent = resolvePath(arguments.path);
@@ -216,6 +240,10 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				if (arguments.path neq local.cleanWs && left(arguments.path, len(local.cleanWs) + 1) neq local.cleanWs & "/") {
 					return fail("Folders can only be deleted inside your active workspace.");
 				}
+			}
+
+			if (FindNoCase("shared images", arguments.path) > 0) {
+				return fail("The shared images folder is read-only and cannot be modified or deleted.");
 			}
 
 			local.target = resolvePath(arguments.path);
@@ -355,24 +383,26 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				local.childRel = len(arguments.relPath) ? arguments.relPath & "/" & local.n : local.n;
 				local.counts   = countChildren(local.childAbs);
 
+				local.isSharedNode = (compareNoCase(local.n, "shared images") == 0);
 				local.node = {
-					"name"     : javaCast("string", local.n),
-					"path"     : javaCast("string", local.childRel),
-					"dirs"     : local.counts.dirs,
-					"files"    : local.counts.files,
-					"count"    : (local.counts.dirs + local.counts.files),
-					"children" : buildFolderTree(local.childAbs, local.childRel)
+					"name"       : javaCast("string", local.n),
+					"path"       : javaCast("string", local.childRel),
+					"dirs"       : local.counts.dirs,
+					"files"      : local.counts.files,
+					"count"      : (local.counts.dirs + local.counts.files),
+					"isShared"   : local.isSharedNode,
+					"isReadOnly" : local.isSharedNode,
+					"children"   : buildFolderTree(local.childAbs, local.childRel)
 				};
 				arrayAppend(local.out, local.node);
 			}
 		}
 
-		// Sort: put images/media first then documents; otherwise alphabetical
+		// Sort: put images/media first, documents second, shared images third; otherwise alphabetical
 		arraySort(local.out, function(a, b) {
-			if (compareNoCase(a.name, "images") == 0 && compareNoCase(b.name, "documents") == 0) return -1;
-			if (compareNoCase(a.name, "documents") == 0 && compareNoCase(b.name, "images") == 0) return 1;
-			if (compareNoCase(a.name, "media") == 0 && compareNoCase(b.name, "documents") == 0) return -1;
-			if (compareNoCase(a.name, "documents") == 0 && compareNoCase(b.name, "media") == 0) return 1;
+			local.orderA = (compareNoCase(a.name, "images") == 0 || compareNoCase(a.name, "media") == 0 ? 1 : (compareNoCase(a.name, "documents") == 0 ? 2 : (compareNoCase(a.name, "shared images") == 0 ? 3 : 99)));
+			local.orderB = (compareNoCase(b.name, "images") == 0 || compareNoCase(b.name, "media") == 0 ? 1 : (compareNoCase(b.name, "documents") == 0 ? 2 : (compareNoCase(b.name, "shared images") == 0 ? 3 : 99)));
+			if (local.orderA != local.orderB) return local.orderA < local.orderB ? -1 : 1;
 			return compareNoCase(a.name, b.name);
 		});
 
@@ -469,6 +499,29 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				text = arguments.e.message & " | " & (structKeyExists(arguments.e, "detail") ? arguments.e.detail : ""));
 		} catch (any ignore) {}
 		return fail("The server could not complete that request.");
+	}
+
+	/**
+	 * Ensures the 'shared images' junction exists pointing to c:\inetpub\chelan-county\images\picjumbo
+	 */
+	private void function ensureSharedImagesJunction(required string wsDisk) {
+		local.targetPath = "C:\inetpub\chelan-county\images\picjumbo";
+		local.juncPath = arguments.wsDisk;
+		if (right(local.juncPath, 1) != "\") local.juncPath &= "\";
+		local.juncPath &= "shared images";
+
+		try {
+			if (!directoryExists(local.targetPath)) {
+				directoryCreate(local.targetPath);
+			}
+			if (!directoryExists(local.juncPath)) {
+				local.pb = createObject("java", "java.lang.ProcessBuilder").init([
+					"cmd.exe", "/c", "mklink", "/J", local.juncPath, local.targetPath
+				]);
+				local.p = local.pb.start();
+				local.p.waitFor();
+			}
+		} catch (any ignore) {}
 	}
 }
 

@@ -87,6 +87,7 @@
 	}
 
 	function friendly(name) {
+		if (String(name).toLowerCase() === 'shared images') return 'Shared Images';
 		return String(name).split(/[-_]+/).filter(Boolean).map(function (w) {
 			return w.charAt(0).toUpperCase() + w.slice(1);
 		}).join(' ');
@@ -113,6 +114,7 @@
 	}
 
 	function folderKind(depth) {
+		if (state.path && state.path.toLowerCase().indexOf('shared images') >= 0) return 'Shared Stock Library (Read-Only)';
 		if (depth === 0) return 'Files root';
 		if (depth === 1) return 'Workspace folder';
 		if (depth <= state.cfg.systemDepth) return 'System folder';
@@ -120,12 +122,18 @@
 	}
 
 	function rulesNote(depth) {
+		if (state.path && state.path.toLowerCase().indexOf('shared images') >= 0) {
+			return 'Shared stock photography library (c:/inetpub/chelan-county/images/picjumbo) is read-only. Adding, renaming, or deleting folders/files is disabled for all users.';
+		}
 		if (depth <= 1) return 'This is your workspace root folder. Folders can be created inside images (or media) and documents.';
 		if (depth <= state.cfg.systemDepth) return 'System folder. You can create subfolders inside it, but it cannot be renamed or deleted.';
 		return '';
 	}
 
 	function levelHint(depth) {
+		if (state.path && state.path.toLowerCase().indexOf('shared images') >= 0) {
+			return 'Shared stock photography \u00b7 Read-Only (selection only)';
+		}
 		if (depth <= 1) return 'Workspace root \u00b7 read-only';
 		if (depth <= state.cfg.systemDepth) return 'System folder \u00b7 subfolders allowed';
 		return 'User folder \u00b7 subfolders allowed, delete when empty';
@@ -445,14 +453,17 @@
 				return renderNode(c, depth + 1);
 			}).join('');
 
+			var isShared = (node.name.toLowerCase() === 'shared images');
+			var displayName = isShared ? 'Shared Images' : node.name;
 			var countText = (node.count != null && !isNaN(node.count)) ? String(node.count) : '';
 
 			return '<li>' +
-				'<button type="button" class="tree-row' + (isCur ? ' is-active' : '') + (depth === 0 ? ' is-root' : '') + '"' +
+				'<button type="button" class="tree-row' + (isCur ? ' is-active' : '') + (depth === 0 ? ' is-root' : '') + (isShared ? ' is-shared' : '') + '"' +
 				' data-path="' + esc(p) + '" style="padding-left: ' + (10 + indent) + 'px;"' +
-				(isCur ? ' aria-current="page"' : '') + ' title="' + esc(node.name) + '">' +
-				svg('folder', 'ficon') +
-				'<span class="label">' + esc(node.name) + '</span>' +
+				(isCur ? ' aria-current="page"' : '') + ' title="' + esc(displayName + (isShared ? ' (Read-Only Stock Photography)' : '')) + '">' +
+				svg(isShared ? 'image' : 'folder', isShared ? 'ficon ficon-shared' : 'ficon') +
+				'<span class="label">' + esc(displayName) + '</span>' +
+				(isShared ? '<span style="font-size:10px; padding:1px 5px; border-radius:4px; background:#e2e8f0; color:#475569; font-weight:700; margin-left:auto; margin-right:4px;">RO</span>' : '') +
 				(countText !== '' ? '<span class="count">' + esc(countText) + '</span>' : '') +
 				'</button>' +
 				(childrenHtml ? '<ul role="list">' + childrenHtml + '</ul>' : '') +
@@ -489,11 +500,12 @@
 			var acc = state.ws;
 			for (var i = 1; i < s.length; i++) {
 				var seg = s[i];
+				var segLabel = (seg.toLowerCase() === 'shared images') ? 'Shared Images' : seg;
 				acc = joinPath(acc, seg);
 				var last = i === s.length - 1;
 				html += last
-					? '<span aria-current="page">' + esc(seg) + '</span><span class="sep" aria-hidden="true">\\</span>'
-					: '<button type="button" data-path="' + esc(acc) + '">' + esc(seg) + '</button><span class="sep" aria-hidden="true">\\</span>';
+					? '<span aria-current="page">' + esc(segLabel) + '</span><span class="sep" aria-hidden="true">\\</span>'
+					: '<button type="button" data-path="' + esc(acc) + '">' + esc(segLabel) + '</button><span class="sep" aria-hidden="true">\\</span>';
 			}
 			el.crumbs.innerHTML = html;
 			el.up.disabled = isWsRoot;
@@ -505,10 +517,11 @@
 			var acc = '';
 			s.forEach(function (seg, i) {
 				acc = joinPath(acc, seg);
+				var segLabel = (seg.toLowerCase() === 'shared images') ? 'Shared Images' : seg;
 				var last = i === s.length - 1;
 				html += last
-					? '<span aria-current="page">' + esc(seg) + '</span><span class="sep" aria-hidden="true">\\</span>'
-					: '<button type="button" data-path="' + esc(acc) + '">' + esc(seg) + '</button><span class="sep" aria-hidden="true">\\</span>';
+					? '<span aria-current="page">' + esc(segLabel) + '</span><span class="sep" aria-hidden="true">\\</span>'
+					: '<button type="button" data-path="' + esc(acc) + '">' + esc(segLabel) + '</button><span class="sep" aria-hidden="true">\\</span>';
 			});
 			el.crumbs.innerHTML = html;
 			el.up.disabled = s.length === 0;
@@ -546,7 +559,12 @@
 		return iconFor(it);
 	}
 
-	function dirMeta(it) { return plural(it.dirs, 'folder', 'folders') + ' \u00b7 ' + plural(it.files, 'file', 'files'); }
+	function dirMeta(it) {
+		if (it && it.name && it.name.toLowerCase() === 'shared images') {
+			return 'Shared Stock Photography \u00b7 ' + plural(it.files, 'photo', 'photos');
+		}
+		return plural(it.dirs, 'folder', 'folders') + ' \u00b7 ' + plural(it.files, 'file', 'files');
+	}
 
 	function renderItems() {
 		if (state.loadError) {
@@ -568,13 +586,15 @@
 				state.shown.map(function (it, idx) {
 					var sel = it.name === state.selected;
 					var isDir = it.type === 'dir';
+					var isShared = isDir && (it.name.toLowerCase() === 'shared images');
+					var displayName = isShared ? 'Shared Images' : it.name;
 					var meta = isDir ? dirMeta(it) : (fmtSize(it.size) + ' \u00b7 ' + it.modified);
-					var badge = '';
-					return '<div class="card item" role="listitem" tabindex="' + (sel || (!state.selected && idx === 0) ? '0' : '-1') + '"' +
+					var badge = isShared ? '<span style="position:absolute; top:8px; right:8px; font-size:10.5px; font-weight:700; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:4px; padding:2px 6px;">READ-ONLY</span>' : '';
+					return '<div class="card item' + (isShared ? ' is-shared-card' : '') + '" role="listitem" tabindex="' + (sel || (!state.selected && idx === 0) ? '0' : '-1') + '"' +
 						' aria-selected="' + (sel ? 'true' : 'false') + '" data-idx="' + idx + '">' +
 						badge +
 						'<div class="thumb">' + thumbFor(it) + '</div>' +
-						'<div class="name" title="' + esc(it.name) + '">' + esc(it.name) + '</div>' +
+						'<div class="name" title="' + esc(displayName) + '">' + esc(displayName) + '</div>' +
 						'<div class="meta">' + esc(meta) + '</div>' +
 						'</div>';
 				}).join('') +
@@ -586,11 +606,14 @@
 				state.shown.map(function (it, idx) {
 					var sel = it.name === state.selected;
 					var isDir = it.type === 'dir';
-					var k = isDir ? { cls: 'dir', label: 'Folder' } : fileKind(it.ext);
-					var chip = '<span class="chip bg-' + k.cls + '">' + esc(isDir ? 'DIR' : (it.ext || 'FILE')) + '</span>';
+					var isShared = isDir && (it.name.toLowerCase() === 'shared images');
+					var displayName = isShared ? 'Shared Images' : it.name;
+					var k = isDir ? { cls: isShared ? 'shared' : 'dir', label: isShared ? 'Shared Photos' : 'Folder' } : fileKind(it.ext);
+					var chipText = isShared ? 'READ-ONLY' : (isDir ? 'DIR' : (it.ext || 'FILE'));
+					var chip = '<span class="chip bg-' + k.cls + '">' + esc(chipText) + '</span>';
 					return '<tr class="row item" tabindex="' + (sel || (!state.selected && idx === 0) ? '0' : '-1') + '"' +
 						' aria-selected="' + (sel ? 'true' : 'false') + '" data-idx="' + idx + '">' +
-						'<td><div class="cell-name">' + chip + '<span title="' + esc(it.name) + '">' + esc(it.name) + '</span></div></td>' +
+						'<td><div class="cell-name">' + chip + '<span title="' + esc(displayName) + '">' + esc(displayName) + '</span></div></td>' +
 						'<td>' + esc(k.label) + '</td>' +
 						'<td class="num mono">' + esc(isDir ? '\u2014' : fmtSize(it.size)) + '</td>' +
 						'<td class="mono muted">' + esc(it.modified || '\u2014') + '</td>' +
@@ -638,21 +661,22 @@
 				? (state.wsName || friendly(rawName))
 				: (depth <= 1 ? friendly(rawName) : rawName);
 
-			var canNew = depth >= state.cfg.systemDepth;
-			var canDel = depth > state.cfg.systemDepth && nd + nf === 0;
+			var isSharedDir = p.toLowerCase().indexOf('shared images') >= 0;
+			var canNew = !isSharedDir && (depth >= state.cfg.systemDepth);
+			var canDel = !isSharedDir && (depth > state.cfg.systemDepth) && (nd + nf === 0);
 			var armed = state.armed && state.armed.path === p;
-			var note = rulesNote(depth);
+			var note = isSharedDir ? 'This shared stock photography library is read-only. Adding, renaming, or deleting folders/files is disabled for all users.' : rulesNote(depth);
 			if (!note && nd + nf > 0) note = 'Only empty folders can be deleted.';
 
-			html = '<div class="preview">' + svg('folder', depth <= 1 ? 'folder-dark' : 'folder-light') + '</div>' +
+			html = '<div class="preview">' + svg(isSharedDir ? 'image' : 'folder', depth <= 1 ? 'folder-dark' : (isSharedDir ? 'ficon-shared' : 'folder-light')) + '</div>' +
 				'<h2>' + esc(title) + '</h2>' +
-				'<div class="kind">' + esc(folderKind(depth)) + (isCurrent ? ' \u00b7 current folder' : '') + '</div>' +
+				'<div class="kind">' + esc(isSharedDir ? 'Shared Stock Library (Read-Only)' : (folderKind(depth) + (isCurrent ? ' \u00b7 current folder' : ''))) + '</div>' +
 				'<div class="actions">' +
 				(isCurrent ? '' : '<button type="button" class="btn btn-primary btn-block" data-act="open">Open folder</button>') +
 				(canNew ? '<button type="button" class="btn btn-block" data-act="new"' + (online ? '' : ' disabled') + '>New subfolder</button>' : '') +
-				(depth > state.cfg.systemDepth
+				(canDel && depth > state.cfg.systemDepth
 					? '<button type="button" class="btn btn-danger btn-block' + (armed ? ' confirming' : '') + '" data-act="delete" data-path="' + esc(p) + '"' +
-						(canDel && online ? '' : ' disabled') + '>' + (armed ? 'Confirm delete' : 'Delete folder') + '</button>'
+						(online ? '' : ' disabled') + '>' + (armed ? 'Confirm delete' : 'Delete folder') + '</button>'
 					: '') +
 				'</div>' +
 				'<dl>' +
@@ -665,6 +689,7 @@
 		} else {
 			var fp = itemPath(it);
 			var k = fileKind(it.ext);
+			var isSharedFile = fp.toLowerCase().indexOf('shared images') >= 0;
 			var preview = k.cls === 'image'
 				? '<img alt="" src="' + esc(webHref(fp)) + '" data-fallback="1">'
 				: svg(k.cls === 'image' ? 'image' : 'file', 't-' + k.cls);
@@ -672,7 +697,7 @@
 			var selectLabel = state.pickerMode === 'document' ? 'Select Document' : (state.pickerMode === 'image' ? 'Select Image' : 'Select File');
 			html = '<div class="preview">' + preview + '</div>' +
 				'<h2>' + esc(it.name) + '</h2>' +
-				'<div class="kind">' + esc(k.label + ' \u00b7 ' + fmtSize(it.size)) + '</div>' +
+				'<div class="kind">' + esc(k.label + ' \u00b7 ' + fmtSize(it.size)) + (isSharedFile ? ' \u00b7 <span style="font-weight:700; color:#0284c7;">Read-Only</span>' : '') + '</div>' +
 				'<div class="actions">' +
 				(isPicker
 					? '<button type="button" class="btn btn-primary btn-block" data-act="select-file">' + esc(selectLabel) + '</button>' +
@@ -704,13 +729,15 @@
 
 	function updateWriteControls() {
 		var online = state.online === true;
-		var canCreate = !!state.data && state.depth >= state.cfg.systemDepth;
+		var isShared = (state.path && state.path.toLowerCase().indexOf('shared images') >= 0);
+		var canCreate = !isShared && !!state.data && state.depth >= state.cfg.systemDepth && (state.data.canCreate !== false);
 		if (el.btnNew) {
 			el.btnNew.disabled = !(online && canCreate);
 			el.btnNew.title = !online ? 'Unavailable while offline'
-				: (canCreate ? 'Create a folder here' : 'Folders can only be created inside images or documents (or below)');
+				: (isShared ? 'Shared images is read-only. Adding or modifying folders is disabled.'
+				: (canCreate ? 'Create a folder here' : 'Folders can only be created inside images or documents (or below)'));
 		}
-		if (el.btnCreate) el.btnCreate.disabled = !online;
+		if (el.btnCreate) el.btnCreate.disabled = !online || isShared;
 		if (!canCreate) closeNew();
 	}
 
@@ -741,6 +768,11 @@
 		if (!it || it.type === 'dir') return;
 		var fp = itemPath(it);
 		var webUrl = webHref(fp);
+		var isSharedPhoto = fp.toLowerCase().indexOf('shared images/') >= 0;
+		if (isSharedPhoto) {
+			var relShared = fp.substring(fp.toLowerCase().indexOf('shared images/') + 14);
+			webUrl = '/images/picjumbo/' + relShared.split('/').map(encodeURIComponent).join('/');
+		}
 		var baseTitle = it.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || it.name;
 		var ext = (it.ext || it.name.split('.').pop() || 'FILE').toUpperCase();
 		var sizeStr = fmtSize(it.size);

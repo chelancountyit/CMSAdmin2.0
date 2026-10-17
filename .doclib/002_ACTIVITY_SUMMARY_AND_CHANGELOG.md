@@ -232,3 +232,24 @@ This log maintains a chronological, permanent record of engineering milestones, 
   2. **Seamless Data Binding & Media Picker Scoping:** Replaced the visible dropdown with a hidden `<input type="hidden" name="site_id" id="site_id">` at the form root. Enhanced `openMediaPickerForInput()` to read `site_id` with fallback to `cmsadmin_workspace` cookie, and added an event listener for `cmsadmin:workspaceChanged` to automatically synchronize new announcements with header workspace selection.
   3. **Controller Workspace Resolution (`Rfps.cfc`):** Updated `new()` and `save()` to resolve active workspace via `resolveUserActiveWorkspace()` using request parameters, `cmsadmin_workspace` cookie, and user role scoping, guaranteeing data isolation across county departments.
   4. **ColdFusion Template Parser Hardening:** Replaced embedded `<cfif>` conditionals inside HTML attributes with standard CFML ternary expressions `#(cond ? "val" : "")#` across all RFP templates and `layout.cfm`, resolving ColdFusion LSP diagnostic warnings.
+
+
+---
+
+### Milestone 12: Media Library Shared Images Repository & Strict Read-Only Governance
+- **Files Modified:**
+  - `api/Files.cfc`, `app/controllers/Media.cfc`
+  - `javascripts/filexplorer/explorer.js`, `stylesheets/filexplorer/explorer.css`
+  - `.gitignore`, `.doclib/004_MEDIA_LIBRARY_AND_FILE_EXPLORER.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`
+- **Key Deliverables & Engineering Solutions:**
+  1. **County-Wide Shared Image Repository (`picjumbo`):**
+     - Linked county-wide photo library `c:\inetpub\chelan-county\images\picjumbo` to `c:\inetpub\CMSAdmin2.0\images\picjumbo` and `c:\inetpub\CMSAdmin2.0\files\<workspace>\shared images` using NTFS directory junctions.
+     - Implemented runtime auto-provisioning helper `ensureSharedImagesJunction(wsDisk)` in both `api/Files.cfc` and `app/controllers/Media.cfc` to automatically create junction links via `ProcessBuilder` if missing.
+  2. **Multi-Layer Read-Only Enforcement (All Users):**
+     - **UI Layer:** Disabled "New Folder" / "Upload" actions when navigating within `shared images`. Suppressed the folder delete button, and surfaced `READ-ONLY` and `RO` visual chips in tree and file views.
+     - **Files API (`api/Files.cfc`):** In `createFolder()` and `deleteFolder()`, blocked any mutation operations targeting `shared images` or its subpaths with explicit read-only errors. Set `canCreate: false` and `canDelete: false` in list payloads.
+     - **Media Controller (`app/controllers/Media.cfc`):** In `processUpload()` and `updateMeta()`, strictly rejected uploads and metadata modifications targeting `shared images`.
+  3. **Media Picker Asset Resolution:**
+     - In `javascripts/filexplorer/explorer.js`, enhanced `selectForPicker()` to detect assets originating from `shared images` or `picjumbo` and resolve clean, public web paths `/images/picjumbo/<filename>`.
+  4. **Git Repository Isolation:**
+     - Configured `.gitignore` to ignore `/files/*/shared images/`, `/files/shared images/`, and `/images/picjumbo/`, ensuring local NTFS junction points and external image assets are not committed into version control.

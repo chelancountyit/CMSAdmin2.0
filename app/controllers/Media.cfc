@@ -54,7 +54,7 @@ component extends="Controller" {
 		if (!Len(local.vDir)) {
 			local.targetFolders = getFoldersForWorkspace(variables.currentWs);
 			for (local.f in local.targetFolders) {
-				if (DirectoryExists("C:\inetpub\cmsadmin2.0\files\" & local.f)) {
+				if (DirectoryExists("C:\inetpub\CMSAdmin2.0\files\" & local.f)) {
 					local.vDir = local.f;
 					break;
 				}
@@ -64,8 +64,8 @@ component extends="Controller" {
 			}
 		}
 
-		// Ensure \files\[workspace.virtual_directory]\images|documents exists on disk
-		local.rootDisk = "C:\inetpub\cmsadmin2.0\files\";
+		// Ensure \files\[workspace.virtual_directory]\images|documents|shared images exists on disk
+		local.rootDisk = "C:\inetpub\CMSAdmin2.0\files\";
 		local.vDir = Replace(Replace(Trim(local.vDir), "\", "/", "all"), "/", "", "all");
 		if (!Len(local.vDir)) {
 			local.vDir = "community-development";
@@ -96,6 +96,7 @@ component extends="Controller" {
 			if (!DirectoryExists(local.wsDisk & "\documents")) {
 				DirectoryCreate(local.wsDisk & "\documents");
 			}
+			ensureSharedImagesJunction(local.wsDisk);
 		} catch (any dirErr) {
 			try {
 				WriteLog(file="media_explorer", type="warning", text="Workspace directory setup warning: " & dirErr.message);
@@ -233,6 +234,7 @@ component extends="Controller" {
 			if (!DirectoryExists(local.wsDisk & "\documents")) {
 				DirectoryCreate(local.wsDisk & "\documents");
 			}
+			ensureSharedImagesJunction(local.wsDisk);
 		} catch (any dirErr) {}
 
 		variables.activeWsFolder = local.vDir;
@@ -290,6 +292,18 @@ component extends="Controller" {
 		}
 
 		local.subfolder = StructKeyExists(params, "subfolder") && Len(Trim(params.subfolder)) ? LCase(Trim(params.subfolder)) : "media";
+		if (local.subfolder eq "shared images" || FindNoCase("shared images", local.subfolder) > 0) {
+			local.result.message = "The shared images folder is read-only. Uploading or modifying files in this folder is disabled for all users.";
+			local.isJson = StructKeyExists(params, "format") && params.format eq "json";
+			if (local.isJson) {
+				renderText(text=SerializeJSON(local.result), contentType="application/json");
+			} else {
+				flashInsert(error=local.result.message);
+				redirectTo(controller="media", action="index", params="ws=" & local.ws);
+			}
+			return;
+		}
+
 		local.altText = StructKeyExists(params, "altText") ? Trim(params.altText) : "";
 		local.caption = StructKeyExists(params, "caption") ? Trim(params.caption) : "";
 		local.title = StructKeyExists(params, "title") ? Trim(params.title) : "";
@@ -363,6 +377,12 @@ component extends="Controller" {
 	 * Update media asset metadata (Alt text, title, caption) with live feedback
 	 */
 	function updateMeta() {
+		if ((StructKeyExists(params, "path") && FindNoCase("shared images", params.path) > 0)
+			|| (StructKeyExists(params, "id") && FindNoCase("shared images", params.id) > 0)) {
+			renderText(text=SerializeJSON({ "success": false, "message": "Shared stock images are read-only. Metadata edits are disabled." }), contentType="application/json");
+			return;
+		}
+
 		local.response = {
 			"success": true,
 			"message": "Asset metadata updated successfully.",
@@ -372,6 +392,26 @@ component extends="Controller" {
 		};
 
 		renderText(text=SerializeJSON(local.response), contentType="application/json");
+	}
+
+	/**
+	 * Ensures the 'shared images' junction exists pointing to c:\inetpub\chelan-county\images\picjumbo
+	 */
+	private void function ensureSharedImagesJunction(required string wsDisk) {
+		local.targetPath = "C:\inetpub\chelan-county\images\picjumbo";
+		local.juncPath = arguments.wsDisk & "\shared images";
+		try {
+			if (!DirectoryExists(local.targetPath)) {
+				DirectoryCreate(local.targetPath);
+			}
+			if (!DirectoryExists(local.juncPath)) {
+				local.pb = createObject("java", "java.lang.ProcessBuilder").init([
+					"cmd.exe", "/c", "mklink", "/J", local.juncPath, local.targetPath
+				]);
+				local.p = local.pb.start();
+				local.p.waitFor();
+			}
+		} catch (any ignore) {}
 	}
 
 	// =========================================================================

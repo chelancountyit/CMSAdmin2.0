@@ -13,3 +13,8 @@
 
 # Scratch/test scripts
 check_snippet*.ps1
+
+# Media Library junctions / external mounts
+/files/*/shared images/
+/files/shared images/
+/images/picjumbo/
