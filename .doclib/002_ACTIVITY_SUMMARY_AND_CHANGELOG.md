@@ -12,6 +12,27 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 16, 2026 — Documentation Hub: User Guide PDF & Technical Manual Integration
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Documentation Module (`app/controllers/Documentation.cfc`, `app/views/documentation/index.cfm`, `app/views/documentation/userGuide.cfm`, `config/routes.cfm`, `app/views/layout.cfm`, `miscellaneous/docs/`, `c:\inetpub\chelan-county\files\shared\documents\`)
+- **Key Deliverables:**
+  1. **User Guide & System Architecture PDF Assets:**
+     - Deployed `CMSAdmin-2.0-User-Guide.pdf` (489 KB) and `CMSAdmin-2.0-Documentation.pdf` (931 KB) into `miscellaneous/docs/` for clean web serving.
+     - Also mirrored both PDFs into `c:\inetpub\chelan-county\files\shared\documents\` so they are accessible directly within the County Shared Media Library for editors.
+  2. **Controller & Routes (`Documentation.cfc`, `config/routes.cfm`):**
+     - Added `userGuide()` action to `Documentation.cfc` exposing `variables.pdfUrl` and `variables.systemDocUrl`.
+     - Registered `/documentation/user-guide` and `/documentation/userGuide` routes in `config/routes.cfm`.
+  3. **Embedded Viewer Studio (`app/views/documentation/userGuide.cfm`):**
+     - Created an interactive WCAG 2.1 AA compliant viewer studio featuring document metadata cards (Format, File Size, Target Audience, Compliance Standard).
+     - Embedded a responsive PDF viewer (`<iframe>`) with fallback download links, "Open in New Tab", and direct PDF download button.
+  4. **Documentation Hub & Navigation Updates (`app/views/documentation/index.cfm`, `app/views/layout.cfm`):**
+     - Revamped `documentation/index.cfm` with featured cards for the **Official User Guide (PDF)** and **System Architecture Blueprint (PDF)** alongside the interactive Form Builder and JBDEditor guides.
+     - Added **CMSAdmin User Guide (PDF)** submenu link directly into the Documentation sidebar nav in `layout.cfm`.
+- **Verification:** Verified `/documentation` and `/documentation/user-guide` returning HTTP 200, verified static PDF asset delivery returning HTTP 200 `application/pdf`, and verified zero errors in `wheels.log`.
+
+---
+
+
 ### Session: October 16, 2026 — Articles CFML Compilation Fix (`articles/edit.cfm`)
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** Articles Module (`app/views/articles/edit.cfm`)

@@ -632,6 +632,9 @@
 										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'documentation' and structKeyExists(params, 'action') and params.action eq 'index' ? 'active' : '')#</cfoutput>">
 											<a href="<cfoutput>#urlFor(controller='documentation', action='index')#</cfoutput>" class="submenu-link">Knowledge Base</a>
 										</li>
+										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'documentation' and structKeyExists(params, 'action') and params.action eq 'userGuide' ? 'active' : '')#</cfoutput>">
+											<a href="<cfoutput>#urlFor(controller='documentation', action='userGuide')#</cfoutput>" class="submenu-link">CMSAdmin User Guide (PDF)</a>
+										</li>
 										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'documentation' and structKeyExists(params, 'action') and params.action eq 'formBuilder' ? 'active' : '')#</cfoutput>">
 											<a href="<cfoutput>#urlFor(controller='documentation', action='formBuilder')#</cfoutput>" class="submenu-link">Form Builder Guide for Beginners</a>
 										</li>

@@ -8,6 +8,12 @@ component extends="Controller" {
 		variables.pageTitle = "Documentation & Help Center";
 	}
 
+	function userGuide() {
+		variables.pageTitle = "CMSAdmin 2.0 User Guide (PDF)";
+		variables.pdfUrl = "/miscellaneous/docs/CMSAdmin-2.0-User-Guide.pdf";
+		variables.systemDocUrl = "/miscellaneous/docs/CMSAdmin-2.0-Documentation.pdf";
+	}
+
 	function formBuilder() {
 		variables.pageTitle = "Form Builder Guide for Beginners";
 	}

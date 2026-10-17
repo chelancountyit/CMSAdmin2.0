@@ -58,6 +58,8 @@
 		.post(name="navigationReorder", pattern="navigation/items/reorder", to="navigation##reorder")
 
 		// Documentation and Knowledge Base Routes
+		.get(name="documentationUserGuide", pattern="documentation/user-guide", to="documentation##userGuide")
+		.get(name="documentationUserGuideDirect", pattern="documentation/userGuide", to="documentation##userGuide")
 		.get(name="documentationEditor", pattern="documentation/editor", to="documentation##editor")
 		.get(name="documentationFormBuilder", pattern="documentation/form-builder", to="documentation##formBuilder")
 		.get(name="documentation", pattern="documentation", to="documentation##index")
