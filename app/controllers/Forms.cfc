@@ -196,7 +196,7 @@ component extends="Controller" {
 		}
 
 		variables.fbPublicFormJson = safeJsonForScript(local.formData);
-		renderView(layout=false);
+		renderView(layout=false, hideDebugInformation=true);
 	}
 
 	/**
@@ -848,16 +848,6 @@ component extends="Controller" {
 	/** Seeds the standard departments once per application lifecycle (idempotent) */
 	private void function ensureFormDepartments() {
 		try {
-			for (local.d in defaultDepartments()) {
-				fbQuery("
-					IF NOT EXISTS (SELECT 1 FROM form_departments WHERE code = :code)
-						INSERT INTO form_departments (code, name, alert_email, color_hex, badge_class) VALUES (:code, :name, :email, :color, :badge)
-				", {
-					code: qp(local.d.code), name: qp(local.d.name), email: qp(local.d.alert_email),
-					color: qp(local.d.color_hex), badge: qp(local.d.badge_class)
-				});
-			}
-
 			// Ensure all active CMS workspaces exist as form departments
 			local.workspaces = getMasterWorkspaces();
 			for (local.ws in local.workspaces) {

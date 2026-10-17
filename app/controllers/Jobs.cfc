@@ -785,7 +785,7 @@ component extends="Controller" {
 			variables.qJobs = QueryNew("JobID,Title,Permalink,ClassCode,MinSalary,MaxSalary,SalarySchedule,Location,Description,department_name");
 		}
 
-		renderView(template="publicList", layout="false");
+		renderView(template="publicList", layout="false", hideDebugInformation=true);
 	}
 
 	/**
@@ -829,7 +829,7 @@ component extends="Controller" {
 			return;
 		}
 
-		renderView(template="publicView", layout="false");
+		renderView(template="publicView", layout="false", hideDebugInformation=true);
 	}
 
 	/**
@@ -864,7 +864,7 @@ component extends="Controller" {
 		}
 
 		variables.pageTitle = "Apply: " & variables.job.title;
-		renderView(template="apply", layout="false");
+		renderView(template="apply", layout="false", hideDebugInformation=true);
 	}
 
 	/**

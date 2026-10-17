@@ -92,16 +92,6 @@
 			</select>
 		</div>
 
-		<div style="flex:1; min-width:160px;">
-			<label for="rfpsDept" class="form-label" style="font-size:0.775rem;">Department / Workspace</label>
-			<select id="rfpsDept" name="ws" class="form-control" style="padding:0.5rem 0.75rem; font-size:0.85rem;" onchange="this.form.submit()">
-				<option value="all" #(variables.selectedSiteId eq "all" ? "selected" : "")#>All Workspaces</option>
-				<cfloop array="#variables.departments#" index="dept">
-					<option value="#dept.code#" #(variables.selectedSiteId eq dept.code ? "selected" : "")#>#dept.name#</option>
-				</cfloop>
-			</select>
-		</div>
-
 		<div style="display:flex; gap:0.35rem;">
 			<button type="submit" class="btn btn-secondary btn-sm" style="padding:0.5rem 0.85rem;">Filter</button>
 			<a href="#urlFor(controller='rfps', action='index')#" class="btn btn-outline btn-sm" style="padding:0.5rem 0.85rem;">Reset</a>

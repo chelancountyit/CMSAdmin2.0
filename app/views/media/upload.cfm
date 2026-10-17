@@ -54,25 +54,13 @@
 					The <strong>Assessors</strong> workspace hosts the shared media library repository for county-wide assessor assets and public archives.
 				</p>
 
-				<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
-					<div class="form-group">
-						<label for="selectWs" class="form-label" style="font-weight:600;">Workspace / Department Site <span style="color:var(--admin-danger);">*</span></label>
-						<select id="selectWs" name="workspace" class="form-control" style="width:100%;" onchange="updatePathPreview()">
-							<cfloop array="#variables.workspaces#" index="local.w">
-								<option value="#local.w.id#" <cfif variables.defaultWs eq local.w.id>selected</cfif>>
-									#EncodeForHTML(local.w.name)#
-								</option>
-							</cfloop>
-						</select>
-					</div>
-
-					<div class="form-group">
-						<label for="selectSubfolder" class="form-label" style="font-weight:600;">Repository Subfolder <span style="color:var(--admin-danger);">*</span></label>
-						<select id="selectSubfolder" name="subfolder" class="form-control" style="width:100%;" onchange="updatePathPreview()">
-							<option value="media" <cfif variables.defaultFolder eq 'media'>selected</cfif>>media/ (Photos, Logos, Graphic Assets)</option>
-							<option value="documents" <cfif variables.defaultFolder eq 'documents'>selected</cfif>>documents/ (PDF Reports, Forms, Spreadsheets)</option>
-						</select>
-					</div>
+				<input type="hidden" id="selectWs" name="workspace" value="#EncodeForHTMLAttribute(variables.defaultWs)#">
+				<div class="form-group">
+					<label for="selectSubfolder" class="form-label" style="font-weight:600;">Repository Subfolder <span style="color:var(--admin-danger);">*</span></label>
+					<select id="selectSubfolder" name="subfolder" class="form-control" style="width:100%;" onchange="updatePathPreview()">
+						<option value="media" <cfif variables.defaultFolder eq 'media'>selected</cfif>>media/ (Photos, Logos, Graphic Assets)</option>
+						<option value="documents" <cfif variables.defaultFolder eq 'documents'>selected</cfif>>documents/ (PDF Reports, Forms, Spreadsheets)</option>
+					</select>
 				</div>
 
 				<div class="upload-path-preview">

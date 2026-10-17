@@ -3,19 +3,17 @@
 <div class="page-header">
 	<div>
 		<div style="display:flex; align-items:center; gap:0.6rem;">
-			<h1 class="page-title" style="margin-bottom:0;">#encodeForHTML(variables.workspaceName)# Dashboard</h1>
+			<h1 class="page-title" style="margin-bottom:0;"><cfif variables.hasWorkspace>#encodeForHTML(variables.workspaceName)# </cfif>Dashboard</h1>
 			<cfif variables.hasWorkspace>
 				<span class="badge #encodeForHTML(variables.activeWsObj.badgeClass ?: 'badge-primary')#" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">
 					#encodeForHTML(variables.activeWsObj.badge ?: variables.activeWorkspaceId)#
 				</span>
-			<cfelse>
-				<span class="badge badge-neutral" style="font-size:0.75rem;">Global</span>
 			</cfif>
 		</div>
 		<ol class="breadcrumb">
 			<li class="breadcrumb-item"><a href="#urlFor(controller='main', action='index')#">#svgIcon(name='dashboard', size=14)# Home</a></li>
 			<li class="breadcrumb-item">Content Management</li>
-			<li class="breadcrumb-item active">#encodeForHTML(variables.workspaceName)#</li>
+			<li class="breadcrumb-item active"><cfif variables.hasWorkspace>#encodeForHTML(variables.workspaceName)#<cfelse>Dashboard</cfif></li>
 		</ol>
 	</div>
 	<div class="page-actions">
@@ -32,31 +30,6 @@
 		</button>
 	</div>
 </div>
-
-<cfif not variables.hasWorkspace>
-	<!--- Workspace Selection Prompt Banner --->
-	<div class="admin-card" style="border-left: 4px solid var(--admin-primary); margin-bottom: 1.5rem; background: var(--admin-surface);">
-		<div class="card-body" style="display:flex; align-items:center; justify-content:space-between; gap:1.5rem; flex-wrap:wrap; padding: 1.25rem 1.5rem;">
-			<div style="display:flex; align-items:center; gap:1rem;">
-				<div style="width:42px; height:42px; border-radius:50%; background:var(--admin-primary-light); color:var(--admin-primary); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-					#svgIcon(name="grid", size=22)#
-				</div>
-				<div>
-					<h2 style="font-size:1.05rem; font-weight:700; margin:0 0 0.25rem 0; color:var(--admin-text-main);">Choose a Workspace to Manage</h2>
-					<p style="margin:0; font-size:0.85rem; color:var(--admin-text-muted);">
-						Select a county department or municipal division from the top header to inspect pages, online forms, media assets, and editorial activity.
-					</p>
-				</div>
-			</div>
-			<div>
-				<button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('workspaceDropdownBtn')?.click();">
-					#svgIcon(name="chevron-down", size=14)#
-					<span>Select Department Workspace</span>
-				</button>
-			</div>
-		</div>
-	</div>
-</cfif>
 
 <!--- 4 Real KPI Metric Stat Cards Scoped to Active Workspace --->
 <div class="stat-grid">
@@ -469,31 +442,7 @@
 				</p>
 
 				<div style="display:flex; flex-direction:column; gap:1.15rem;">
-					<cfif not variables.hasWorkspace>
-						<div>
-							<label for="modalWorkspaceSelect" class="form-label" style="font-weight:600;">
-								Department / Workspace <span style="color:var(--admin-danger);" aria-hidden="true">*</span>
-							</label>
-							<select id="modalWorkspaceSelect" name="modalWorkspaceSelect" class="form-control" required style="width:100%; font-size:0.95rem; padding:0.6rem 0.75rem;">
-								<option value="">-- Choose Target Department / Workspace --</option>
-								<cfloop array="#variables.accessibleWorkspaces#" index="w">
-									<cfif w.id neq "global" and w.id neq "all">
-										<option value="#encodeForHTML(w.id)#" data-vdir="#encodeForHTML(structKeyExists(w, 'virtual_directory') ? w.virtual_directory : w.id)#">#encodeForHTML(w.name)# (#encodeForHTML(w.badge)#)</option>
-									</cfif>
-								</cfloop>
-							</select>
-							<div id="modalWorkspaceError" class="form-help-text" style="color:var(--admin-danger); display:none; margin-top:0.35rem; font-size:0.8rem; font-weight:600;" role="alert">
-								Please select a workspace for the new page.
-							</div>
-						</div>
-					<cfelse>
-						<input type="hidden" id="modalWorkspaceSelect" value="#encodeForHTML(variables.activeWorkspaceId)#">
-						<div style="font-size:0.825rem; color:var(--admin-text-muted); display:flex; align-items:center; gap:0.4rem; padding:0.45rem 0.75rem; background:var(--admin-bg); border-radius:var(--radius-sm); border:1px solid var(--admin-border-subtle);">
-							<span style="color:var(--admin-primary);">#svgIcon(name="grid", size=14)#</span>
-							<span>Workspace: <strong style="color:var(--admin-text-main);">#encodeForHTML(variables.workspaceName)#</strong></span>
-							<span class="badge #encodeForHTML(variables.activeWsObj.badgeClass ?: 'badge-primary')#" style="font-size:0.68rem; margin-left:auto;">#encodeForHTML(variables.activeWsObj.badge ?: variables.activeWorkspaceId)#</span>
-						</div>
-					</cfif>
+					<input type="hidden" id="modalWorkspaceSelect" value="#encodeForHTML(variables.activeWorkspaceId)#">
 
 					<!--- 1. Page Title --->
 					<div>
@@ -702,6 +651,18 @@
 	}
 
 	window.openAddPageModal = function () {
+		var curWs = getActiveWorkspaceId();
+		if (!curWs || curWs === "global" || curWs === "all") {
+			if (typeof window.adminAlert === "function") {
+				window.adminAlert({
+					title: "Workspace Required",
+					message: "Please select a workspace from the header dropdown before creating a page.",
+					type: "warning"
+				});
+			}
+			return;
+		}
+
 		if (addPageModal && addPageModal.parentNode !== document.body) {
 			document.body.appendChild(addPageModal);
 		}
@@ -723,13 +684,8 @@
 		slugManuallyEdited = false;
 
 		var wsSelect = document.getElementById("modalWorkspaceSelect");
-		var curWs = getActiveWorkspaceId();
 		if (wsSelect && wsSelect.tagName === "SELECT") {
-			if (curWs) {
-				wsSelect.value = curWs;
-			} else {
-				wsSelect.value = "";
-			}
+			wsSelect.value = curWs;
 		}
 
 		updateUrlPrefix();
@@ -738,11 +694,7 @@
 		selectLayout("Right Sidebar");
 
 		setTimeout(function () {
-			if (wsSelect && wsSelect.tagName === "SELECT" && !wsSelect.value) {
-				wsSelect.focus();
-			} else {
-				titleInput.focus();
-			}
+			titleInput.focus();
 		}, 50);
 	};
 

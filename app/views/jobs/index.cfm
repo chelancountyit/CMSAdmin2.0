@@ -95,22 +95,9 @@
 				</select>
 			</div>
 
-			<!--- Department / Workspace Filter --->
-			<div>
-				<label for="jobsDept" class="form-label" style="font-size:0.775rem;">Department / Workspace</label>
-				<select id="jobsDept" name="ws" class="form-control" style="padding:0.5rem 0.75rem; font-size:0.85rem;" onchange="this.form.submit()">
-					<option value="all" <cfif variables.selectedSiteId eq "all">selected</cfif>>All Departments</option>
-					<cfloop array="#variables.departments#" index="deptItem">
-						<option value="#deptItem.code#" <cfif variables.selectedSiteId eq LCase(deptItem.code)>selected</cfif>>
-							#deptItem.name# (#deptItem.code#)
-						</option>
-					</cfloop>
-				</select>
-			</div>
-
 			<button type="submit" class="btn btn-secondary btn-sm" style="padding:0.5rem 0.85rem;">Filter</button>
 			
-			<cfif len(variables.searchQuery) or variables.selectedSiteId neq "all" or variables.selectedStatus neq "Active">
+			<cfif len(variables.searchQuery) or variables.selectedStatus neq "Active">
 				<a href="#urlFor(controller='jobs', action='index')#" class="btn btn-outline btn-sm" style="padding:0.5rem 0.85rem;">Reset</a>
 			</cfif>
 

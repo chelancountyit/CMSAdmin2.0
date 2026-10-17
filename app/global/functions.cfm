@@ -7,71 +7,12 @@
  */
 public void function ensureMasterWorkspacesTablePopulated() {
 	try {
-		var qCheck = queryExecute("
+		queryExecute("
 			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-			SELECT COUNT(1) AS cnt FROM cms_workspaces
+			IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'global')
+				INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
+				VALUES ('global', 'All Workspaces', '', 'global', 'Global', 'badge-neutral', 'grid', 'County-wide unified view across all municipal divisions and portals', 'files/shared', 'shared', '', 'County-wide', 'County Administration', 1, 1, 0);
 		", {}, { datasource: "ChelanCountyWebsite" });
-
-		if (qCheck.cnt == 0) {
-			queryExecute("
-				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'global')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('global', 'All Workspaces', '', 'global', 'Global', 'badge-neutral', 'grid', 'County-wide unified view across all municipal divisions and portals', 'files/shared', 'shared', '', 'County-wide', 'County Administration', 1, 1, 0);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'assessor')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('assessor', 'Assessor - Property & Parcels', 'assessors', 'dept', 'Assessor', 'badge-info', 'building', 'Property assessment & shared media library', 'files/assessors', 'assessors', 'https://www.chelancounty.gov/assessor', 'Assessor', 'Finance and Records', 1, 0, 10);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'auditor')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('auditor', 'Auditor - Elections & Records', '', 'dept', 'Auditor', 'badge-purple', 'building', 'Elections, recording & licensing', 'files/auditor', 'auditor', 'https://www.chelancounty.gov/auditor', 'Auditor', 'Finance and Records', 1, 0, 20);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'human-resources')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('human-resources', 'Human Resources', 'hrm', 'dept', 'HRM', 'badge-purple', 'briefcase', 'Recruitment, personnel & benefits', 'files/hrm', 'hrm', 'https://www.chelancounty.gov/human-resources', 'Human Resources', 'Internal Services', 1, 1, 30);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'communications')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('communications', 'Public Information', 'pio', 'dept', 'PIO', 'badge-info', 'megaphone', 'Media alerts, press & notifications', 'files/pio', 'pio', 'https://www.chelancounty.gov/pio', 'Public Information', 'Community Outreach', 1, 1, 40);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'admin')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('admin', 'County Administration', 'county-administration', 'dept', 'Admin', 'badge-neutral', 'building', 'Commissioners, executive & budget', 'files/admin', 'admin', 'https://www.chelancounty.gov/administration', 'County Administration', 'County Administration', 1, 1, 70);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'commissioners')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('commissioners', 'Board of Commissioners', '', 'dept', 'Commissioners', 'badge-neutral', 'building', 'County Commissioners & legislative agendas', 'files/commissioners', 'commissioners', 'https://www.chelancounty.gov/board-of-commissioners', 'Commissioners', 'County Administration', 1, 0, 80);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'sheriff')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('sheriff', 'Sheriff''s Office', '', 'dept', 'Sheriff', 'badge-neutral', 'shield', 'Law enforcement & public safety', 'files/sheriff', 'sheriff', 'https://www.chelancounty.gov/sheriff', 'Sheriff', 'Law Enforcement', 1, 0, 90);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'treasurer')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('treasurer', 'Treasurer', '', 'dept', 'Treasurer', 'badge-neutral', 'building', 'Tax collections & county finance', 'files/treasurer', 'treasurer', 'https://www.chelancounty.gov/treasurer', 'Treasurer', 'Finance and Records', 1, 0, 100);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'clerk')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('clerk', 'County Clerk', '', 'dept', 'Clerk', 'badge-neutral', 'building', 'Superior court records & judicial filings', 'files/clerk', 'clerk', 'https://www.chelancounty.gov/clerk', 'County Clerk', 'Law and Judicial Services', 1, 0, 110);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'site-main')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('site-main', 'chelancounty.gov', 'chelancounty.gov', 'site', 'Main Site', 'badge-success', 'globe', 'Primary County public government portal', 'files/chelancounty.gov', 'chelancounty.gov', 'https://www.chelancounty.gov', 'Public Portal', 'County Administration', 1, 0, 120);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'site-parks')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('site-parks', 'parks.chelancounty.gov', 'parks.chelancounty.gov', 'site', 'Subsite', 'badge-primary', 'globe', 'County Parks & Recreation portal', 'files/parks.chelancounty.gov', 'parks.chelancounty.gov', 'https://parks.chelancounty.gov', 'Parks & Recreation', 'Community Services', 1, 0, 130);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'site-gis')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('site-gis', 'gis.chelancounty.gov', 'gis.chelancounty.gov', 'site', 'Portal', 'badge-warning', 'globe', 'GIS, parcel viewer & map layers', 'files/gis.chelancounty.gov', 'gis.chelancounty.gov', 'https://gis.chelancounty.gov', 'Information Technology / GIS', 'Internal Services', 1, 0, 140);
-
-				IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'site-expo')
-					INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-					VALUES ('site-expo', 'expo.chelancounty.gov', 'expo.chelancounty.gov', 'site', 'Portal', 'badge-info', 'globe', 'Chelan County Expo Center & Fairgrounds', 'files/expo.chelancounty.gov', 'expo.chelancounty.gov', 'https://expo.chelancounty.gov', 'Expo Center', 'Chelan-Douglas', 1, 0, 150);
-			", {}, { datasource: "ChelanCountyWebsite" });
-		}
 	} catch (any e) {
 		// Log or suppress schema verification errors
 	}

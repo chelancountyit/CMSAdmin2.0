@@ -483,26 +483,7 @@
 					</small>
 				</div>
 
-				<div style="margin-bottom:1rem;">
-					<label for="siteid" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.3rem; color:var(--admin-text-muted);">
-						Assigned Workspace / Department
-					</label>
-					<cfif ArrayLen(accessibleWorkspaces) gt 1>
-						<select id="siteid" name="siteid" class="form-control" onchange="onArticleWorkspaceChanged(this.value)">
-							<cfloop array="#accessibleWorkspaces#" index="ws">
-								<option value="#EncodeForHTMLAttribute(ws.id)#" <cfif (article.siteid ?: activeWorkspaceId) eq ws.id>selected</cfif>>
-									#EncodeForHTML(ws.name)#
-								</option>
-							</cfloop>
-						</select>
-					<cfelse>
-						<input type="hidden" id="siteid" name="siteid" value="#EncodeForHTMLAttribute(Len(Trim(article.siteid ?: '')) ? article.siteid : (Len(Trim(activeWorkspaceId ?: '')) ? activeWorkspaceId : 'global'))#">
-						<div style="font-size:0.85rem; font-weight:600; padding:0.45rem 0.65rem; background:var(--admin-bg); border:1px solid var(--admin-border); border-radius:var(--radius-sm); color:var(--admin-text-main); display:flex; align-items:center; gap:0.4rem;">
-							#svgIcon(name="folder", size=13)#
-							<span>#EncodeForHTML(activeWsObj.name ?: "Public Information Office")#</span>
-						</div>
-					</cfif>
-				</div>
+				<input type="hidden" id="siteid" name="siteid" value="#EncodeForHTMLAttribute(Len(Trim(article.siteid ?: '')) ? article.siteid : (activeWorkspaceId != 'global' ? activeWorkspaceId : ''))#">
 
 				<button type="button" class="btn btn-primary" style="width:100%; justify-content:center; padding:0.6rem;" onclick="saveArticleForm()" id="btnSaveSidebar">
 					#svgIcon(name="check-circle", size=15)#

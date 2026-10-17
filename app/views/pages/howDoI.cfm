@@ -367,11 +367,6 @@
 	<div>
 		<div style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
 			<h1 class="page-title" style="margin-bottom:0;">How Do I</h1>
-			<cfif viewScope eq "all">
-				<span class="badge badge-purple" style="font-size:0.75rem;">County-Wide Rollup (All Workspaces)</span>
-			<cfelse>
-				<span class="badge #wsBadgeClass#" style="font-size:0.75rem;">#EncodeForHTML(wsName)#</span>
-			</cfif>
 		</div>
 		<nav aria-label="Breadcrumb">
 			<ol class="breadcrumb" style="margin-top:0.35rem;">
@@ -383,19 +378,6 @@
 	</div>
 
 	<div class="page-actions" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-		<cfif isAdmin and wsId neq "global" and wsId neq "all">
-			<div style="display:inline-flex; border:1px solid var(--admin-border); border-radius:var(--radius-md); overflow:hidden; background:var(--admin-surface);">
-				<a href="#urlFor(controller='pages', action='howDoI', params='scope=workspace')#" class="btn btn-sm #(viewScope eq 'workspace' ? 'btn-primary' : 'btn-ghost')#" style="border-radius:0; border:none;">
-					#svgIcon(name="building", size=14)#
-					<span>#EncodeForHTML(wsName)#</span>
-				</a>
-				<a href="#urlFor(controller='pages', action='howDoI', params='scope=all')#" class="btn btn-sm #(viewScope eq 'all' ? 'btn-primary' : 'btn-ghost')#" style="border-radius:0; border:none;">
-					#svgIcon(name="globe", size=14)#
-					<span>All County (/howdoi)</span>
-				</a>
-			</div>
-		</cfif>
-
 		<button type="button" class="btn btn-outline btn-sm" id="btnOpenHowDoIPreview">
 			#svgIcon(name="eye", size=14)#
 			<span>Preview /howdoi &amp; Mega-Menu</span>
@@ -699,18 +681,7 @@
 						<div class="pg-help">Choose the action prefix (e.g., Apply For, Pay For, Report).</div>
 					</div>
 
-					<div>
-						<label for="hdiItemSiteId" class="form-label">Department / Workspace <span style="color:var(--admin-danger);">*</span></label>
-						<select id="hdiItemSiteId" class="form-control" style="width:100%;" <cfif not isAdmin and ArrayLen(accessibleWorkspaces) lte 1>disabled</cfif>>
-							<cfif isAdmin>
-								<option value="global" <cfif wsId eq "global">selected</cfif>>Global (County-Wide)</option>
-							</cfif>
-							<cfloop array="#accessibleWorkspaces#" index="w">
-								<option value="#EncodeForHTMLAttribute(w.id)#" <cfif CompareNoCase(w.id, wsId) eq 0>selected</cfif>>#EncodeForHTML(w.name)#</option>
-							</cfloop>
-						</select>
-						<div class="pg-help">Department that owns and maintains this link.</div>
-					</div>
+					<input type="hidden" id="hdiItemSiteId" value="#EncodeForHTMLAttribute(wsId)#">
 				</div>
 
 				<div>

@@ -423,7 +423,6 @@
 	<div>
 		<div style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
 			<h1 class="page-title" style="margin-bottom:0;">Events / Calendar</h1>
-			<span class="badge #activeWsBadgeClass#" style="font-size:0.75rem;">#EncodeForHTML(activeWsName)#</span>
 		</div>
 		<nav aria-label="Breadcrumb">
 			<ol class="breadcrumb" style="margin-top:0.35rem;">
@@ -524,18 +523,7 @@
 				</select>
 			</div>
 
-			<div>
-				<label for="evWorkspaceFilter" class="form-label" style="font-size:0.775rem;">Department / Workspace</label>
-				<select id="evWorkspaceFilter" class="form-control" style="padding:0.5rem 0.75rem; font-size:0.85rem;">
-					<option value="">All Workspaces</option>
-					<option value="global">County-Wide (Global)</option>
-					<cfloop array="#wsListArr#" index="ws">
-						<cfif ws.id neq "global">
-							<option value="#EncodeForHTMLAttribute(LCase(ws.id))#">#EncodeForHTML(ws.name)#</option>
-						</cfif>
-					</cfloop>
-				</select>
-			</div>
+			<input type="hidden" id="evWorkspaceFilter" value="#EncodeForHTMLAttribute(LCase(activeWsId eq 'all' or activeWsId eq 'global' ? '' : activeWsId))#">
 
 			<div>
 				<label for="evStatusFilter" class="form-label" style="font-size:0.775rem;">Status</label>
@@ -824,7 +812,7 @@
 						<input type="text" id="evTitle" class="form-control" placeholder="e.g., Board of County Commissioners Regular Legislative Session" required aria-required="true">
 					</div>
 
-					<div style="grid-column: span 5;">
+					<div style="grid-column: span 6;">
 						<label for="evCategoryId" class="form-label" style="font-weight:600;">
 							Event Category <span style="color:var(--admin-danger);" aria-hidden="true">*</span>
 						</label>
@@ -835,21 +823,9 @@
 						</select>
 					</div>
 
-					<div style="grid-column: span 4;">
-						<label for="evSiteId" class="form-label" style="font-weight:600;">
-							Department / Workspace <span style="color:var(--admin-danger);" aria-hidden="true">*</span>
-						</label>
-						<select id="evSiteId" class="form-control" required aria-required="true">
-							<option value="global">County-Wide (All Workspaces)</option>
-							<cfloop array="#wsListArr#" index="ws">
-								<cfif ws.id neq "global">
-									<option value="#EncodeForHTMLAttribute(ws.id)#" <cfif LCase(ws.id) eq LCase(activeWsId)>selected</cfif>>#EncodeForHTML(ws.name)#</option>
-								</cfif>
-							</cfloop>
-						</select>
-					</div>
+					<input type="hidden" id="evSiteId" value="#EncodeForHTMLAttribute(activeWsId)#">
 
-					<div style="grid-column: span 3;">
+					<div style="grid-column: span 6;">
 						<label for="evStatus" class="form-label" style="font-weight:600;">Status</label>
 						<select id="evStatus" class="form-control">
 							<option value="Published">Published</option>

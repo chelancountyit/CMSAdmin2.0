@@ -98,21 +98,10 @@
 						</div>
 					</div>
 
-					<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-						<div>
-							<label for="SiteID" class="form-label" style="font-weight:600;">SiteID / Department Workspace <span aria-hidden="true" style="color:var(--admin-danger);">*</span><span class="sr-only"> (required)</span></label>
-							<select id="SiteID" name="SiteID" class="form-control" required aria-required="true">
-								<cfloop array="#variables.departments#" index="dept">
-									<option value="<cfoutput>#dept.code#</cfoutput>" <cfif variables.job.siteId eq dept.code>selected</cfif>>
-										<cfoutput>#dept.name# (#dept.code#)</cfoutput>
-									</option>
-								</cfloop>
-							</select>
-						</div>
-						<div>
-							<label for="Permalink" class="form-label" style="font-weight:600;">Permalink (URL Slug)</label>
-							<input type="text" id="Permalink" name="Permalink" class="form-control" placeholder="road-maintenance-specialist-ii" value="<cfoutput>#encodeForHTML(variables.job.permalink)#</cfoutput>">
-						</div>
+					<div>
+						<input type="hidden" id="SiteID" name="SiteID" value="<cfoutput>#EncodeForHTMLAttribute(Len(Trim(variables.job.siteId ?: '')) ? variables.job.siteId : activeWorkspaceId())#</cfoutput>">
+						<label for="Permalink" class="form-label" style="font-weight:600;">Permalink (URL Slug)</label>
+						<input type="text" id="Permalink" name="Permalink" class="form-control" placeholder="road-maintenance-specialist-ii" value="<cfoutput>#encodeForHTML(variables.job.permalink)#</cfoutput>">
 					</div>
 
 					<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">

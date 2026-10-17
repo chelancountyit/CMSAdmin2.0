@@ -199,47 +199,7 @@
 			</div>
 		</div>
 
-		<!--- Bottom row: Department / Workspace tabs --->
-		<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; border-top:1px solid var(--admin-border-subtle); padding-top:0.75rem;">
-			<div class="dept-filter-tabs" style="display:flex; gap:0.35rem; flex-wrap:wrap;">
-				<button type="button" class="btn btn-sm dept-tab <cfoutput>#(currentDeptFilter eq 'all' ? 'btn-primary' : 'btn-outline')#</cfoutput>" data-dept="all" style="font-size:0.75rem; padding:0.25rem 0.7rem;">
-					All Workspaces (<cfoutput>#formMetrics.total#</cfoutput>)
-				</button>
-				<cfloop array="#deptTabs#" index="deptTab">
-					<cfoutput>
-						<button type="button" class="btn btn-sm dept-tab #(currentDeptFilter eq deptTab.key ? 'btn-primary' : 'btn-outline')#" data-dept="#EncodeForHTMLAttribute(deptTab.key)#" style="font-size:0.75rem; padding:0.25rem 0.7rem;">
-							#EncodeForHTML(deptTab.name)# (#deptTab.count#)
-						</button>
-					</cfoutput>
-				</cfloop>
-				<cfif false>
-				<button type="button" class="btn btn-sm dept-tab <cfoutput>#(currentDeptFilter eq 'hrm' ? 'btn-primary' : 'btn-outline')#</cfoutput>" data-dept="hrm" style="font-size:0.75rem; padding:0.25rem 0.7rem; border-color:var(--admin-purple); color:<cfoutput>#(currentDeptFilter eq 'hrm' ? '##fff' : 'var(--admin-purple)')#</cfoutput>;">
-					<cfoutput>#svgIcon(name="briefcase", size=12)#</cfoutput>
-					<span>HRM &bull; Human Resources (2)</span>
-				</button>
-				<button type="button" class="btn btn-sm dept-tab <cfoutput>#(currentDeptFilter eq 'pio' ? 'btn-primary' : 'btn-outline')#</cfoutput>" data-dept="pio" style="font-size:0.75rem; padding:0.25rem 0.7rem; border-color:var(--admin-info); color:<cfoutput>#(currentDeptFilter eq 'pio' ? '##fff' : 'var(--admin-info)')#</cfoutput>;">
-					<cfoutput>#svgIcon(name="megaphone", size=12)#</cfoutput>
-					<span>PIO &bull; Public Information (3)</span>
-				</button>
-				<button type="button" class="btn btn-sm dept-tab <cfoutput>#(currentDeptFilter eq 'admin' ? 'btn-primary' : 'btn-outline')#</cfoutput>" data-dept="admin" style="font-size:0.75rem; padding:0.25rem 0.7rem;">
-					<cfoutput>#svgIcon(name="building", size=12)#</cfoutput>
-					<span>Administration (2)</span>
-				</button>
-				<button type="button" class="btn btn-sm dept-tab <cfoutput>#(currentDeptFilter eq 'community' ? 'btn-primary' : 'btn-outline')#</cfoutput>" data-dept="community" style="font-size:0.75rem; padding:0.25rem 0.7rem;">
-					<cfoutput>#svgIcon(name="map-pin", size=12)#</cfoutput>
-					<span>Community Development (2)</span>
-				</button>
-				<button type="button" class="btn btn-sm dept-tab <cfoutput>#(currentDeptFilter eq 'works' ? 'btn-primary' : 'btn-outline')#</cfoutput>" data-dept="works" style="font-size:0.75rem; padding:0.25rem 0.7rem; border-color:var(--admin-warning); color:<cfoutput>#(currentDeptFilter eq 'works' ? '##fff' : 'var(--admin-warning)')#</cfoutput>;">
-					<cfoutput>#svgIcon(name="alert-triangle", size=12)#</cfoutput>
-					<span>Public Works (1)</span>
-				</button>
-				<button type="button" class="btn btn-sm dept-tab <cfoutput>#(currentDeptFilter eq 'natural' ? 'btn-primary' : 'btn-outline')#</cfoutput>" data-dept="natural" style="font-size:0.75rem; padding:0.25rem 0.7rem; border-color:var(--admin-success); color:<cfoutput>#(currentDeptFilter eq 'natural' ? '##fff' : 'var(--admin-success)')#</cfoutput>;">
-					<cfoutput>#svgIcon(name="bug", size=12)#</cfoutput>
-					<span>Natural Resources (1)</span>
-				</button>
-				</cfif>
-			</div>
-
+		<div style="display:flex; align-items:center; justify-content:flex-end; border-top:1px solid var(--admin-border-subtle); padding-top:0.75rem;">
 			<div id="formsFilterCount" style="font-size:0.775rem; color:var(--admin-text-muted);">
 				<cfoutput>Showing #formMetrics.total# of #formMetrics.total# forms</cfoutput>
 			</div>

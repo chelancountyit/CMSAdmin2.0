@@ -100,7 +100,20 @@
 <div class="jbd-template-callout jbd-callout-info">
   <h4>Public Information Notice</h4>
   <p>All county facilities are ADA accessible. For auxiliary aids or language assistance, please contact the coordinator at least 48 hours in advance.</p>
-</div></textarea>
+</div>
+<aside class="jbd-template jbd-cta-card" aria-label="Action: Online Service">
+  <div class="jbd-cta-card-header">
+    <span class="jbd-cta-badge" aria-hidden="true">ONLINE SERVICE</span>
+    <p class="jbd-cta-title h4">Apply for Department Permits &amp; Licenses</p>
+  </div>
+  <p class="jbd-cta-desc">Submit your applications, upload engineering documents, and track review status securely through our citizen portal.</p>
+  <div class="jbd-cta-card-footer">
+    <a href="##portal" class="jbd-btn jbd-btn-primary jbd-cta-btn" aria-label="Apply online for Department Permits and Licenses">
+      <span>Begin Online Application</span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
+  </div>
+</aside></textarea>
 			</div>
 
 			<div style="margin-top:0.75rem; display:flex; justify-content:space-between; align-items:center;">
@@ -108,6 +121,34 @@
 				<button type="button" class="btn btn-outline btn-sm" id="btnInspectDemoHTML">Inspect Clean HTML</button>
 			</div>
 			<pre id="demoOutputCode" style="display:none; margin-top:0.75rem; padding:0.85rem; background:var(--admin-bg); border:1px solid var(--admin-border); border-radius:var(--radius-md); font-size:0.8rem; max-height:200px; overflow:auto;"></pre>
+		</section>
+
+		<section class="admin-card kb-section" id="cta-templates" aria-labelledby="ctaTitle">
+			<h2 id="ctaTitle">
+				<cfoutput>#svgIcon(name="external-link", size=18)#</cfoutput>
+				<span>Call to Action (CTA / CTR) Card Patterns</span>
+			</h2>
+			<p>High-conversion Call to Action cards are essential for civic web pages to guide citizens smoothly toward key services, permit applications, payments, and public records requests.</p>
+
+			<div class="kb-steps">
+				<div class="kb-step">
+					<strong>Single Action Card (<code>.jbd-cta-card</code>)</strong>
+					<span>Focuses reader attention on a single primary goal with a category badge, clear headline, explanatory text, and a prominent 44px touch target button.</span>
+				</div>
+				<div class="kb-step">
+					<strong>2-Column Action Grid (<code>.jbd-cta-grid</code>)</strong>
+					<span>Presents paired civic pathways (e.g. "Pay Taxes Online" vs. "Public Records Request") that wrap gracefully into single columns on mobile devices.</span>
+				</div>
+				<div class="kb-step">
+					<strong>Full-Width Banner (<code>.jbd-cta-banner</code>)</strong>
+					<span>High-contrast Chelan navy gradient bar designed for end-of-page application steps, office assistance notices, or critical milestones.</span>
+				</div>
+			</div>
+
+			<div class="kb-note kb-success" style="margin-top:1rem;">
+				<strong>ADA Title II &amp; WCAG 2.1 AA Compliant:</strong>
+				CTA cards use styled <code>&lt;p class="jbd-cta-title h4"&gt;</code> elements so they never skip or disrupt the page's heading hierarchy during automated accessibility audits. Buttons include descriptive <code>aria-label</code> tags, high-contrast focus rings (minimum 3:1 ratio), and full Windows High Contrast Mode support.
+			</div>
 		</section>
 
 		<section class="admin-card kb-section" id="keyboard-shortcuts" aria-labelledby="shortcutsTitle">
@@ -202,6 +243,7 @@
 		<strong style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--admin-text-main);">On This Page</strong>
 		<a href="#overview">Overview</a>
 		<a href="#interactive-demo">Live Interactive Demo</a>
+		<a href="#cta-templates">Call to Action (CTA) Cards</a>
 		<a href="#keyboard-shortcuts">Keyboard Shortcuts</a>
 		<a href="#app-integration">Integration Methods</a>
 		<hr style="margin:0.75rem 0; border:none; border-top:1px solid var(--admin-border);">

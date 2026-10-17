@@ -22,7 +22,6 @@ component extends="Controller" {
 		local.requestedWs = (StructKeyExists(params, "ws") && Len(Trim(params.ws))) ? Trim(params.ws)
 			: ((StructKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace))) ? Trim(cookie.cmsadmin_workspace) : "global");
 		variables.activeWsObj = resolveUserActiveWorkspace(requestedWs = local.requestedWs, role = local.role);
-		variables.activeWorkspaceId = LCase(Trim(variables.activeWsObj.id ?: "global"));
 		variables.accessibleWorkspaces = getUserAccessibleWorkspaces(local.role);
 
 		// Query alerts from database
@@ -487,28 +486,6 @@ component extends="Controller" {
 				END;
 			", {}, { datasource: "ChelanCountyWebsite" });
 
-			// Seed sample inactive preset templates if empty
-			local.qCnt = queryExecute("SELECT COUNT(*) AS cnt FROM emergency_alerts", {}, { datasource: "ChelanCountyWebsite" });
-			if (Val(local.qCnt.cnt) == 0) {
-				queryExecute("
-					INSERT INTO emergency_alerts (
-						title, message, severity, incident_type, link_url, link_text,
-						is_active, is_dismissible, siteid, created_by, modified_by
-					) VALUES (
-						N'WINTER WEATHER ADVISORY: Stevens Pass & Blewett Pass Traction Tires Required',
-						N'Heavy winter snowfall is impacting higher elevations across Chelan County. WSDOT requires traction tires or chains on US-2 and US-97. Road crews actively plowing.',
-						N'warning',
-						N'road_closure',
-						N'https://wsdot.com/travel/real-time/',
-						N'View Live Pass Conditions',
-						1,
-						1,
-						N'global',
-						N'PIO Administrator',
-						N'PIO Administrator'
-					);
-				", {}, { datasource: "ChelanCountyWebsite" });
-			}
 		} catch (any e) {
 			writeLog(type="error", file="alerts", text="ensureEmergencyAlertsTable error: #e.message#");
 		}

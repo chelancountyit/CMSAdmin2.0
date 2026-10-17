@@ -1046,7 +1046,7 @@ component extends="Controller" {
 			variables.qBids = QueryNew("id,site_id,solicitation_number,title,slug,solicitation_type,status,submission_deadline");
 		}
 
-		renderView(template="publicList", layout="false");
+		renderView(template="publicList", layout="false", hideDebugInformation=true);
 	}
 
 	/**
@@ -1118,7 +1118,7 @@ component extends="Controller" {
 			return;
 		}
 
-		renderView(template="publicView", layout="false");
+		renderView(template="publicView", layout="false", hideDebugInformation=true);
 	}
 
 	/**

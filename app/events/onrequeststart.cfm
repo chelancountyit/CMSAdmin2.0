@@ -20,4 +20,19 @@ if (!structKeyExists(application, "lastSchedulerRun") || dateDiff("s", applicati
 		}
 	}
 }
+if (!structKeyExists(application, "workspaceGuardReadyV3")) {
+	try {
+		structDelete(application, "cmsWorkspacesList");
+		structDelete(application, "fbDepartmentsSeeded");
+		if (structKeyExists(application, "wheels")) {
+			if (structKeyExists(application.wheels, "controllers")) structClear(application.wheels.controllers);
+			if (structKeyExists(application.wheels, "integrationPlans")) structClear(application.wheels.integrationPlans);
+		}
+		if (structKeyExists(application, "$wheels")) {
+			if (structKeyExists(application.$wheels, "controllers")) structClear(application.$wheels.controllers);
+			if (structKeyExists(application.$wheels, "integrationPlans")) structClear(application.$wheels.integrationPlans);
+		}
+		application.workspaceGuardReadyV3 = true;
+	} catch (any e) {}
+}
 </cfscript>

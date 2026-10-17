@@ -465,20 +465,9 @@
 				</div>
 			</div>
 
-			<!--- Target Site & Type --->
-			<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.85rem;">
-				<div>
-					<label for="fldSiteId" class="form-label" style="font-weight:600; font-size:0.825rem; display:block; margin-bottom:0.35rem;">
-						Target Site / Workspace
-					</label>
-					<select id="fldSiteId" name="siteid" class="form-control">
-						<option value="global">All County Portals (Global Banner)</option>
-						<option value="site-main">Primary Site (chelancounty.gov only)</option>
-						<option value="public-works">Public Works</option>
-						<option value="sheriff">Sheriff's Office</option>
-						<option value="site-parks">Parks &amp; Recreation</option>
-					</select>
-				</div>
+			<!--- Incident Category --->
+			<div>
+				<input type="hidden" id="fldSiteId" name="siteid" value="#EncodeForHTMLAttribute(activeWorkspaceId())#">
 				<div>
 					<label for="fldIncidentType" class="form-label" style="font-weight:600; font-size:0.825rem; display:block; margin-bottom:0.35rem;">
 						Incident Category

@@ -12,6 +12,90 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 17, 2026 — Call to Action (CTA / CTR) Cards & High-Conversion Civic Block Templates
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Stylesheets (`stylesheets/jbd-templates.css`), Rich Text Editor (`javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `vendor/jbdeditor/src/dialog.js`), Pages Studio (`app/views/pages/edit.cfm`), Documentation & Demo (`app/views/documentation/editor.cfm`, `app/views/layout.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`)
+- **Key Deliverables:**
+  1. **Standalone Portable CSS Suite (`stylesheets/jbd-templates.css`):**
+     - Authored Section 12 for Call to Action Cards, Grids, and Banners.
+     - Implemented `.jbd-cta-card` with high-contrast accent borders (`border-top: 4px solid #0b2545`), rounded container, smooth hover elevation (`box-shadow: 0 6px 16px rgba(0,0,0,0.08)`), and color-coded badges (`.jbd-cta-badge`, `.jbd-cta-badge-teal`, `.jbd-cta-badge-blue`, `.jbd-cta-badge-amber`).
+     - Styled `.jbd-cta-btn` with minimum 44x44px touch targets (WCAG 2.5.5 / 2.5.8), dynamic arrow transitions, and 3:1 focus-visible outlines (`outline: 3px solid #2563eb; outline-offset: 3px`).
+     - Implemented `.jbd-cta-grid` utilizing an accessible responsive CSS Grid (`repeat(auto-fit, minmax(280px, 1fr))`) that automatically reflows into single-column layouts on mobile devices.
+     - Implemented full-width `.jbd-cta-banner` with Chelan navy gradient (`#0b2545` to `#134074`), white contrast action button, and high-visibility typography.
+     - Added Windows High Contrast / Forced Colors Mode rules (`@media (forced-colors: active)`) with `ButtonText` and `Highlight` outlines.
+  2. **Rich Text Editor Templates Suite (`javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `vendor/jbdeditor/src/dialog.js`):**
+     - Added 3 new block templates under the `'Call to Action'` category:
+       - `cta-card`: Single Call to Action (CTA) Card for focused citizen applications.
+       - `cta-grid`: Call to Action Grid (2-Column) for paired service offerings (e.g. "Pay Taxes Online" vs. "Public Records Request").
+       - `cta-banner`: High-Impact Action Banner for end-of-page application steps or office assistance advisories.
+     - Dynamically generates the `'Call to Action'` filter pill in the editor's Browse Templates dialog modal.
+     - Built with semantic landmark elements (`<aside>`, `<section>`), `<p class="jbd-cta-title h4">` non-heading typography to prevent disrupting page heading levels in ADA audits, and fully accessible descriptive `aria-label`s on action buttons.
+  3. **Page & Subpage Studio Integration (`app/views/pages/edit.cfm`):**
+     - Added `cta-card`, `cta-grid`, and `cta-banner` options to the `#pgSubpageTemplateSelect` dropdown menu.
+     - Registered template markup in `SUBPAGE_TEMPLATE_MAP` for 1-click insertion into subpage bodies.
+  4. **Documentation & Live Interactive Demo (`app/views/documentation/editor.cfm`):**
+     - Embedded a live interactive CTA Card directly into the demo textarea.
+     - Authored Section `#cta-templates` with explanations of conversion architecture, 44px touch target compliance, heading hierarchy preservation, and TOC navigation link.
+  5. **Cache-Busting Asset Versioning (`app/views/layout.cfm`):**
+     - Bumped `jbd-templates.css` to `?v=1.5` and `jbdeditor.js` to `?v=1.8` across the layout view.
+- **Verification:** Syntax verified clean with `node -c` on all modified JavaScript files; validated CSS markup, template definitions, and subpage template selection.
+
+---
+
+### Session: October 17, 2026 — Online Forms: Shortcode Auto-Resolution & Public Front-End Embed Parser
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Public Front-End (`C:\inetpub\ChelanCounty.gov\app\views\helpers.cfm`, `C:\inetpub\ChelanCounty.gov\app\views\shared\_dept-overview.cfm`), Admin Page Studio (`app/views/pages/edit.cfm`), Documentation (`.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`)
+- **Key Deliverables:**
+  1. **Public Front-End Shortcode Resolver (`ChelanCounty.gov/app/views/helpers.cfm`):**
+     - Implemented `renderCmsContent(required string html)` helper in `ChelanCounty.gov`.
+     - Automatically parses `[chelan_form slug="..."]` and `[chelan_form id="..."]` tokens inside page bodies and dynamically transforms them into responsive, accessible iframe embeds pointing to `http://cmsadmin.chelancounty.gov/forms/preview?slug=...`.
+  2. **Subpage & Overview Template Integration (`ChelanCounty.gov/app/views/shared/_dept-overview.cfm`):**
+     - Wrapped all `#content.Body#` renderings with `#renderCmsContent(content.Body)#` across subpages, full-width layouts, and overview grids.
+     - Resolved the issue where shortcodes like `[chelan_form slug="public-information-office-pio-media-press-inquiry-form-2"]` previously displayed as plain, unparsed text strings on live pages (such as `/assessor/page/contact-us`).
+  3. **Page Editor Embed Form Snippet Upgrade (`app/views/pages/edit.cfm`):**
+     - Updated `.btn-insert-embed-iframe` handler in the Page Editor Studio to output full cross-domain URLs with slugs (`http://cmsadmin.chelancounty.gov/forms/preview?slug=...`) instead of relative `/forms/preview?id=...`, ensuring iframes render seamlessly when pages are displayed on either domain.
+  4. **Dynamic Auto-Height & Recursive Loop Prevention (`preview.cfm`, `helpers.cfm`):**
+     - Added `is-embedded` styling to `preview.cfm` (`overflow: hidden !important; padding: 0.25rem 0 0.5rem 0; height: auto; max-width: 100%`).
+     - Replaced unconstrained body `ResizeObserver` with a debounced bounding-box measurement of `.form-wrapper` guarded by `Math.abs(h - lastSentHeight) < 4` to prevent height feedback loops.
+     - Hardened parent listener in `helpers.cfm` with bounds checking (`Math.max(350, Math.min(height, 3000))`) and delta checks, adding the requested +50px container height buffer without arbitrary runaway creep.
+- **Verification:** Tested `http://chelancounty.gov/assessor/page/contact-us` and confirmed the iframe height stabilizes precisely at the exact form card height plus 50px of comfortable breathing room without recurring loops.
+
+---
+
+### Session: October 17, 2026 — Pages Module: Featured Cover Image Panel, Schema Migration & Pre-Flight Linter Integration
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Database Schema (`config/sql/schema-pages.sql`), Core Controller (`app/controllers/Pages.cfc`), Page Editor View (`app/views/pages/edit.cfm`), Documentation (`.doclib/006_PAGES_AND_REVISION_HISTORY_STUDIO.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`)
+- **Key Deliverables:**
+  1. **Featured Cover Image Panel Added to Pages Edit Studio (`app/views/pages/edit.cfm`):**
+     - Replicated the Article Editor's cover image panel with exact visual styling, field naming, and UX ergonomics in `.pg-side-col` between `pgLayoutPanel` and `pgPublishPanel`.
+     - Panel header features the image icon, live ADA compliance status badge (`#featuredImgAdaBadge`), and active workspace badge (`#featuredImgWsBadge`).
+     - Image URL input (`#featuredImage`, `name="imageAttachment"`) with integrated `Browse Media` and `Remove` actions.
+     - Interactive thumbnail preview / dropzone (`#featuredImgPreviewWrap`) linking directly to the County Media Picker overlay.
+     - Decorative image toggle (`#featuredImageDecorative`, WCAG 2.1 H67) that automatically dims the alt text input container when checked and flags the element as presentation-only.
+     - Alternative Text input (`#featuredImageAlt`) with real-time character counter (`0/150 rec.`), a "Suggest from Title" helper button, and dynamic audit warnings.
+     - Public Story Caption (`#featuredImageCaption`, `name="imageTitle"`, `0/1000` counter) and Extended Narrative Description (`#featuredImageDescription`, `name="imageDescription"`, `0/2000` counter) for complex infographics or long captions.
+     - Photo Credit & Attribution (`#featuredImageCredit`, `name="imageAttribution"`).
+  2. **Database Schema & Self-Healing Column Provisioning (`config/sql/schema-pages.sql`, `app/controllers/Pages.cfc`):**
+     - Updated `config/sql/schema-pages.sql` with `[imageDecorative] BIT NOT NULL CONSTRAINT [DF_pages_imageDecorative] DEFAULT (0)`.
+     - Implemented `ensurePagesTableColumns()` in `Pages.cfc` to automatically detect and provision any missing cover image columns (`imageAttachment`, `imageAttribution`, `imageAlt`, `imageTitle`, `imageDescription`, `imageDecorative`) dynamically upon edit or save.
+     - Adhered strictly to SQL Server filtered index requirements (`SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;`) on all queries touching `dbo.pages`.
+  3. **Revision History Snapshotting & Rollback Integration (`Pages.cfc`, `pages/edit.cfm`):**
+     - Updated `recordPageRevision()` in `Pages.cfc` to capture all 6 cover image attributes into revision metadata JSON snapshots per Washington State RCW 42.56 compliance.
+     - Updated `restoreRevision()` to restore image fields to the active record and return them in API responses.
+     - Integrated `executeRollback()` client-side handler in `pages/edit.cfm` to restore all cover image inputs, reset previews, recalculate character counters, and re-evaluate ADA badges upon version rollback.
+  4. **ADA WCAG 2.1 AA Pre-Flight Quality Gate Integration (`PageA11yLinter` in `pages/edit.cfm`):**
+     - Added the `cover` category to `catCounts`, `_lastResults.categories`, category chips (`#chipA11yCover`), and drawer filters.
+     - Integrated Rule Group 1 (Featured Cover Image) into `PageA11yLinter.scan()` to audit missing alt text on non-decorative images (critical error), generic/filename alt text (warning), and alt text exceeding 150 characters (warning).
+     - Wired reactive `input` and `change` listeners on `#featuredImage`, `#featuredImageAlt`, and `#featuredImageDecorative` to trigger debounced linter scans.
+  5. **Page Layout Moved to Page Attributes Group (`app/views/pages/edit.cfm`):**
+     - Added **Page Layout** as the primary tab (`#tabBtnAttrLayout`, `#tabPanelAttrLayout`) within the **Page Attributes** card, containing the layout selection (`Full` vs `Right Sidebar`), available sidebars, subpage chooser, and subpage creation trigger.
+     - Refactored tab navigation to smoothly cycle between **Page Layout**, **Navigation Assignment**, and **Folder Explorer**.
+     - Removed redundant `#pgLayoutPanel` from the sidebar column (`.pg-side-col`), creating a clean 2-card sidebar (Featured Cover Image + Publish Card).
+     - Replaced native `prompt()` in manual snapshot creation with an accessible modal dialog.
+- **Verification:** Verified CFML compilation without syntax errors, tested template rendering returning HTTP 302 to login, and confirmed proper SQL Server filtered index flags.
+
+---
+
 ### Session: October 16, 2026 — Media Explorer: Shared Images Server Path Resolution (`C:\inetpub\chelan-county\images\picjumbo`)
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** Files API (`api/Files.cfc`), Media Explorer Client (`javascripts/filexplorer/explorer.js`), Media Views (`app/views/media/index.cfm`, `app/views/media/picker.cfm`), Documentation (`.doclib/004_MEDIA_LIBRARY_AND_FILE_EXPLORER.md`)

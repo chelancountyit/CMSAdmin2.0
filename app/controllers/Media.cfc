@@ -20,94 +20,74 @@ component extends="Controller" {
 		}
 
 		variables.workspaces = getWorkspacesList();
-
-		if (local.isAdmin) {
-			if (StructKeyExists(params, "ws") && Len(Trim(params.ws))) {
-				variables.currentWs = LCase(Trim(params.ws));
-			} else if (Len(local.cookieWs) && local.cookieWs neq "all") {
-				variables.currentWs = local.cookieWs;
-			} else if (ArrayLen(variables.workspaces) gt 0) {
-				variables.currentWs = variables.workspaces[1].id;
-			} else {
-				variables.currentWs = "community-development";
-			}
-		} else {
-			local.targetWs = StructKeyExists(params, "ws") && Len(Trim(params.ws)) ? LCase(Trim(params.ws)) : local.cookieWs;
-			if (Len(local.targetWs) && local.targetWs neq "all" && local.targetWs neq "global" && isWorkspaceAccessible(local.targetWs, local.role)) {
-				variables.currentWs = local.targetWs;
-			} else if (ArrayLen(variables.workspaces) gt 0) {
-				variables.currentWs = variables.workspaces[1].id;
-			} else {
-				variables.currentWs = "community-development";
-			}
-		}
+		variables.currentWs = activeWorkspaceId();
 
 		// Resolve canonical workspace object
 		local.wsObj = resolveUserActiveWorkspace(requestedWs=variables.currentWs, role=local.role);
 		local.vDir = "";
-		if (StructKeyExists(local.wsObj, "virtual_directory") && Len(Trim(local.wsObj.virtual_directory))) {
-			local.vDir = Trim(local.wsObj.virtual_directory);
-		} else if (StructKeyExists(local.wsObj, "virtualdir") && Len(Trim(local.wsObj.virtualdir))) {
-			local.vDir = Trim(local.wsObj.virtualdir);
-		}
-
-		if (!Len(local.vDir)) {
-			local.targetFolders = getFoldersForWorkspace(variables.currentWs);
-			for (local.f in local.targetFolders) {
-				if (DirectoryExists("C:\inetpub\chelan-county\files\" & local.f)) {
-					local.vDir = local.f;
-					break;
-				}
+		if (Len(variables.currentWs)) {
+			if (StructKeyExists(local.wsObj, "virtual_directory") && Len(Trim(local.wsObj.virtual_directory))) {
+				local.vDir = Trim(local.wsObj.virtual_directory);
+			} else if (StructKeyExists(local.wsObj, "virtualdir") && Len(Trim(local.wsObj.virtualdir))) {
+				local.vDir = Trim(local.wsObj.virtualdir);
 			}
+
 			if (!Len(local.vDir)) {
-				local.vDir = variables.currentWs;
-			}
-		}
-
-		// Ensure \files\[workspace.virtual_directory]\images|documents|shared images exists on disk
-		local.rootDisk = "C:\inetpub\chelan-county\files\";
-		local.vDir = Replace(Replace(Trim(local.vDir), "\", "/", "all"), "/", "", "all");
-		if (!Len(local.vDir)) {
-			local.vDir = "community-development";
-		}
-		local.wsDisk = local.rootDisk & local.vDir;
-
-		try {
-			if (!DirectoryExists(local.wsDisk)) {
-				DirectoryCreate(local.wsDisk);
-			}
-			if (!DirectoryExists(local.wsDisk & "\images")) {
-				DirectoryCreate(local.wsDisk & "\images");
-			}
-			// If legacy media folder exists with files and images is empty, copy over files
-			if (DirectoryExists(local.wsDisk & "\media") && DirectoryExists(local.wsDisk & "\images")) {
-				local.mediaFiles = DirectoryList(local.wsDisk & "\media", false, "query");
-				local.imgFiles = DirectoryList(local.wsDisk & "\images", false, "query");
-				if (local.mediaFiles.recordCount > 0 && local.imgFiles.recordCount == 0) {
-					for (local.mi = 1; local.mi <= local.mediaFiles.recordCount; local.mi++) {
-						local.srcFile = local.wsDisk & "\media\" & local.mediaFiles.name[local.mi];
-						local.dstFile = local.wsDisk & "\images\" & local.mediaFiles.name[local.mi];
-						if (compareNoCase(local.mediaFiles.type[local.mi], "file") == 0 && !FileExists(local.dstFile)) {
-							FileCopy(local.srcFile, local.dstFile);
-						}
+				local.targetFolders = getFoldersForWorkspace(variables.currentWs);
+				for (local.f in local.targetFolders) {
+					if (DirectoryExists("C:\inetpub\chelan-county\files\" & local.f)) {
+						local.vDir = local.f;
+						break;
 					}
 				}
+				if (!Len(local.vDir)) {
+					local.vDir = variables.currentWs;
+				}
 			}
-			if (!DirectoryExists(local.wsDisk & "\documents")) {
-				DirectoryCreate(local.wsDisk & "\documents");
+
+			// Ensure \files\[workspace.virtual_directory]\images|documents|shared images exists on disk
+			local.rootDisk = "C:\inetpub\chelan-county\files\";
+			local.vDir = Replace(Replace(Trim(local.vDir), "\", "/", "all"), "/", "", "all");
+			if (Len(local.vDir)) {
+				local.wsDisk = local.rootDisk & local.vDir;
+				try {
+					if (!DirectoryExists(local.wsDisk)) {
+						DirectoryCreate(local.wsDisk);
+					}
+					if (!DirectoryExists(local.wsDisk & "\images")) {
+						DirectoryCreate(local.wsDisk & "\images");
+					}
+					// If legacy media folder exists with files and images is empty, copy over files
+					if (DirectoryExists(local.wsDisk & "\media") && DirectoryExists(local.wsDisk & "\images")) {
+						local.mediaFiles = DirectoryList(local.wsDisk & "\media", false, "query");
+						local.imgFiles = DirectoryList(local.wsDisk & "\images", false, "query");
+						if (local.mediaFiles.recordCount > 0 && local.imgFiles.recordCount == 0) {
+							for (local.mi = 1; local.mi <= local.mediaFiles.recordCount; local.mi++) {
+								local.srcFile = local.wsDisk & "\media\" & local.mediaFiles.name[local.mi];
+								local.dstFile = local.wsDisk & "\images\" & local.mediaFiles.name[local.mi];
+								if (compareNoCase(local.mediaFiles.type[local.mi], "file") == 0 && !FileExists(local.dstFile)) {
+									FileCopy(local.srcFile, local.dstFile);
+								}
+							}
+						}
+					}
+					if (!DirectoryExists(local.wsDisk & "\documents")) {
+						DirectoryCreate(local.wsDisk & "\documents");
+					}
+					ensureSharedImagesJunction(local.rootDisk);
+				} catch (any dirErr) {
+					try {
+						WriteLog(file="media_explorer", type="warning", text="Workspace directory setup warning: " & dirErr.message);
+					} catch (any logErr) {}
+				}
 			}
-			ensureSharedImagesJunction(local.rootDisk);
-		} catch (any dirErr) {
-			try {
-				WriteLog(file="media_explorer", type="warning", text="Workspace directory setup warning: " & dirErr.message);
-			} catch (any logErr) {}
 		}
 
 		variables.activeWsFolder = local.vDir;
 		variables.activeWsVirtualDir = local.vDir;
 
 		// Friendly name
-		variables.activeWsName = StructKeyExists(local.wsObj, "name") && Len(Trim(local.wsObj.name)) ? local.wsObj.name : variables.currentWs;
+		variables.activeWsName = Len(variables.currentWs) && StructKeyExists(local.wsObj, "name") && Len(Trim(local.wsObj.name)) ? local.wsObj.name : "Please select a workspace";
 		for (local.w in variables.workspaces) {
 			if (local.w.id eq variables.currentWs) {
 				variables.activeWsName = local.w.name;
@@ -126,22 +106,7 @@ component extends="Controller" {
 		local.role = getCurrentActiveRole();
 		local.isAdmin = (local.role eq "admin");
 		variables.workspaces = getWorkspacesList();
-		
-		local.cookieWs = StructKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace)) ? LCase(Trim(cookie.cmsadmin_workspace)) : "";
-		if (local.cookieWs eq "global") local.cookieWs = "all";
-		
-		local.reqWs = StructKeyExists(params, "ws") && Len(Trim(params.ws)) ? LCase(Trim(params.ws)) : (Len(local.cookieWs) && local.cookieWs neq "all" ? local.cookieWs : "");
-		if (local.isAdmin) {
-			variables.defaultWs = Len(local.reqWs) ? local.reqWs : "assessors";
-		} else {
-			if (Len(local.reqWs) && isWorkspaceAccessible(local.reqWs, local.role)) {
-				variables.defaultWs = local.reqWs;
-			} else if (ArrayLen(variables.workspaces) gt 0) {
-				variables.defaultWs = variables.workspaces[1].id;
-			} else {
-				variables.defaultWs = "site-main";
-			}
-		}
+		variables.defaultWs = activeWorkspaceId();
 		variables.defaultFolder = StructKeyExists(params, "folder") && Len(Trim(params.folder)) ? LCase(Trim(params.folder)) : "media";
 	}
 
@@ -154,93 +119,68 @@ component extends="Controller" {
 		local.isAdmin = (local.role eq "admin");
 		variables.isAdmin = local.isAdmin;
 		variables.workspaces = getWorkspacesList();
-
-		local.cookieWs = StructKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace)) ? LCase(Trim(cookie.cmsadmin_workspace)) : "";
-		if (local.cookieWs eq "global") {
-			local.cookieWs = "all";
-		}
-
-		if (local.isAdmin) {
-			if (StructKeyExists(params, "ws") && Len(Trim(params.ws)) && LCase(Trim(params.ws)) neq "all" && LCase(Trim(params.ws)) neq "global") {
-				variables.currentWs = LCase(Trim(params.ws));
-			} else if (Len(local.cookieWs) && local.cookieWs neq "all") {
-				variables.currentWs = local.cookieWs;
-			} else if (ArrayLen(variables.workspaces) gt 0) {
-				variables.currentWs = variables.workspaces[1].id;
-			} else {
-				variables.currentWs = "community-development";
-			}
-		} else {
-			local.targetWs = StructKeyExists(params, "ws") && Len(Trim(params.ws)) ? LCase(Trim(params.ws)) : local.cookieWs;
-			if (Len(local.targetWs) && local.targetWs neq "all" && local.targetWs neq "global" && isWorkspaceAccessible(local.targetWs, local.role)) {
-				variables.currentWs = local.targetWs;
-			} else if (ArrayLen(variables.workspaces) gt 0) {
-				variables.currentWs = variables.workspaces[1].id;
-			} else {
-				variables.currentWs = "community-development";
-			}
-		}
+		variables.currentWs = activeWorkspaceId();
 
 		// Resolve canonical workspace object
 		local.wsObj = resolveUserActiveWorkspace(requestedWs=variables.currentWs, role=local.role);
 		local.vDir = "";
-		if (StructKeyExists(local.wsObj, "virtual_directory") && Len(Trim(local.wsObj.virtual_directory))) {
-			local.vDir = Trim(local.wsObj.virtual_directory);
-		} else if (StructKeyExists(local.wsObj, "virtualdir") && Len(Trim(local.wsObj.virtualdir))) {
-			local.vDir = Trim(local.wsObj.virtualdir);
-		}
-
-		if (!Len(local.vDir)) {
-			local.targetFolders = getFoldersForWorkspace(variables.currentWs);
-			for (local.f in local.targetFolders) {
-				if (DirectoryExists("C:\inetpub\chelan-county\files\" & local.f)) {
-					local.vDir = local.f;
-					break;
-				}
+		if (Len(variables.currentWs)) {
+			if (StructKeyExists(local.wsObj, "virtual_directory") && Len(Trim(local.wsObj.virtual_directory))) {
+				local.vDir = Trim(local.wsObj.virtual_directory);
+			} else if (StructKeyExists(local.wsObj, "virtualdir") && Len(Trim(local.wsObj.virtualdir))) {
+				local.vDir = Trim(local.wsObj.virtualdir);
 			}
+
 			if (!Len(local.vDir)) {
-				local.vDir = variables.currentWs;
-			}
-		}
-
-		// Ensure \files\[workspace.virtual_directory]\images|documents exists on disk
-		local.rootDisk = "C:\inetpub\chelan-county\files\";
-		local.vDir = Replace(Replace(Trim(local.vDir), "\", "/", "all"), "/", "", "all");
-		if (!Len(local.vDir)) {
-			local.vDir = "community-development";
-		}
-		local.wsDisk = local.rootDisk & local.vDir;
-
-		try {
-			if (!DirectoryExists(local.wsDisk)) {
-				DirectoryCreate(local.wsDisk);
-			}
-			if (!DirectoryExists(local.wsDisk & "\images")) {
-				DirectoryCreate(local.wsDisk & "\images");
-			}
-			if (DirectoryExists(local.wsDisk & "\media") && DirectoryExists(local.wsDisk & "\images")) {
-				local.mediaFiles = DirectoryList(local.wsDisk & "\media", false, "query");
-				local.imgFiles = DirectoryList(local.wsDisk & "\images", false, "query");
-				if (local.mediaFiles.recordCount > 0 && local.imgFiles.recordCount == 0) {
-					for (local.mi = 1; local.mi <= local.mediaFiles.recordCount; local.mi++) {
-						local.srcFile = local.wsDisk & "\media\" & local.mediaFiles.name[local.mi];
-						local.dstFile = local.wsDisk & "\images\" & local.mediaFiles.name[local.mi];
-						if (compareNoCase(local.mediaFiles.type[local.mi], "file") == 0 && !FileExists(local.dstFile)) {
-							FileCopy(local.srcFile, local.dstFile);
-						}
+				local.targetFolders = getFoldersForWorkspace(variables.currentWs);
+				for (local.f in local.targetFolders) {
+					if (DirectoryExists("C:\inetpub\chelan-county\files\" & local.f)) {
+						local.vDir = local.f;
+						break;
 					}
 				}
+				if (!Len(local.vDir)) {
+					local.vDir = variables.currentWs;
+				}
 			}
-			if (!DirectoryExists(local.wsDisk & "\documents")) {
-				DirectoryCreate(local.wsDisk & "\documents");
+
+			// Ensure \files\[workspace.virtual_directory]\images|documents exists on disk
+			local.rootDisk = "C:\inetpub\chelan-county\files\";
+			local.vDir = Replace(Replace(Trim(local.vDir), "\", "/", "all"), "/", "", "all");
+			if (Len(local.vDir)) {
+				local.wsDisk = local.rootDisk & local.vDir;
+				try {
+					if (!DirectoryExists(local.wsDisk)) {
+						DirectoryCreate(local.wsDisk);
+					}
+					if (!DirectoryExists(local.wsDisk & "\images")) {
+						DirectoryCreate(local.wsDisk & "\images");
+					}
+					if (DirectoryExists(local.wsDisk & "\media") && DirectoryExists(local.wsDisk & "\images")) {
+						local.mediaFiles = DirectoryList(local.wsDisk & "\media", false, "query");
+						local.imgFiles = DirectoryList(local.wsDisk & "\images", false, "query");
+						if (local.mediaFiles.recordCount > 0 && local.imgFiles.recordCount == 0) {
+							for (local.mi = 1; local.mi <= local.mediaFiles.recordCount; local.mi++) {
+								local.srcFile = local.wsDisk & "\media\" & local.mediaFiles.name[local.mi];
+								local.dstFile = local.wsDisk & "\images\" & local.mediaFiles.name[local.mi];
+								if (compareNoCase(local.mediaFiles.type[local.mi], "file") == 0 && !FileExists(local.dstFile)) {
+									FileCopy(local.srcFile, local.dstFile);
+								}
+							}
+						}
+					}
+					if (!DirectoryExists(local.wsDisk & "\documents")) {
+						DirectoryCreate(local.wsDisk & "\documents");
+					}
+					ensureSharedImagesJunction(local.rootDisk);
+				} catch (any dirErr) {}
 			}
-			ensureSharedImagesJunction(local.rootDisk);
-		} catch (any dirErr) {}
+		}
 
 		variables.activeWsFolder = local.vDir;
 		variables.activeWsVirtualDir = local.vDir;
 
-		variables.activeWsName = StructKeyExists(local.wsObj, "name") && Len(Trim(local.wsObj.name)) ? local.wsObj.name : variables.currentWs;
+		variables.activeWsName = Len(variables.currentWs) && StructKeyExists(local.wsObj, "name") && Len(Trim(local.wsObj.name)) ? local.wsObj.name : "Please select a workspace";
 		for (local.w in variables.workspaces) {
 			if (local.w.id eq variables.currentWs) {
 				variables.activeWsName = local.w.name;
@@ -268,7 +208,7 @@ component extends="Controller" {
 
 		variables.callback = StructKeyExists(params, "callback") && Len(Trim(params.callback)) ? Trim(params.callback) : "onMediaSelected";
 
-		renderView(layout=false);
+		renderView(layout=false, hideDebugInformation=true);
 	}
 
 	/**
@@ -284,7 +224,12 @@ component extends="Controller" {
 		local.role = getCurrentActiveRole();
 		local.isAdmin = (local.role eq "admin");
 
-		local.ws = StructKeyExists(params, "workspace") && Len(Trim(params.workspace)) ? LCase(Trim(params.workspace)) : "assessors";
+		local.ws = StructKeyExists(params, "workspace") && Len(Trim(params.workspace)) ? LCase(Trim(params.workspace)) : activeWorkspaceId();
+		if (!Len(local.ws) || local.ws == "global" || local.ws == "all") {
+			local.result.message = "Workspace Required: Please select a workspace before uploading files.";
+			renderText(text=SerializeJSON(local.result), contentType="application/json");
+			return;
+		}
 		if (!local.isAdmin && !isWorkspaceAccessible(local.ws, local.role)) {
 			local.result.message = "Security Error: You do not have permission to upload files to the '" & local.ws & "' workspace. You may only upload to your assigned workspaces.";
 			renderText(text=SerializeJSON(local.result), contentType="application/json");
@@ -425,7 +370,6 @@ component extends="Controller" {
 	 */
 	private array function getWorkspacesList() {
 		local.role = getCurrentActiveRole();
-		local.isAdmin = (local.role eq "admin");
 		local.accessible = getUserAccessibleWorkspaces(local.role);
 		local.list = [];
 
@@ -441,10 +385,6 @@ component extends="Controller" {
 			};
 			if (StructKeyExists(local.w, "alias")) local.entry.alias = local.w.alias;
 			ArrayAppend(local.list, local.entry);
-		}
-
-		if (local.isAdmin) {
-			ArrayAppend(local.list, { id: "shared", name: "County Shared Media Library", type: "global", badge: "County Wide", folderCount: 2, defaultPath: "files/shared" });
 		}
 
 		return local.list;

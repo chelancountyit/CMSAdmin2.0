@@ -1,5 +1,4 @@
 <cfparam name="categories" default="#[]#">
-<cfparam name="activeWorkspaceId" default="global">
 <cfparam name="accessibleWorkspaces" default="#[]#">
 
 <cfoutput>
@@ -157,26 +156,14 @@
 				<textarea id="modalCatDesc" class="form-control" rows="2" placeholder="Brief description of stories in this category..."></textarea>
 			</div>
 
-			<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+			<div style="margin-bottom:1.5rem;">
 				<div>
 					<label for="modalCatOrder" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.3rem; color:var(--admin-text-muted);">
 						Sort Order
 					</label>
 					<input type="number" id="modalCatOrder" class="form-control" value="0">
 				</div>
-				<div>
-					<label for="modalCatSiteid" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.3rem; color:var(--admin-text-muted);">
-						Workspace Scope
-					</label>
-					<select id="modalCatSiteid" class="form-control">
-						<option value="global">Global (All Sites)</option>
-						<cfloop array="#accessibleWorkspaces#" index="ws">
-							<cfif ws.id neq "all" and ws.id neq "global">
-								<option value="#ws.id#">#EncodeForHTML(ws.name)#</option>
-							</cfif>
-						</cfloop>
-					</select>
-				</div>
+				<input type="hidden" id="modalCatSiteid" value="#EncodeForHTMLAttribute(activeWorkspaceId())#">
 			</div>
 
 			<div style="display:flex; justify-content:flex-end; gap:0.6rem;">

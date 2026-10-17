@@ -1161,6 +1161,234 @@ table.jbd-table th {
   line-height: 1.4;
 }
 
+/* 12. Call to Action (CTA) Cards, Grids & Banners */
+.jbd-cta-card {
+  margin: 18px 0;
+  padding: 22px 24px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-top: 4px solid #0b2545;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.jbd-cta-card:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.jbd-cta-card-header {
+  margin-bottom: 8px;
+}
+
+.jbd-cta-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.jbd-cta-badge-teal {
+  background-color: #f0fdfa;
+  color: #0f766e;
+  border-color: #99f6e4;
+}
+
+.jbd-cta-badge-blue {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.jbd-cta-badge-amber {
+  background-color: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.jbd-cta-title {
+  margin: 0 0 6px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.jbd-cta-desc {
+  font-size: 14.5px;
+  color: #475569;
+  line-height: 1.55;
+  margin: 0 0 16px 0;
+  flex-grow: 1;
+}
+
+.jbd-cta-card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jbd-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 6px;
+  background-color: #0b2545;
+  color: #ffffff !important;
+  border: 1px solid #0b2545;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.jbd-cta-btn:hover {
+  background-color: #134074;
+  border-color: #134074;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(11, 37, 69, 0.2);
+}
+
+.jbd-cta-btn:focus-visible {
+  outline: 3px solid #2563eb !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25) !important;
+}
+
+.jbd-cta-btn svg {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.jbd-cta-btn:hover svg {
+  transform: translateX(3px);
+}
+
+/* Multi-Card Grid */
+.jbd-cta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.jbd-cta-grid .jbd-cta-card {
+  margin: 0;
+}
+
+/* Full-Width High-Impact Action Banner */
+.jbd-cta-banner {
+  margin: 22px 0;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, #0b2545 0%, #134074 100%);
+  color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #0b2545;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 12px rgba(11, 37, 69, 0.12);
+}
+
+.jbd-cta-banner-content {
+  flex: 1 1 320px;
+}
+
+.jbd-cta-banner-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.jbd-cta-banner-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  line-height: 1.35;
+}
+
+.jbd-cta-banner-lead {
+  font-size: 14.5px;
+  color: #e2e8f0;
+  margin: 0;
+  line-height: 1.55;
+}
+
+.jbd-cta-banner-action {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.jbd-cta-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #0b2545 !important;
+  border: 1px solid #ffffff;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.jbd-cta-banner-btn:hover {
+  background-color: #f8fafc;
+  color: #041426 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.jbd-cta-banner-btn:focus-visible {
+  outline: 3px solid #ffffff !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35) !important;
+}
+
+.jbd-cta-banner-btn svg {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.jbd-cta-banner-btn:hover svg {
+  transform: translateX(3px);
+}
+
 /* Forced Colors / High Contrast Mode for Templates */
 @media (forced-colors: active) {
   .jbd-callout,
@@ -1172,6 +1400,8 @@ table.jbd-table th {
   .jbd-contact-card,
   .jbd-subpage-menu,
   .jbd-related-pages,
+  .jbd-cta-card,
+  .jbd-cta-banner,
   .jbd-grid-2col > .jbd-grid-col,
   .jbd-grid-3col > .jbd-card,
   .jbd-hero,
@@ -1186,7 +1416,9 @@ table.jbd-table th {
     border-bottom: 1px solid ButtonText !important;
   }
   .jbd-accordion summary:focus-visible,
-  .jbd-hero a:focus-visible {
+  .jbd-hero a:focus-visible,
+  .jbd-cta-btn:focus-visible,
+  .jbd-cta-banner-btn:focus-visible {
     outline: 3px solid Highlight !important;
   }
 }

@@ -23,11 +23,13 @@ component extends="Controller" {
 	 * Add / Edit Page. Pass ?id=N to load a page from database, omit for a new page.
 	 */
 	function edit() {
+		ensurePagesTableColumns();
 		local.all = loadPagesList();
 		variables.page = {
 			id: 0, title: "", slug: "", siteId: activeWorkspaceId(), menuItem: false, status: "Active", visibility: "Published",
 			parent: "", layout: "Full", sidebarIds: [], updated: "", author: "", locked: false, summary: "", body: "", content: "",
-			metaTitle: "", metaDesc: "", metaKeywords: "", hasArchive: false
+			metaTitle: "", metaDesc: "", metaKeywords: "", hasArchive: false,
+			imageAttachment: "", imageAttribution: "", imageAlt: "", imageTitle: "", imageDescription: "", imageDecorative: 0
 		};
 
 		if (StructKeyExists(params, "id") && IsNumeric(params.id) && Val(params.id) > 0) {
@@ -66,6 +68,9 @@ component extends="Controller" {
 		}
 		local.editSiteId = Len(local.currentActiveWs) ? local.currentActiveWs : ((StructKeyExists(variables.page, "siteId") && Len(Trim(variables.page.siteId)) && variables.page.siteId != "global" && variables.page.siteId != "all") ? Trim(variables.page.siteId) : "");
 		variables.editSiteId = local.editSiteId;
+		local.role = getCurrentActiveRole();
+		variables.activeRole = local.role;
+		variables.activeWsObj = resolveUserActiveWorkspace(requestedWs = local.editSiteId, role = local.role);
 		variables.availableSubpages = loadSubpages(contentId=variables.page.id, requestedWs=local.editSiteId, assignedIds=variables.page.sidebarIds);
 		variables.availableSidebars = [];
 		variables.availableFolders = loadFolderExplorers(contentId=variables.page.id, requestedWs=local.editSiteId);
@@ -276,6 +281,7 @@ component extends="Controller" {
 	 * POST JSON: saves full updates to an existing page in the database
 	 */
 	function save() {
+		ensurePagesTableColumns();
 		local.body = fxReadJsonBody();
 		local.req = IsStruct(local.body) ? local.body : params;
 
@@ -365,7 +371,8 @@ component extends="Controller" {
 
 			// Retrieve existing record to check site, lock status, and avoid collisions
 			local.curPageQ = queryExecute("
-				SELECT SiteID, Permalink, isLocked, isService, imageAttachment, imageAttribution, imageAlt, imageTitle, imageDescription
+				SELECT SiteID, Permalink, isLocked, isService, imageAttachment, imageAttribution, imageAlt, imageTitle, imageDescription,
+				       ISNULL(imageDecorative, 0) AS imageDecorative
 				FROM pages
 				WHERE ContentID = :id AND DeletedAt IS NULL
 			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
@@ -419,11 +426,12 @@ component extends="Controller" {
 			local.isService = StructKeyExists(local.req, "isService")
 				? (local.req.isService == 1 || local.req.isService == "true" || local.req.isService == true || local.req.isService == "yes" ? 1 : 0)
 				: Val(local.curPageQ.isService ?: 0);
-			local.imageAttachment = StructKeyExists(local.req, "imageAttachment") ? Trim(local.req.imageAttachment) : (local.curPageQ.imageAttachment ?: "");
-			local.imageAttribution = StructKeyExists(local.req, "imageAttribution") ? Trim(local.req.imageAttribution) : (local.curPageQ.imageAttribution ?: "");
-			local.imageAlt = StructKeyExists(local.req, "imageAlt") ? Trim(local.req.imageAlt) : (local.curPageQ.imageAlt ?: "");
-			local.imageTitle = StructKeyExists(local.req, "imageTitle") ? Trim(local.req.imageTitle) : (local.curPageQ.imageTitle ?: "");
-			local.imageDescription = StructKeyExists(local.req, "imageDescription") ? Trim(local.req.imageDescription) : (local.curPageQ.imageDescription ?: "");
+			local.imageAttachment = StructKeyExists(local.req, "imageAttachment") ? Trim(local.req.imageAttachment) : (StructKeyExists(local.req, "featured_image") ? Trim(local.req.featured_image) : (local.curPageQ.imageAttachment ?: ""));
+			local.imageAttribution = StructKeyExists(local.req, "imageAttribution") ? Trim(local.req.imageAttribution) : (StructKeyExists(local.req, "featured_image_credit") ? Trim(local.req.featured_image_credit) : (local.curPageQ.imageAttribution ?: ""));
+			local.imageAlt = StructKeyExists(local.req, "imageAlt") ? Trim(local.req.imageAlt) : (StructKeyExists(local.req, "featured_image_alt") ? Trim(local.req.featured_image_alt) : (local.curPageQ.imageAlt ?: ""));
+			local.imageTitle = StructKeyExists(local.req, "imageTitle") ? Trim(local.req.imageTitle) : (StructKeyExists(local.req, "featured_image_caption") ? Trim(local.req.featured_image_caption) : (local.curPageQ.imageTitle ?: ""));
+			local.imageDescription = StructKeyExists(local.req, "imageDescription") ? Trim(local.req.imageDescription) : (StructKeyExists(local.req, "featured_image_description") ? Trim(local.req.featured_image_description) : (local.curPageQ.imageDescription ?: ""));
+			local.imageDecorative = StructKeyExists(local.req, "imageDecorative") ? (local.req.imageDecorative == 1 || local.req.imageDecorative == "true" || local.req.imageDecorative == true || local.req.imageDecorative == "yes" ? 1 : 0) : (StructKeyExists(local.req, "featured_image_decorative") ? (local.req.featured_image_decorative == 1 || local.req.featured_image_decorative == "true" || local.req.featured_image_decorative == true || local.req.featured_image_decorative == "yes" ? 1 : 0) : Val(local.curPageQ.imageDecorative ?: 0));
 
 			queryExecute("
 				SET ANSI_NULLS ON;
@@ -454,6 +462,7 @@ component extends="Controller" {
 				    imageAlt = :imageAlt,
 				    imageTitle = :imageTitle,
 				    imageDescription = :imageDescription,
+				    imageDecorative = :imageDecorative,
 				    SidebarIDs = :sidebarIds,
 				    Modified = SYSUTCDATETIME(),
 				    ModifiedBy = :actor
@@ -481,6 +490,7 @@ component extends="Controller" {
 				imageAlt: { value: local.imageAlt, cfsqltype: "cf_sql_nvarchar" },
 				imageTitle: { value: local.imageTitle, cfsqltype: "cf_sql_nvarchar" },
 				imageDescription: { value: local.imageDescription, cfsqltype: "cf_sql_longvarchar" },
+				imageDecorative: { value: local.imageDecorative, cfsqltype: "cf_sql_bit" },
 				sidebarIds: { value: local.sidebarJson, cfsqltype: "cf_sql_nvarchar" },
 				actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar" },
 				id: { value: local.id, cfsqltype: "cf_sql_integer" }
@@ -1337,6 +1347,7 @@ component extends="Controller" {
 				SELECT TOP 1 ContentID, SiteID, PageType, MenuSelected, LayoutType, ParentID,
 				       StatusCode, Permalink, Title, MetaTitle, MetaDesc, MetaKeyWords,
 				       Summary, Body, imageAttachment, imageAttribution, imageAlt, imageTitle, imageDescription,
+				       ISNULL(imageDecorative, 0) AS imageDecorative,
 				       isService, hasArchive, ShowInMenu, isLocked, SidebarIDs, SortOrder,
 				       isPublished, Visibility, PublishAt, publish_at, UnpublishAt, unpublish_at, ViewCount, Created, CreatedBy, Modified, ModifiedBy
 				FROM pages
@@ -1388,6 +1399,12 @@ component extends="Controller" {
 					metaTitle: local.row.MetaTitle ?: "",
 					metaDesc: local.row.MetaDesc ?: "",
 					metaKeywords: local.row.MetaKeyWords ?: "",
+					imageAttachment: local.row.imageAttachment ?: "",
+					imageAttribution: local.row.imageAttribution ?: "",
+					imageAlt: local.row.imageAlt ?: "",
+					imageTitle: local.row.imageTitle ?: "",
+					imageDescription: local.row.imageDescription ?: "",
+					imageDecorative: Val(local.row.imageDecorative ?: 0),
 					sidebarIds: local.sidebarList,
 					author: Len(local.row.ModifiedBy) ? local.row.ModifiedBy : (local.row.CreatedBy ?: "Admin"),
 					updated: local.updatedStr,
@@ -1643,6 +1660,12 @@ component extends="Controller" {
 			local.metaDesc = StructKeyExists(local.meta, "metaDesc") ? local.meta.metaDesc : local.targetRev.summary;
 			local.metaKeywords = StructKeyExists(local.meta, "metaKeywords") ? local.meta.metaKeywords : "";
 			local.layout = Len(Trim(local.targetRev.layout_type)) ? local.targetRev.layout_type : "Full";
+			local.imageAttachment = StructKeyExists(local.meta, "imageAttachment") ? local.meta.imageAttachment : "";
+			local.imageAttribution = StructKeyExists(local.meta, "imageAttribution") ? local.meta.imageAttribution : "";
+			local.imageAlt = StructKeyExists(local.meta, "imageAlt") ? local.meta.imageAlt : "";
+			local.imageTitle = StructKeyExists(local.meta, "imageTitle") ? local.meta.imageTitle : "";
+			local.imageDescription = StructKeyExists(local.meta, "imageDescription") ? local.meta.imageDescription : "";
+			local.imageDecorative = StructKeyExists(local.meta, "imageDecorative") ? Val(local.meta.imageDecorative) : 0;
 
 			// 4. Update the live pages record with the restored version
 			queryExecute("
@@ -1657,6 +1680,12 @@ component extends="Controller" {
 				    MetaTitle = :metaTitle,
 				    MetaDesc = :metaDesc,
 				    MetaKeyWords = :metaKeywords,
+				    imageAttachment = :imageAttachment,
+				    imageAttribution = :imageAttribution,
+				    imageAlt = :imageAlt,
+				    imageTitle = :imageTitle,
+				    imageDescription = :imageDescription,
+				    imageDecorative = :imageDecorative,
 				    Modified = SYSUTCDATETIME(),
 				    ModifiedBy = :actor
 				WHERE ContentID = :id
@@ -1669,6 +1698,12 @@ component extends="Controller" {
 				metaTitle: { value: local.metaTitle, cfsqltype: "cf_sql_nvarchar" },
 				metaDesc: { value: local.metaDesc, cfsqltype: "cf_sql_nvarchar" },
 				metaKeywords: { value: local.metaKeywords, cfsqltype: "cf_sql_nvarchar" },
+				imageAttachment: { value: local.imageAttachment, cfsqltype: "cf_sql_nvarchar" },
+				imageAttribution: { value: local.imageAttribution, cfsqltype: "cf_sql_nvarchar" },
+				imageAlt: { value: local.imageAlt, cfsqltype: "cf_sql_nvarchar" },
+				imageTitle: { value: local.imageTitle, cfsqltype: "cf_sql_nvarchar" },
+				imageDescription: { value: local.imageDescription, cfsqltype: "cf_sql_longvarchar" },
+				imageDecorative: { value: local.imageDecorative, cfsqltype: "cf_sql_bit" },
 				actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar" },
 				id: { value: local.pageId, cfsqltype: "cf_sql_integer" }
 			}, { datasource: "ChelanCountyWebsite" });
@@ -1699,7 +1734,13 @@ component extends="Controller" {
 					"layout": local.layout,
 					"metaTitle": local.metaTitle,
 					"metaDesc": local.metaDesc,
-					"metaKeywords": local.metaKeywords
+					"metaKeywords": local.metaKeywords,
+					"imageAttachment": local.imageAttachment,
+					"imageAttribution": local.imageAttribution,
+					"imageAlt": local.imageAlt,
+					"imageTitle": local.imageTitle,
+					"imageDescription": local.imageDescription,
+					"imageDecorative": local.imageDecorative
 				}
 			});
 		} catch (any e) {
@@ -1756,7 +1797,9 @@ component extends="Controller" {
 				SELECT TOP 1 ContentID, SiteID, PageType, MenuSelected, LayoutType, ParentID,
 				       StatusCode, Permalink, Title, MetaTitle, MetaDesc, MetaKeyWords,
 				       Summary, Body, isService, hasArchive, ShowInMenu, isLocked, SidebarIDs,
-				       SortOrder, isPublished, Visibility, PublishAt, Created, CreatedBy, Modified, ModifiedBy
+				       SortOrder, isPublished, Visibility, PublishAt, Created, CreatedBy, Modified, ModifiedBy,
+				       imageAttachment, imageAttribution, imageAlt, imageTitle, imageDescription,
+				       ISNULL(imageDecorative, 0) AS imageDecorative
 				FROM pages
 				WHERE ContentID = :id AND DeletedAt IS NULL
 			", { id: { value: arguments.pageId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
@@ -1786,7 +1829,13 @@ component extends="Controller" {
 				"visibility": local.pageQ.Visibility ?: "Published",
 				"statusCode": local.pageQ.StatusCode ?: "Active",
 				"sidebarIds": local.pageQ.SidebarIDs ?: "[]",
-				"siteId": local.pageQ.SiteID ?: "global"
+				"siteId": local.pageQ.SiteID ?: "global",
+				"imageAttachment": local.pageQ.imageAttachment ?: "",
+				"imageAttribution": local.pageQ.imageAttribution ?: "",
+				"imageAlt": local.pageQ.imageAlt ?: "",
+				"imageTitle": local.pageQ.imageTitle ?: "",
+				"imageDescription": local.pageQ.imageDescription ?: "",
+				"imageDecorative": Val(local.pageQ.imageDecorative ?: 0)
 			};
 
 			local.summaryNote = Len(Trim(arguments.changeSummary)) ? Trim(arguments.changeSummary) : ("Version " & local.nextVer & " snapshot");
@@ -1852,6 +1901,38 @@ component extends="Controller" {
 			", {}, { datasource: "ChelanCountyWebsite" });
 		} catch (any e) {
 			writeLog(type="error", file="pages", text="ensurePageRevisionsTable error: #e.message#");
+		}
+	}
+
+	/**
+	 * Ensures dbo.pages has hero cover image & accessibility fields
+	 */
+	private void function ensurePagesTableColumns() {
+		try {
+			queryExecute("
+				SET ANSI_NULLS ON;
+				SET QUOTED_IDENTIFIER ON;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pages') AND name = 'imageAttachment')
+					ALTER TABLE pages ADD imageAttachment NVARCHAR(500) NULL;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pages') AND name = 'imageAttribution')
+					ALTER TABLE pages ADD imageAttribution NVARCHAR(255) NULL;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pages') AND name = 'imageAlt')
+					ALTER TABLE pages ADD imageAlt NVARCHAR(500) NULL;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pages') AND name = 'imageTitle')
+					ALTER TABLE pages ADD imageTitle NVARCHAR(1000) NULL;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pages') AND name = 'imageDescription')
+					ALTER TABLE pages ADD imageDescription NVARCHAR(2000) NULL;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pages') AND name = 'imageDecorative')
+					ALTER TABLE pages ADD imageDecorative BIT NOT NULL CONSTRAINT DF_pages_imageDecorative DEFAULT 0;
+			", {}, { datasource: "ChelanCountyWebsite" });
+		} catch (any e) {
+			writeLog(type="error", file="pages", text="ensurePagesTableColumns error: #e.message#");
 		}
 	}
 
@@ -2412,131 +2493,6 @@ component extends="Controller" {
 					);
 				END;
 			", {}, { datasource: "ChelanCountyWebsite" });
-
-			// Seed the 12 standard Chelan County categories if table is empty
-			local.catCheck = queryExecute("SELECT COUNT(*) AS cnt FROM how_do_i_categories WHERE deletedat IS NULL", {}, { datasource: "ChelanCountyWebsite" });
-			if (Val(local.catCheck.cnt) == 0) {
-				queryExecute("
-					INSERT INTO how_do_i_categories (name, slug, icon, description, sort_order, is_active, is_system)
-					VALUES
-					(N'Apply For',   N'apply-for',   N'clipboard-list', N'Permits, licenses, employment, and county program applications.', 10, 1, 1),
-					(N'Contact',     N'contact',     N'phone',          N'Department directories, elected officials, and office contact desks.', 20, 1, 1),
-					(N'Find',        N'find',        N'search',         N'Locate county resources, election results, court statuses, and districts.', 30, 1, 1),
-					(N'File A',      N'file-a',      N'file-text',      N'Submit official claims, petitions, and formal filings.', 40, 1, 1),
-					(N'Join',        N'join',        N'users',          N'Volunteer boards, advisory committees, and community programs.', 50, 1, 1),
-					(N'Pay For',     N'pay-for',     N'hard-drive',     N'Online payments for property taxes, court costs, probation, and accounts.', 60, 1, 1),
-					(N'Learn About', N'learn-about', N'book',           N'Educational guides, court protection orders, and county initiatives.', 70, 1, 1),
-					(N'Register To', N'register-to', N'check-square',   N'Voter registration, jury duty check-in, and court classes.', 80, 1, 1),
-					(N'Report',      N'report',      N'megaphone',      N'Report road hazards, code violations, pest infestations, or tips.', 90, 1, 1),
-					(N'Request',     N'request',     N'mail',           N'Public records requests, court case records, and vital certificates.', 100, 1, 1),
-					(N'Search For',  N'search-for',  N'globe',          N'Public document archives, parcel lookups, and jail registries.', 110, 1, 1),
-					(N'View',        N'view',        N'eye',            N'Court calendars, dockets, schedules, and public hearings.', 120, 1, 1)
-				", {}, { datasource: "ChelanCountyWebsite" });
-			}
-
-			// Seed initial authentic Chelan County "How Do I" links if how_do_i_items is completely empty
-			local.itemCheck = queryExecute("SELECT COUNT(*) AS cnt FROM how_do_i_items", {}, { datasource: "ChelanCountyWebsite" });
-			if (Val(local.itemCheck.cnt) == 0) {
-				local.catRows = queryExecute("SELECT id, slug FROM how_do_i_categories WHERE deletedat IS NULL", {}, { datasource: "ChelanCountyWebsite" });
-				local.catMap = {};
-				for (local.cr in local.catRows) {
-					local.catMap[local.cr.slug] = local.cr.id;
-				}
-
-				local.seedItems = [
-					// Apply For
-					{ cat: "apply-for", site: "human-resources", q: "A Job", type: "custom", url: "/human-resources/jobs", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "apply-for", site: "public-works", q: "A New Address", type: "page", url: "/public-works/pages/addressing-and-road-naming", newTab: 0, mega: 1, sort: 20 },
-					{ cat: "apply-for", site: "public-works", q: "Adopt a County Road Program", type: "page", url: "/solid-waste-management/pages/adopt-a-county-road", newTab: 0, mega: 1, sort: 30 },
-					{ cat: "apply-for", site: "community-development", q: "Building Permit", type: "page", url: "/community-development/pages/building", newTab: 0, mega: 1, sort: 40 },
-					{ cat: "apply-for", site: "sheriff", q: "Concealed Pistol License (CPL)", type: "external", url: "https://chelanwa.permitium.com/ccw/start", newTab: 1, mega: 1, sort: 50 },
-					{ cat: "apply-for", site: "public-works", q: "Driveway Permit", type: "page", url: "/public-works/pages/development", newTab: 0, mega: 0, sort: 60 },
-					{ cat: "apply-for", site: "public-works", q: "Event Permit", type: "page", url: "/public-works/pages/event-permits-in-chelan-county", newTab: 0, mega: 0, sort: 70 },
-					{ cat: "apply-for", site: "assessors", q: "Property Tax Relief & Senior Exemption", type: "page", url: "/assessor/pages/current-use-exemptions", newTab: 0, mega: 1, sort: 80 },
-					{ cat: "apply-for", site: "clerk", q: "Passport", type: "page", url: "/clerk/pages/passport-information", newTab: 0, mega: 0, sort: 90 },
-
-					// Contact
-					{ cat: "contact", site: "commissioners", q: "Board of Commissioners", type: "custom", url: "/board-of-commissioners/contacts", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "contact", site: "Auditor", q: "Chelan County Elections", type: "custom", url: "/elections/contacts", newTab: 0, mega: 1, sort: 20 },
-					{ cat: "contact", site: "clerk", q: "Court Clerk", type: "custom", url: "/clerk/contacts", newTab: 0, mega: 1, sort: 30 },
-					{ cat: "contact", site: "assessors", q: "County Assessor's Office", type: "custom", url: "/assessor/contacts", newTab: 0, mega: 1, sort: 40 },
-					{ cat: "contact", site: "sheriff", q: "Sheriff's Office", type: "custom", url: "/sheriff/contacts", newTab: 0, mega: 1, sort: 50 },
-
-					// Find
-					{ cat: "find", site: "Auditor", q: "Election Results", type: "page", url: "/elections/pages/current-election-results", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "find", site: "public-works", q: "Flood Control Zone District", type: "custom", url: "/flood-control-zone-district", newTab: 0, mega: 1, sort: 20 },
-					{ cat: "find", site: "assessors", q: "Property Levy Rates & Tax District Distribution", type: "page", url: "/assessor/pages/property-tax-summary-reports", newTab: 0, mega: 1, sort: 30 },
-
-					// File A
-					{ cat: "file-a", site: "commissioners", q: "Claim Against Chelan County", type: "custom", url: "/files/prosecutor/documents/Claim for Damages Form 2026 (fillable).pdf", newTab: 1, mega: 1, sort: 10 },
-					{ cat: "file-a", site: "assessors", q: "Petition to Board of Equalization", type: "page", url: "/assessor/pages/appeals", newTab: 0, mega: 1, sort: 20 },
-
-					// Join
-					{ cat: "join", site: "commissioners", q: "County Advisory Boards & Commissions", type: "page", url: "/board-of-commissioners/pages/boards-and-commissions", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "join", site: "sheriff", q: "Sheriff Volunteer Search & Rescue", type: "page", url: "/sheriff/pages/search-and-rescue", newTab: 0, mega: 1, sort: 20 },
-
-					// Pay For
-					{ cat: "pay-for", site: "treasurer", q: "Property Taxes", type: "page", url: "/treasurer/pages/make-payments", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "pay-for", site: "clerk", q: "Court Cost and Restitution", type: "page", url: "/clerk/pages/financial-collector", newTab: 0, mega: 1, sort: 20 },
-					{ cat: "pay-for", site: "global", q: "Jail Commissary Account", type: "page", url: "/regional-jail/pages/inmate-phone-and-commissary-accounts-", newTab: 0, mega: 1, sort: 30 },
-					{ cat: "pay-for", site: "global", q: "Probation Fees Online", type: "page", url: "/district-court-probation/pages/probation-online-payments", newTab: 0, mega: 1, sort: 40 },
-
-					// Learn About
-					{ cat: "learn-about", site: "clerk", q: "Domestic Violence Assistance & Protection", type: "page", url: "/clerk/pages/domestic-violence-assistance", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "learn-about", site: "assessors", q: "How Property Taxes Are Calculated", type: "page", url: "/assessor/pages/frequently-asked-questions", newTab: 0, mega: 1, sort: 20 },
-
-					// Register To
-					{ cat: "register-to", site: "clerk", q: "Jury Duty", type: "external", url: "https://jury.chelancounty.gov", newTab: 1, mega: 1, sort: 10 },
-					{ cat: "register-to", site: "clerk", q: "Parenting Class", type: "page", url: "/clerk/pages/parenting-class", newTab: 0, mega: 1, sort: 20 },
-					{ cat: "register-to", site: "Auditor", q: "Vote", type: "external", url: "https://www.sos.wa.gov/elections/myvote/", newTab: 1, mega: 1, sort: 30 },
-
-					// Report
-					{ cat: "report", site: "community-development", q: "Code Violation", type: "page", url: "/community-development/pages/code-enforcement", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "report", site: "public-works", q: "Icy Road Conditions", type: "form", url: "/public-works/forms/report-a-problem", newTab: 0, mega: 1, sort: 20 },
-					{ cat: "report", site: "public-works", q: "Missing Traffic Signs", type: "form", url: "/public-works/forms/report-a-problem", newTab: 0, mega: 1, sort: 30 },
-					{ cat: "report", site: "sheriff", q: "Submit A Crime Tip", type: "form", url: "/sheriff/forms/submit-a-tip", newTab: 0, mega: 1, sort: 40 },
-
-					// Request
-					{ cat: "request", site: "pio", q: "Public Records", type: "custom", url: "/public-records-request", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "request", site: "Auditor", q: "A Death Certificate", type: "external", url: "https://doh.wa.gov/licenses-permits-and-certificates/vital-records/ordering-vital-record/death-record", newTab: 1, mega: 1, sort: 20 },
-					{ cat: "request", site: "community-development", q: "Flood Elevation Certificate", type: "custom", url: "/community-development/contacts", newTab: 0, mega: 1, sort: 30 },
-
-					// Search For
-					{ cat: "search-for", site: "commissioners", q: "Commissioner's Public Documents", type: "page", url: "/board-of-commissioners/pages/document-and-record-search", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "search-for", site: "assessors", q: "Property & Parcel Search", type: "page", url: "/assessor/pages/parcel-and-sale-search", newTab: 0, mega: 1, sort: 20 },
-					{ cat: "search-for", site: "global", q: "Inmate / Arrestee Roster", type: "page", url: "/regional-jail/pages/jail-registry--inmate-list", newTab: 0, mega: 1, sort: 30 },
-
-					// View
-					{ cat: "view", site: "clerk", q: "Court Dockets and Schedules", type: "page", url: "/clerk/pages/court-calendars", newTab: 0, mega: 1, sort: 10 },
-					{ cat: "view", site: "assessors", q: "Monthly Property Sales Reports", type: "page", url: "/assessor/pages/monthly-sales-reports", newTab: 0, mega: 1, sort: 20 }
-				];
-
-				for (local.s in local.seedItems) {
-					if (StructKeyExists(local.catMap, local.s.cat)) {
-						queryExecute("
-							SET ANSI_NULLS ON;
-							SET QUOTED_IDENTIFIER ON;
-							INSERT INTO how_do_i_items (
-								category_id, siteid, question, destination_type, destination_url,
-								open_in_new_tab, is_featured_mega_menu, sort_order, is_published, created_by, modified_by
-							)
-							VALUES (
-								:catId, :siteId, :q, :dtype, :durl,
-								:newTab, :mega, :sortOrder, 1, N'System Seed', N'System Seed'
-							)
-						", {
-							catId: { value: local.catMap[local.s.cat], cfsqltype: "cf_sql_integer" },
-							siteId: { value: local.s.site, cfsqltype: "cf_sql_nvarchar" },
-							q: { value: local.s.q, cfsqltype: "cf_sql_nvarchar" },
-							dtype: { value: local.s.type, cfsqltype: "cf_sql_nvarchar" },
-							durl: { value: local.s.url, cfsqltype: "cf_sql_nvarchar" },
-							newTab: { value: local.s.newTab, cfsqltype: "cf_sql_bit" },
-							mega: { value: local.s.mega, cfsqltype: "cf_sql_bit" },
-							sortOrder: { value: local.s.sort, cfsqltype: "cf_sql_integer" }
-						}, { datasource: "ChelanCountyWebsite" });
-					}
-				}
-			}
 		} catch (any e) {
 			writeLog(type="error", file="pages", text="ensureHowDoITables failed: #e.message# #e.detail#");
 		}

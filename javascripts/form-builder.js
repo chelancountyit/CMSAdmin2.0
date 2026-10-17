@@ -1504,18 +1504,7 @@
         <textarea class="fb-prop-textarea" id="formPropDesc">${escapeHTML(currentForm.description || "")}</textarea>
       </div>
 
-      <div class="fb-prop-group">
-        <label class="fb-prop-label" style="display:flex; justify-content:space-between; align-items:center;">
-          <span>Department / Owning Workspace</span>
-          <span class="badge badge-primary" style="font-size:0.65rem; font-weight:600;">Workspace Bound</span>
-        </label>
-        <select class="fb-prop-select" id="formPropDepartment" title="Department / Workspace that owns this form">
-          ${deptOptionsHtml}
-        </select>
-        <div style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.35rem; line-height:1.4;">
-          This form is owned by <strong id="formPropOwningWs" style="color:var(--admin-primary);">${escapeHTML(owningWsName)}</strong>. Department classification, access permissions, and directory listings are inherited from this workspace.
-        </div>
-      </div>
+      <input type="hidden" id="formPropDepartment" value="${escapeHTML(currentForm.siteid || currentForm.department || owningSiteId)}">
 
       <div class="fb-prop-group">
         <label class="fb-prop-label">Submit Button Label</label>

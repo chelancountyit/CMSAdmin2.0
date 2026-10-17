@@ -1,5 +1,4 @@
 <cfparam name="tagRecords" default="#[]#">
-<cfparam name="activeWorkspaceId" default="global">
 <cfparam name="accessibleWorkspaces" default="#[]#">
 
 <cfoutput>
@@ -41,19 +40,7 @@
 				<input type="text" id="newTagName" class="form-control" placeholder="e.g. wildfire, permits, budget" required>
 			</div>
 
-			<div style="margin-bottom:1.25rem;">
-				<label for="newTagSiteid" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.3rem; color:var(--admin-text-muted);">
-					Scope
-				</label>
-				<select id="newTagSiteid" class="form-control">
-					<option value="global">Global (All Sites)</option>
-					<cfloop array="#accessibleWorkspaces#" index="ws">
-						<cfif ws.id neq "all" and ws.id neq "global">
-							<option value="#ws.id#">#EncodeForHTML(ws.name)#</option>
-						</cfif>
-					</cfloop>
-				</select>
-			</div>
+			<input type="hidden" id="newTagSiteid" value="#EncodeForHTMLAttribute(activeWorkspaceId())#">
 
 			<button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;" id="btnSaveTag">
 				#svgIcon(name="plus", size=14)#

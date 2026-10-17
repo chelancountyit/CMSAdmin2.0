@@ -72,3 +72,13 @@ The Rollback Studio UI provides an accessible comparison modal:
 4. **Accessible Confirmation:**
    - Uses `window.adminConfirm` to verify rollback intent and explain the automated safety snapshot.
 
+---
+
+## 5. Featured Cover Image Suite
+
+Pages support the same comprehensive **Featured Cover Image** panel as the Articles module:
+- **Schema Fields (`dbo.pages`):** `imageAttachment` (URL), `imageAttribution` (Credit), `imageAlt` (ADA alternative text), `imageTitle` (Public story caption), `imageDescription` (Extended description), and `imageDecorative` (`BIT`, WCAG 2.1 H67).
+- **Workspace-Aware Media Library:** Direct integration with `#mediaPickerModal` filtered to the active department or shared library.
+- **ADA WCAG 2.1 AA Compliance:** Real-time auditing via `PageA11yLinter` for missing alt text, generic placeholder text, character limits (150 chars), and decorative state.
+- **Rollback Studio Synchronization:** All 6 cover image attributes are captured into `meta_json` in `dbo.page_revisions` and restored upon historical rollback.
+

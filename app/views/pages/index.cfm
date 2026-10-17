@@ -246,18 +246,6 @@ form.admin-modal-dialog {
 		currentWsId = variables.activeWsObj.id;
 	}
 </cfscript>
-<!--- Informational prompt when no workspace is selected --->
-<cfif not Len(currentWsId)>
-<div class="admin-alert admin-alert-info" style="margin-bottom:1.25rem; display:flex; align-items:flex-start; gap:0.75rem; padding:1rem 1.25rem; border-radius:var(--radius-md); background:var(--admin-info-light, ##e0f2fe); border:1px solid var(--admin-info-border, ##bae6fd); color:var(--admin-info-dark, ##0369a1);">
-	<div style="flex-shrink:0; margin-top:0.1rem;" aria-hidden="true">#svgIcon(name="info", size=20)#</div>
-	<div style="flex:1;">
-		<div style="font-weight:700; font-size:0.95rem; margin-bottom:0.25rem; color:var(--admin-info-dark, ##075985);">No Workspace Selected</div>
-		<p style="margin:0; font-size:0.875rem; line-height:1.45; color:var(--admin-info-dark, ##0c4a6e);">
-			Pages are isolated by workspace. Please select a department or portal workspace from the <strong>Workspace</strong> dropdown in the top header to view and manage its pages.
-		</p>
-	</div>
-</div>
-</cfif>
 
 <!--- Summary cards --->
 <div class="stat-grid" style="margin-bottom:1.5rem;">
@@ -336,7 +324,7 @@ form.admin-modal-dialog {
 		<table class="admin-table" id="pagesTable" aria-label="All pages">
 			<thead>
 				<tr>
-					<th scope="col" style="width:78px;"><span class="sr-only">Actions</span></th>
+					<th scope="col" style="width:48px;"><span class="sr-only">Actions</span></th>
 					<th scope="col">Page Title</th>
 					<th scope="col" style="text-align:center;">Menu Item</th>
 					<th scope="col" style="text-align:center;">Status</th>
@@ -355,9 +343,6 @@ form.admin-modal-dialog {
 						<div style="display:flex; gap:0.25rem; align-items:center;">
 							<a href="#urlFor(controller='pages', action='edit', params='id=#p.id#')#" class="btn btn-sm btn-icon-only btn-outline" aria-label="Edit #EncodeForHTMLAttribute(p.title)#" title="Edit">
 								#svgIcon(name="edit", size=14)#
-							</a>
-							<a href="#urlFor(controller='pages', action='edit', params='id=' & p.id & '&createSubpage=1')#" class="btn btn-sm btn-icon-only btn-outline" aria-label="Create subpage for #EncodeForHTMLAttribute(p.title)#" title="Create Subpage">
-								#svgIcon(name="layers", size=14)#
 							</a>
 						</div>
 					</td>

@@ -2746,6 +2746,81 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     </li>
   </ul>
 </section>`
+  },
+  {
+    id: 'cta-card',
+    title: 'Call to Action (CTA) Card',
+    category: 'Call to Action',
+    icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0b2545" stroke-width="2" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8"/><path d="m13 9 3 3-3 3"/></svg>',
+    description: 'High-conversion action card with category badge, heading, description, and primary action button.',
+    html: `<aside class="jbd-template jbd-cta-card" aria-label="Action: Online Service">
+  <div class="jbd-cta-card-header">
+    <span class="jbd-cta-badge" aria-hidden="true">ONLINE SERVICE</span>
+    <p class="jbd-cta-title h4">Apply for Department Permits &amp; Licenses</p>
+  </div>
+  <p class="jbd-cta-desc">Submit your applications, upload engineering documents, and track review status securely through our citizen portal.</p>
+  <div class="jbd-cta-card-footer">
+    <a href="#portal" class="jbd-btn jbd-btn-primary jbd-cta-btn" aria-label="Apply online for Department Permits and Licenses">
+      <span>Begin Online Application</span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
+  </div>
+</aside>`
+  },
+  {
+    id: 'cta-grid',
+    title: 'Call to Action Grid (2-Column)',
+    category: 'Call to Action',
+    icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0f766e" stroke-width="2" aria-hidden="true" focusable="false"><rect x="2" y="3" width="9" height="18" rx="2"/><rect x="13" y="3" width="9" height="18" rx="2"/><path d="M5 14h3"/><path d="M16 14h3"/></svg>',
+    description: 'Side-by-side action cards for presenting primary citizen services (payments, permits, requests).',
+    html: `<section class="jbd-template jbd-cta-grid" aria-label="Popular online actions">
+  <article class="jbd-cta-card">
+    <div class="jbd-cta-card-header">
+      <span class="jbd-cta-badge jbd-cta-badge-teal" aria-hidden="true">PAYMENT</span>
+      <p class="jbd-cta-title h4">Pay Taxes &amp; Fees Online</p>
+    </div>
+    <p class="jbd-cta-desc">Pay real property taxes, assessment fees, and administrative charges with e-check or card.</p>
+    <div class="jbd-cta-card-footer">
+      <a href="#pay" class="jbd-btn jbd-btn-primary jbd-cta-btn" aria-label="Make an online payment for taxes and fees">
+        <span>Pay Online Now</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
+  </article>
+  <article class="jbd-cta-card">
+    <div class="jbd-cta-card-header">
+      <span class="jbd-cta-badge jbd-cta-badge-blue" aria-hidden="true">PUBLIC RECORDS</span>
+      <p class="jbd-cta-title h4">Submit Public Records Request</p>
+    </div>
+    <p class="jbd-cta-desc">Request county government records under RCW 42.56 with our automated disclosure portal.</p>
+    <div class="jbd-cta-card-footer">
+      <a href="#records" class="jbd-btn jbd-btn-primary jbd-cta-btn" aria-label="Submit a public records disclosure request">
+        <span>Submit Request</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
+  </article>
+</section>`
+  },
+  {
+    id: 'cta-banner',
+    title: 'Call to Action Banner',
+    category: 'Call to Action',
+    icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2563eb" stroke-width="2" aria-hidden="true" focusable="false"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="6" y1="12" x2="14" y2="12"/><path d="m12 9 3 3-3 3"/><rect x="15" y="9" width="3" height="6" rx="1"/></svg>',
+    description: 'Full-width, high-contrast action banner with headline, secondary guidance, and high-visibility button.',
+    html: `<aside class="jbd-template jbd-cta-banner" aria-label="Action required">
+  <div class="jbd-cta-banner-content">
+    <span class="jbd-cta-banner-badge" aria-hidden="true">NEXT STEP</span>
+    <p class="jbd-cta-banner-title h4">Need assistance completing your submission?</p>
+    <p class="jbd-cta-banner-lead">Our department specialists are available Monday through Friday from 8:00 AM to 5:00 PM to help you navigate requirements.</p>
+  </div>
+  <div class="jbd-cta-banner-action">
+    <a href="#contact" class="jbd-btn jbd-cta-banner-btn" aria-label="Contact our department specialists for assistance">
+      <span>Contact Office Specialist</span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
+  </div>
+</aside>`
   }
 ];
 

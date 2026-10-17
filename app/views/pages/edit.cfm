@@ -414,6 +414,10 @@
 							</div>
 
 							<div class="pg-a11y-category-chips" id="pgA11yCategoryChips" role="group" aria-label="Accessibility Check Categories">
+								<button type="button" class="pg-a11y-chip" id="chipA11yCover" data-cat="cover" title="Cover Image: Alternative text & decorative check">
+									<span class="chip-label">Cover</span>
+									<span class="chip-count" id="countA11yCover">0</span>
+								</button>
 								<button type="button" class="pg-a11y-chip" id="chipA11yImages" data-cat="images" title="Images: Alternative text & decorative check">
 									<span class="chip-label">Images</span>
 									<span class="chip-count" id="countA11yImages">0</span>
@@ -510,7 +514,10 @@
 				<div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
 					<h2 class="card-title">#svgIcon(name="layers", size=16)# <span>Page Attributes</span></h2>
 					<div class="pg-attr-tabs" role="tablist" aria-label="Page Attributes Sections">
-						<button type="button" role="tab" id="tabBtnAttrNav" aria-selected="true" aria-controls="tabPanelAttrNav" class="pg-attr-tab is-active" data-attr-tab="nav">
+						<button type="button" role="tab" id="tabBtnAttrLayout" aria-selected="true" aria-controls="tabPanelAttrLayout" class="pg-attr-tab is-active" data-attr-tab="layout">
+							<span>Page Layout</span>
+						</button>
+						<button type="button" role="tab" id="tabBtnAttrNav" aria-selected="false" aria-controls="tabPanelAttrNav" class="pg-attr-tab" data-attr-tab="nav">
 							<span>Navigation Assignment</span>
 						</button>
 						<button type="button" role="tab" id="tabBtnAttrFolder" aria-selected="false" aria-controls="tabPanelAttrFolder" class="pg-attr-tab" data-attr-tab="folder">
@@ -519,8 +526,59 @@
 					</div>
 				</div>
 				<div class="card-body">
-					<!--- Tab 1: Navigation Assignment --->
-					<div id="tabPanelAttrNav" role="tabpanel" aria-labelledby="tabBtnAttrNav">
+					<!--- Tab 1: Page Layout --->
+					<div id="tabPanelAttrLayout" role="tabpanel" aria-labelledby="tabBtnAttrLayout">
+						<div class="pg-field">
+							<label for="pgLayout" class="form-label">Layout</label>
+							<select id="pgLayout" name="layout" class="form-control" style="width:100%;" aria-describedby="pgLayoutHelp">
+								<cfloop list="Full,Right Sidebar" index="layoutOption">
+									<option value="#layoutOption#" <cfif page.layout eq layoutOption>selected</cfif>>#layoutOption#</option>
+								</cfloop>
+							</select>
+							<div id="pgLayoutHelp" class="pg-help">Choose whether this page uses a full-width layout or right sidebar layout.</div>
+						</div>
+						<div id="pgSidebarLayoutOptions" <cfif page.layout neq "Right Sidebar">hidden</cfif>>
+							<div id="pgSidebarChoices">
+								<h3 class="form-label" style="margin-bottom:0.35rem;">Available Sidebars</h3>
+								<div id="pgSidebarChooser" role="group" aria-describedby="pgSidebarHelp" style="display:flex; flex-direction:column; gap:0;">
+									<cfloop array="#availableSidebars#" index="sidebarOption">
+										<label style="display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0; border-bottom:1px solid var(--admin-border-subtle); cursor:pointer;">
+											<input type="checkbox" name="sidebarIds" value="#EncodeForHTMLAttribute(sidebarOption.id)#" <cfif ArrayFind(page.sidebarIds, sidebarOption.id)>checked</cfif> style="width:18px; height:18px; margin-top:0.1rem; flex-shrink:0; accent-color:var(--admin-primary);">
+											<span>
+												<strong style="display:block; color:var(--admin-text-main); font-size:0.85rem;">#EncodeForHTML(sidebarOption.name)#</strong>
+											</span>
+										</label>
+									</cfloop>
+									<cfloop array="#availableSubpages#" index="subpageOption">
+										<div class="pg-subpage-row" style="padding:0.35rem 0; gap:0.5rem;">
+											<label style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; cursor:pointer;">
+												<input type="checkbox" name="sidebarIds" value="subpage-#subpageOption.id#" data-id="#subpageOption.id#" data-subpage-title="#EncodeForHTMLAttribute(subpageOption.title)#" data-content="#EncodeForHTMLAttribute(subpageOption.body)#" data-position="#Val(subpageOption.position)#" <cfif ArrayFindNoCase(page.sidebarIds, "subpage-#subpageOption.id#")>checked</cfif> style="width:18px; height:18px; margin-top:0.1rem; flex-shrink:0; accent-color:var(--admin-primary);">
+												<span><strong data-subpage-title style="display:block; color:var(--admin-text-main); font-size:0.85rem;">#EncodeForHTML(subpageOption.title)#</strong></span>
+											</label>
+											<button type="button" class="btn btn-outline btn-sm btn-icon-only" data-edit-subpage title="Edit" aria-label="Edit #EncodeForHTMLAttribute(subpageOption.title)#">#svgIcon(name="edit", size=14)#</button>
+										</div>
+									</cfloop>
+									<cfif ArrayLen(availableSubpages) eq 0 and ArrayLen(availableSidebars) eq 0>
+										<div id="pgNoSidebarsMsg" class="pg-help" style="padding:0.5rem 0; color:var(--admin-text-muted);">No subpages or sidebars have been created for this workspace yet.</div>
+									</cfif>
+								</div>
+								<div id="pgSidebarHelp" class="pg-help" aria-live="polite">Select one or more sidebars for this page.</div>
+							</div>
+							<cfif not isNew>
+								<div id="pgSubpageActions" style="border-top:1px solid var(--admin-border-subtle); margin-top:1rem; padding-top:1rem;">
+									<button type="button" class="btn btn-outline btn-sm" id="pgOpenSubpageModal" data-content-id="#page.id#" data-site-id="#EncodeForHTMLAttribute(variables.editSiteId)#" data-save-url="#urlFor(route="saveSubpage")#" data-delete-url="#urlFor(route="deleteSubpage")#">#svgIcon(name="plus", size=14)# <span>Create Subpage</span></button>
+									<div class="pg-help">Create a subpage for “#EncodeForHTML(page.title)#” and add it to this workspace’s sidebar list.</div>
+								</div>
+							<cfelse>
+								<div id="pgSubpageActions" style="border-top:1px solid var(--admin-border-subtle); margin-top:1rem; padding-top:1rem;">
+									<div class="pg-help">Save this page first to create new custom subpages. Existing workspace subpages can be selected above.</div>
+								</div>
+							</cfif>
+						</div>
+					</div>
+
+					<!--- Tab 2: Navigation Assignment --->
+					<div id="tabPanelAttrNav" role="tabpanel" aria-labelledby="tabBtnAttrNav" hidden>
 						<div class="pg-field">
 							<label for="pgParent" class="form-label">Page Assignment</label>
 							<cfset isAssignedToMenu = (structKeyExists(page, "pageType") and Val(page.pageType) eq 1) or page.parent eq "Assign to Main Menu Item" or page.parent eq "Assign to Menu Item" or (len(trim(page.parent)) gt 0 and page.parent neq "Top Level - Called from URL")>
@@ -611,58 +669,132 @@
 
 	<!--- Sidebar column --->
 	<div class="pg-side-col">
-		<div class="admin-card" id="pgLayoutPanel" style="margin-bottom:0;">
-			<div class="card-header">
-				<h2 class="card-title">#svgIcon(name="layers", size=16)# <span>Page Layout</span></h2>
+		<!--- Featured Cover Image Card --->
+		<div class="admin-card" id="pgCoverImagePanel" style="padding:1.25rem; margin-bottom:0;">
+			<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; border-bottom:1px solid var(--admin-border-subtle); padding-bottom:0.5rem; flex-wrap:wrap; gap:0.4rem;">
+				<h3 style="margin:0; font-size:0.95rem; font-weight:700; color:var(--admin-text-main); display:flex; align-items:center; gap:0.4rem;">
+					#svgIcon(name="image", size=16)#
+					<span>Featured Cover Image</span>
+				</h3>
+				<div style="display:flex; align-items:center; gap:0.35rem;">
+					<span class="badge badge-neutral" id="featuredImgAdaBadge" style="font-size:0.7rem; font-weight:600;" title="Live ADA Title II & WCAG 2.1 AA Compliance Status">
+						<span id="featuredImgAdaText">No Image</span>
+					</span>
+					<span class="badge badge-neutral" id="featuredImgWsBadge" style="font-size:0.7rem; font-weight:600;" title="Media browser will open files assigned to this workspace">
+						#svgIcon(name="folder", size=11)#
+						<span id="featuredImgWsName">#EncodeForHTML(StructKeyExists(variables, "activeWsObj") && StructKeyExists(activeWsObj, "name") ? activeWsObj.name : (editWsObj.name ?: "Workspace"))#</span>
+					</span>
+				</div>
 			</div>
-			<div class="card-body">
-				<div class="pg-field">
-					<label for="pgLayout" class="form-label">Layout</label>
-					<select id="pgLayout" name="layout" class="form-control" style="width:100%;" aria-describedby="pgLayoutHelp">
-						<cfloop list="Full,Right Sidebar" index="layoutOption">
-							<option value="#layoutOption#" <cfif page.layout eq layoutOption>selected</cfif>>#layoutOption#</option>
-						</cfloop>
-					</select>
-					<div id="pgLayoutHelp" class="pg-help">Choose whether this page uses a full-width layout or right sidebar layout.</div>
-				</div>
-				<div id="pgSidebarLayoutOptions" <cfif page.layout neq "Right Sidebar">hidden</cfif>>
-					<div id="pgSidebarChoices">
-						<h3 class="form-label" style="margin-bottom:0.35rem;">Available Sidebars</h3>
-						<div id="pgSidebarChooser" role="group" aria-describedby="pgSidebarHelp" style="display:flex; flex-direction:column; gap:0;">
-							<cfloop array="#availableSidebars#" index="sidebarOption">
-								<label style="display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0; border-bottom:1px solid var(--admin-border-subtle); cursor:pointer;">
-									<input type="checkbox" name="sidebarIds" value="#EncodeForHTMLAttribute(sidebarOption.id)#" <cfif ArrayFind(page.sidebarIds, sidebarOption.id)>checked</cfif> style="width:18px; height:18px; margin-top:0.1rem; flex-shrink:0; accent-color:var(--admin-primary);">
-									<span>
-										<strong style="display:block; color:var(--admin-text-main); font-size:0.85rem;">#EncodeForHTML(sidebarOption.name)#</strong>
-									</span>
-								</label>
-							</cfloop>
-							<cfloop array="#availableSubpages#" index="subpageOption">
-								<div class="pg-subpage-row" style="padding:0.35rem 0; gap:0.5rem;">
-									<label style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; cursor:pointer;">
-										<input type="checkbox" name="sidebarIds" value="subpage-#subpageOption.id#" data-id="#subpageOption.id#" data-subpage-title="#EncodeForHTMLAttribute(subpageOption.title)#" data-content="#EncodeForHTMLAttribute(subpageOption.body)#" data-position="#Val(subpageOption.position)#" <cfif ArrayFindNoCase(page.sidebarIds, "subpage-#subpageOption.id#")>checked</cfif> style="width:18px; height:18px; margin-top:0.1rem; flex-shrink:0; accent-color:var(--admin-primary);">
-										<span><strong data-subpage-title style="display:block; color:var(--admin-text-main); font-size:0.85rem;">#EncodeForHTML(subpageOption.title)#</strong></span>
-									</label>
-									<button type="button" class="btn btn-outline btn-sm btn-icon-only" data-edit-subpage title="Edit" aria-label="Edit #EncodeForHTMLAttribute(subpageOption.title)#">#svgIcon(name="edit", size=14)#</button>
-								</div>
-							</cfloop>
-							<cfif ArrayLen(availableSubpages) eq 0 and ArrayLen(availableSidebars) eq 0>
-								<div id="pgNoSidebarsMsg" class="pg-help" style="padding:0.5rem 0; color:var(--admin-text-muted);">No subpages or sidebars have been created for this workspace yet.</div>
-							</cfif>
+
+			<!--- Thumbnail Preview --->
+			<div style="margin-bottom:0.75rem;">
+				<div id="featuredImgPreviewWrap"
+				     role="button"
+				     tabindex="0"
+				     aria-label="Click to browse workspace media library for cover image"
+				     onclick="openMediaPickerForPageCover()"
+				     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMediaPickerForPageCover();}"
+				     style="border:1.5px dashed var(--admin-border); border-radius:var(--radius-md); padding:0.5rem; text-align:center; min-height:130px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--admin-bg); cursor:pointer; transition:all 0.15s ease;"
+				     onmouseenter="this.style.borderColor='var(--admin-primary)'; this.style.backgroundColor='var(--admin-surface-hover, ##f8fafc)';"
+				     onmouseleave="this.style.borderColor='var(--admin-border)'; this.style.backgroundColor='var(--admin-bg)';"
+				     title="Click to browse workspace media library">
+					<img id="featuredImgPreview" src="#EncodeForHTML(page.imageAttachment ?: '')#" alt="#EncodeForHTMLAttribute(page.imageAlt ?: '')#" style="max-width:100%; max-height:140px; object-fit:cover; border-radius:var(--radius-sm); #(Len(Trim(page.imageAttachment ?: '')) ? '' : 'display:none;')#" />
+					<div id="featuredImgPlaceholder" style="color:var(--admin-text-muted); font-size:0.8rem; #(Len(Trim(page.imageAttachment ?: '')) ? 'display:none;' : 'display:flex; flex-direction:column; align-items:center; justify-content:center;')#">
+						<div style="color:var(--admin-primary); margin-bottom:0.25rem;">
+							#svgIcon(name="image", size=28)#
 						</div>
-						<div id="pgSidebarHelp" class="pg-help" aria-live="polite">Select one or more sidebars for this page.</div>
+						<div style="font-weight:600; color:var(--admin-text-main); font-size:0.85rem;">Choose Cover Image</div>
+						<div style="font-size:0.72rem; color:var(--admin-text-muted); margin-top:0.15rem;">Click to browse workspace media library</div>
 					</div>
-					<cfif not isNew>
-						<div id="pgSubpageActions" style="border-top:1px solid var(--admin-border-subtle); margin-top:1rem; padding-top:1rem;">
-							<button type="button" class="btn btn-outline btn-sm" id="pgOpenSubpageModal" data-content-id="#page.id#" data-site-id="#EncodeForHTMLAttribute(variables.editSiteId)#" data-save-url="#urlFor(route="saveSubpage")#" data-delete-url="#urlFor(route="deleteSubpage")#">#svgIcon(name="plus", size=14)# <span>Create Subpage</span></button>
-							<div class="pg-help">Create a subpage for “#EncodeForHTML(page.title)#” and add it to this workspace’s sidebar list.</div>
-						</div>
-					<cfelse>
-						<div id="pgSubpageActions" style="border-top:1px solid var(--admin-border-subtle); margin-top:1rem; padding-top:1rem;">
-							<div class="pg-help">Save this page first to create new custom subpages. Existing workspace subpages can be selected above.</div>
-						</div>
-					</cfif>
 				</div>
+			</div>
+
+			<!--- Image URL & Picker Buttons --->
+			<div style="margin-bottom:0.75rem;">
+				<label for="featuredImage" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.25rem; color:var(--admin-text-muted);">
+					Image URL
+				</label>
+				<div style="display:flex; gap:0.4rem;">
+					<input type="text" id="featuredImage" name="imageAttachment" class="form-control" style="font-size:0.82rem;" value="#EncodeForHTML(page.imageAttachment ?: "")#" placeholder="/files/pio/images/photo.jpg" oninput="updateImagePreview(this.value)">
+					<button type="button" id="btnBrowseFeaturedImg" class="btn btn-outline-secondary btn-sm" onclick="openMediaPickerForPageCover()" title="Select from Workspace Media Library" style="display:inline-flex; align-items:center; gap:0.3rem; white-space:nowrap;">
+						#svgIcon(name="folder", size=13)#
+						<span>Browse</span>
+					</button>
+					<button type="button" id="btnRemoveFeaturedImg" class="btn btn-outline-danger btn-sm" onclick="removeFeaturedImage()" title="Remove cover image" style="display:#(Len(Trim(page.imageAttachment ?: '')) ? 'inline-flex' : 'none')#; align-items:center; gap:0.3rem; white-space:nowrap;">
+						#svgIcon(name="trash", size=13)#
+						<span>Remove</span>
+					</button>
+				</div>
+			</div>
+
+			<!--- Decorative Toggle (WCAG 2.1 H67) --->
+			<div style="background:var(--admin-bg-subtle, ##f8fafc); border:1px solid var(--admin-border-subtle); border-radius:var(--radius-sm); padding:0.6rem 0.75rem; margin-bottom:0.75rem;">
+				<label style="display:flex; align-items:flex-start; gap:0.5rem; font-size:0.8rem; font-weight:600; color:var(--admin-text-main); margin:0; cursor:pointer;">
+					<input type="checkbox" id="featuredImageDecorative" name="imageDecorative" value="1" #(Val(page.imageDecorative ?: 0) ? 'checked="checked"' : '')# onchange="onDecorativeToggled(this.checked)" style="margin-top:0.15rem;">
+					<div>
+						<span>Mark as decorative image (WCAG 1.1.1 / H67)</span>
+						<div style="font-weight:400; font-size:0.72rem; color:var(--admin-text-muted); margin-top:0.15rem; line-height:1.35;">
+							Check if this image is purely decorative or mood-setting and conveys no critical news content. Screen readers will safely ignore it.
+						</div>
+					</div>
+				</label>
+			</div>
+
+			<!--- Alt Text Container --->
+			<div id="altTextContainer" style="#(Val(page.imageDecorative ?: 0) ? 'opacity:0.5; pointer-events:none;' : '')# margin-bottom:0.75rem;">
+				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+					<label for="featuredImageAlt" style="display:block; font-weight:600; font-size:0.8rem; margin:0; color:var(--admin-text-muted);">
+						Alternative Text (ADA / WCAG 2.1 AA) <span style="color:var(--admin-danger, ##ef4444); font-weight:700;">*</span>
+					</label>
+					<span style="font-size:0.7rem; color:var(--admin-text-muted);" id="altCharCounter">#Len(Trim(page.imageAlt ?: ''))#/150 rec.</span>
+				</div>
+				<input type="text" id="featuredImageAlt" name="imageAlt" class="form-control" style="font-size:0.82rem;" value="#EncodeForHTML(page.imageAlt ?: "")#" placeholder="Brief description of the scene or subjects for screen readers" maxlength="500" oninput="onAltInput(this.value)">
+
+				<div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.3rem;">
+					<div style="font-size:0.72rem; color:var(--admin-text-muted);">
+						Be concise and specific. Do not include phrases like "photo of" or "image of".
+					</div>
+					<button type="button" class="btn btn-link btn-sm" style="padding:0; font-size:0.72rem; text-decoration:none; color:var(--admin-primary); display:inline-flex; align-items:center; gap:0.2rem; cursor:pointer;" onclick="suggestAltFromHeadline()" title="Draft initial alt text based on the page title">
+						#svgIcon(name="sparkles", size=12)#
+						<span>Suggest from Headline</span>
+					</button>
+				</div>
+
+				<div id="altAuditNotice" style="display:none; margin-top:0.35rem; padding:0.4rem 0.6rem; border-radius:var(--radius-sm); font-size:0.73rem; line-height:1.35;"></div>
+			</div>
+
+			<!--- Story Caption (Visible) --->
+			<div style="margin-bottom:0.75rem;">
+				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+					<label for="featuredImageCaption" style="display:block; font-weight:600; font-size:0.8rem; margin:0; color:var(--admin-text-muted);">
+						Story Caption (Visible)
+					</label>
+					<span style="font-size:0.7rem; color:var(--admin-text-muted);" id="captionCharCounter">#Len(Trim(page.imageTitle ?: ''))#/1000</span>
+				</div>
+				<input type="text" id="featuredImageCaption" name="imageTitle" class="form-control" style="font-size:0.82rem;" value="#EncodeForHTML(page.imageTitle ?: "")#" placeholder="Optional visible caption printed below the image on the page" maxlength="1000" oninput="updateCaptionCharCount(this.value)">
+			</div>
+
+			<!--- Extended Description (Complex Visuals / Maps / Infographics) --->
+			<div style="margin-bottom:0.75rem;">
+				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+					<label for="featuredImageDescription" style="display:block; font-weight:600; font-size:0.8rem; margin:0; color:var(--admin-text-muted);">
+						Extended Description (Complex Visuals / Maps / Infographics)
+					</label>
+					<span style="font-size:0.7rem; color:var(--admin-text-muted);" id="descCharCounter">#Len(Trim(page.imageDescription ?: ''))#/2000</span>
+				</div>
+				<textarea id="featuredImageDescription" name="imageDescription" class="form-control" rows="2" style="font-size:0.82rem;" placeholder="Detailed text transcription for screen readers when the image contains complex maps, data charts, or documents..." maxlength="2000" oninput="updateDescCharCount(this.value)">#EncodeForHTML(page.imageDescription ?: "")#</textarea>
+				<div style="font-size:0.71rem; color:var(--admin-text-muted); margin-top:0.2rem;">
+					WCAG 1.1.1 AA: If the cover image conveys detailed data, provide a full text equivalent here.
+				</div>
+			</div>
+
+			<!--- Photo Credit / Attribution --->
+			<div>
+				<label for="featuredImageCredit" style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:0.25rem; color:var(--admin-text-muted);">
+					Photo Credit / Attribution
+				</label>
+				<input type="text" id="featuredImageCredit" name="imageAttribution" class="form-control" style="font-size:0.82rem;" value="#EncodeForHTML(page.imageAttribution ?: "")#" placeholder="e.g. Chelan County Sheriff's Office / Jane Doe" maxlength="255">
 			</div>
 		</div>
 
@@ -783,6 +915,9 @@
 								<option value="panel-warning">Warning Panel</option>
 								<option value="references-authority">References &amp; Authority</option>
 								<option value="callout-info">Info Callout</option>
+								<option value="cta-card">Call to Action (CTA) Card</option>
+								<option value="cta-grid">Call to Action Grid (2-Col)</option>
+								<option value="cta-banner">Call to Action Banner</option>
 								<option value="faq-item">FAQ Question &amp; Answer</option>
 								<option value="steps-process">Step-by-Step Instructions</option>
 							</select>
@@ -1185,21 +1320,21 @@
 	document.querySelectorAll("[data-attr-tab]").forEach(function (tabBtn) {
 		tabBtn.addEventListener("click", function () {
 			var mode = tabBtn.getAttribute("data-attr-tab");
-			var isNav = (mode === "nav");
-			var btnNav = document.getElementById("tabBtnAttrNav");
-			var btnFolder = document.getElementById("tabBtnAttrFolder");
-			var panelNav = document.getElementById("tabPanelAttrNav");
-			var panelFolder = document.getElementById("tabPanelAttrFolder");
-			if (btnNav) {
-				btnNav.classList.toggle("is-active", isNav);
-				btnNav.setAttribute("aria-selected", isNav ? "true" : "false");
-			}
-			if (btnFolder) {
-				btnFolder.classList.toggle("is-active", !isNav);
-				btnFolder.setAttribute("aria-selected", !isNav ? "true" : "false");
-			}
-			if (panelNav) panelNav.hidden = !isNav;
-			if (panelFolder) panelFolder.hidden = isNav;
+			document.querySelectorAll("[data-attr-tab]").forEach(function (btn) {
+				var isActive = (btn === tabBtn);
+				btn.classList.toggle("is-active", isActive);
+				btn.setAttribute("aria-selected", isActive ? "true" : "false");
+			});
+			var panels = {
+				layout: document.getElementById("tabPanelAttrLayout"),
+				nav: document.getElementById("tabPanelAttrNav"),
+				folder: document.getElementById("tabPanelAttrFolder")
+			};
+			Object.keys(panels).forEach(function (key) {
+				if (panels[key]) {
+					panels[key].hidden = (key !== mode);
+				}
+			});
 		});
 	});
 	var folderContentId = parseInt(folderListingControls.dataset.contentId, 10) || 0;
@@ -1491,6 +1626,9 @@
 		'references-authority': '<section class="jbd-template jbd-references" aria-label="References and Statutory Authority">\n  <div class="jbd-references-header">\n    <span class="jbd-references-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/></svg></span>\n    <strong class="jbd-references-title">References &amp; Statutory Authority</strong>\n  </div>\n  <ul class="jbd-references-list">\n    <li>\n      <span class="jbd-ref-badge">RCW 36.32</span>\n      <span class="jbd-ref-text">Revised Code of Washington &mdash; County Commissioners General Powers</span>\n    </li>\n    <li>\n      <span class="jbd-ref-badge">CCC Title 14</span>\n      <span class="jbd-ref-text">Chelan County Code &mdash; Development Standards &amp; Administration</span>\n    </li>\n    <li>\n      <span class="jbd-ref-badge">Policy &num;2024-03</span>\n      <span class="jbd-ref-text">Department Operating Procedure &amp; Review Timeline</span>\n    </li>\n  </ul>\n</section>',
 		'contact-hours': '<aside class="jbd-template jbd-contact-card" aria-label="Department Contact and Hours">\n  <div class="jbd-contact-header">\n    <span class="jbd-contact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>\n    <strong class="jbd-contact-title">Office Hours &amp; Location</strong>\n  </div>\n  <div class="jbd-contact-body">\n    <p><strong>Location:</strong> 350 Orondo Ave, Suite 201, Wenatchee, WA 98801</p>\n    <p><strong>Hours:</strong> Monday &ndash; Friday: 8:00 AM &ndash; 5:00 PM</p>\n    <p><strong>Phone:</strong> <a href="tel:5096676100">(509) 667-6100</a></p>\n    <p><strong>Email:</strong> <a href="mailto:info@chelancounty.gov">info@chelancounty.gov</a></p>\n  </div>\n</aside>',
 		'callout-info': '<aside class="jbd-template jbd-callout jbd-callout-info" aria-label="Note: Information">\n  <div class="jbd-callout-header">\n    <span class="jbd-callout-badge" aria-hidden="true">INFO</span>\n    <strong class="jbd-callout-title">Important Note</strong>\n  </div>\n  <p>Enter your key takeaway or instructions for the reader here.</p>\n</aside>',
+		'cta-card': '<aside class="jbd-template jbd-cta-card" aria-label="Action: Online Service">\n  <div class="jbd-cta-card-header">\n    <span class="jbd-cta-badge" aria-hidden="true">ONLINE SERVICE</span>\n    <p class="jbd-cta-title h4">Apply for Department Permits &amp; Licenses</p>\n  </div>\n  <p class="jbd-cta-desc">Submit your applications, upload engineering documents, and track review status securely through our citizen portal.</p>\n  <div class="jbd-cta-card-footer">\n    <a href="#portal" class="jbd-btn jbd-btn-primary jbd-cta-btn" aria-label="Apply online for Department Permits and Licenses">\n      <span>Begin Online Application</span>\n      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>\n    </a>\n  </div>\n</aside>',
+		'cta-grid': '<section class="jbd-template jbd-cta-grid" aria-label="Popular online actions">\n  <article class="jbd-cta-card">\n    <div class="jbd-cta-card-header">\n      <span class="jbd-cta-badge jbd-cta-badge-teal" aria-hidden="true">PAYMENT</span>\n      <p class="jbd-cta-title h4">Pay Taxes &amp; Fees Online</p>\n    </div>\n    <p class="jbd-cta-desc">Pay real property taxes, assessment fees, and administrative charges with e-check or card.</p>\n    <div class="jbd-cta-card-footer">\n      <a href="#pay" class="jbd-btn jbd-btn-primary jbd-cta-btn" aria-label="Make an online payment for taxes and fees">\n        <span>Pay Online Now</span>\n        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>\n      </a>\n    </div>\n  </article>\n  <article class="jbd-cta-card">\n    <div class="jbd-cta-card-header">\n      <span class="jbd-cta-badge jbd-cta-badge-blue" aria-hidden="true">PUBLIC RECORDS</span>\n      <p class="jbd-cta-title h4">Submit Public Records Request</p>\n    </div>\n    <p class="jbd-cta-desc">Request county government records under RCW 42.56 with our automated disclosure portal.</p>\n    <div class="jbd-cta-card-footer">\n      <a href="#records" class="jbd-btn jbd-btn-primary jbd-cta-btn" aria-label="Submit a public records disclosure request">\n        <span>Submit Request</span>\n        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>\n      </a>\n    </div>\n  </article>\n</section>',
+		'cta-banner': '<aside class="jbd-template jbd-cta-banner" aria-label="Action required">\n  <div class="jbd-cta-banner-content">\n    <span class="jbd-cta-banner-badge" aria-hidden="true">NEXT STEP</span>\n    <p class="jbd-cta-banner-title h4">Need assistance completing your submission?</p>\n    <p class="jbd-cta-banner-lead">Our department specialists are available Monday through Friday from 8:00 AM to 5:00 PM to help you navigate requirements.</p>\n  </div>\n  <div class="jbd-cta-banner-action">\n    <a href="#contact" class="jbd-btn jbd-cta-banner-btn" aria-label="Contact our department specialists for assistance">\n      <span>Contact Office Specialist</span>\n      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>\n    </a>\n  </div>\n</aside>',
 		'faq-item': '<div class="jbd-template jbd-faq-block" aria-label="Frequently Asked Questions">\n  <div class="jbd-faq-item">\n    <div class="jbd-faq-header">\n      <span class="jbd-faq-badge" aria-hidden="true">Q&amp;A</span>\n      <p class="jbd-faq-question h4">What are the requirements for this procedure?</p>\n    </div>\n    <div class="jbd-faq-answer">\n      <p>Provide clear, concise details about eligibility, deadlines, and next steps.</p>\n    </div>\n  </div>\n</div>',
 		'steps-process': '<ol class="jbd-template jbd-steps" aria-label="Step by step instructions">\n  <li class="jbd-step">\n    <div class="jbd-step-badge" aria-hidden="true">1</div>\n    <div class="jbd-step-body">\n      <strong class="jbd-step-title">Step 1: Preparation</strong>\n      <p>Gather the necessary documentation and review prerequisites.</p>\n    </div>\n  </li>\n  <li class="jbd-step">\n    <div class="jbd-step-badge" aria-hidden="true">2</div>\n    <div class="jbd-step-body">\n      <strong class="jbd-step-title">Step 2: Submission</strong>\n      <p>Submit your application in person, by mail, or through the online portal.</p>\n    </div>\n  </li>\n</ol>'
 	};
@@ -1873,7 +2011,13 @@
 			folderListingEnabled: folderListingEnabled ? folderListingEnabled.checked : false,
 			folderListingIds: folderCheckedIds,
 			sidebarIds: sidebarChecked,
-			changeSummary: document.getElementById("pgChangeSummary") ? document.getElementById("pgChangeSummary").value.trim() : ""
+			changeSummary: document.getElementById("pgChangeSummary") ? document.getElementById("pgChangeSummary").value.trim() : "",
+			imageAttachment: document.getElementById("featuredImage") ? document.getElementById("featuredImage").value.trim() : "",
+			imageAlt: document.getElementById("featuredImageAlt") ? document.getElementById("featuredImageAlt").value.trim() : "",
+			imageTitle: document.getElementById("featuredImageCaption") ? document.getElementById("featuredImageCaption").value.trim() : "",
+			imageDescription: document.getElementById("featuredImageDescription") ? document.getElementById("featuredImageDescription").value.trim() : "",
+			imageAttribution: document.getElementById("featuredImageCredit") ? document.getElementById("featuredImageCredit").value.trim() : "",
+			imageDecorative: (document.getElementById("featuredImageDecorative") && document.getElementById("featuredImageDecorative").checked) ? 1 : 0
 		};
 
 		var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -2367,8 +2511,9 @@ window.closeEmbedFormModal = function() {
 			var formId = btnIframe.getAttribute("data-id");
 			var formSlug = btnIframe.getAttribute("data-slug");
 			var formTitle = btnIframe.getAttribute("data-title") || "Online Form";
+			var formSrc = formSlug ? ('http://cmsadmin.chelancounty.gov/forms/preview?slug=' + encodeURIComponent(formSlug)) : ('http://cmsadmin.chelancounty.gov/forms/preview?id=' + formId);
 			var snippet = '<div class="cms-form-embed" data-form-slug="' + formSlug + '" data-form-id="' + formId + '">\n' +
-				'  <iframe src="/forms/preview?id=' + formId + '" width="100%" height="750" frameborder="0" style="border:none; max-width:100%; border-radius:8px;" title="' + formTitle.replace(/"/g, '&quot;') + '"></iframe>\n' +
+				'  <iframe src="' + formSrc + '" width="100%" height="750" frameborder="0" scrolling="no" style="border:none; width:100%; min-height:500px; overflow:hidden; border-radius:8px;" title="' + formTitle.replace(/"/g, '&quot;') + '"></iframe>\n' +
 				'</div>\n';
 			insertSnippetAtCursor("pgContent", snippet);
 			closeEmbedFormModal();
@@ -2513,6 +2658,326 @@ function insertSnippetAtCursor(textareaId, text) {
 	ta.selectionStart = ta.selectionEnd = start + text.length + 2;
 	ta.focus();
 }
+
+/* ==========================================================================
+   Featured Cover Image & Media Library Picker Integration
+   ========================================================================== */
+function updateImagePreview(url) {
+	var img = document.getElementById('featuredImgPreview');
+	var ph = document.getElementById('featuredImgPlaceholder');
+	var btnRemove = document.getElementById('btnRemoveFeaturedImg');
+	var trimmed = (url || '').trim();
+	if (trimmed.length > 0) {
+		if (img) {
+			img.src = trimmed;
+			img.style.display = 'block';
+		}
+		if (ph) ph.style.display = 'none';
+		if (btnRemove) btnRemove.style.display = 'inline-flex';
+	} else {
+		if (img) {
+			img.src = '';
+			img.style.display = 'none';
+		}
+		if (ph) ph.style.display = 'flex';
+		if (btnRemove) btnRemove.style.display = 'none';
+	}
+	updateAdaComplianceStatus();
+	if (window.PageA11yLinter && typeof window.PageA11yLinter.scheduleScan === 'function') {
+		window.PageA11yLinter.scheduleScan();
+	}
+}
+
+function removeFeaturedImage() {
+	var imgInput = document.getElementById('featuredImage');
+	if (imgInput) imgInput.value = '';
+	var altInput = document.getElementById('featuredImageAlt');
+	if (altInput) altInput.value = '';
+	var captionEl = document.getElementById('featuredImageCaption');
+	if (captionEl) captionEl.value = '';
+	var descEl = document.getElementById('featuredImageDescription');
+	if (descEl) descEl.value = '';
+	var creditEl = document.getElementById('featuredImageCredit');
+	if (creditEl) creditEl.value = '';
+	var decEl = document.getElementById('featuredImageDecorative');
+	if (decEl) decEl.checked = false;
+
+	updateImagePreview('');
+	updateAltCharCount('');
+	updateCaptionCharCount('');
+	updateDescCharCount('');
+	onDecorativeToggled(false);
+	updateAdaComplianceStatus();
+
+	if (window.PageA11yLinter && typeof window.PageA11yLinter.scheduleScan === 'function') {
+		window.PageA11yLinter.scheduleScan();
+	}
+
+	if (typeof window.showToast === 'function') {
+		window.showToast('Featured cover image removed.', 'info');
+	}
+	var browseBtn = document.getElementById('btnBrowseFeaturedImg');
+	if (browseBtn) browseBtn.focus();
+}
+
+function getActiveWorkspaceName(wsId) {
+	wsId = (wsId || getActiveWorkspaceId() || "").toLowerCase();
+	var wsCont = document.getElementById("workspaceDropdownContainer");
+	if (wsCont) {
+		var titleEl = wsCont.querySelector(".header-ws-title") || wsCont.querySelector(".workspace-name") || wsCont.querySelector(".active-ws-name");
+		if (titleEl && titleEl.textContent.trim()) {
+			return titleEl.textContent.trim();
+		}
+	}
+	var badgeEl = document.getElementById("featuredImgWsName");
+	if (badgeEl && badgeEl.textContent.trim() && badgeEl.textContent.trim() !== "Workspace") {
+		return badgeEl.textContent.trim();
+	}
+	return wsId || "Workspace";
+}
+
+window.openMediaPickerForPageCover = function() {
+	var triggerBtn = document.getElementById('btnBrowseFeaturedImg') || document.getElementById('featuredImgPreviewWrap');
+	window._mediaPickerTrigger = triggerBtn;
+
+	window.openMediaPicker('image', {
+		folder: 'images',
+		onSelect: function(payload) {
+			if (!payload) return;
+			var url = payload.url || (payload.data && payload.data.webUrl) || '';
+			if (!url) return;
+
+			var imgInput = document.getElementById('featuredImage');
+			if (imgInput) {
+				imgInput.value = url;
+			}
+
+			var altInput = document.getElementById('featuredImageAlt');
+			var suggestedAlt = payload.alt || payload.title || (payload.data && (payload.data.altText || payload.data.title)) || '';
+			if (altInput && (!altInput.value.trim().length) && suggestedAlt) {
+				altInput.value = suggestedAlt;
+				updateAltCharCount(suggestedAlt);
+			}
+
+			var captionInput = document.getElementById('featuredImageCaption');
+			var suggestedCaption = payload.caption || (payload.data && payload.data.caption) || '';
+			if (captionInput && (!captionInput.value.trim().length) && suggestedCaption) {
+				captionInput.value = suggestedCaption;
+				updateCaptionCharCount(suggestedCaption);
+			}
+
+			var creditInput = document.getElementById('featuredImageCredit');
+			var suggestedCredit = payload.credit || (payload.data && payload.data.credit) || '';
+			if (creditInput && (!creditInput.value.trim().length) && suggestedCredit) {
+				creditInput.value = suggestedCredit;
+			}
+
+			updateImagePreview(url);
+			updateAdaComplianceStatus();
+			if (window.PageA11yLinter && typeof window.PageA11yLinter.scheduleScan === 'function') {
+				window.PageA11yLinter.scheduleScan();
+			}
+			var wsName = getActiveWorkspaceName();
+			if (typeof window.showToast === 'function') {
+				window.showToast('Cover image selected' + (wsName ? ' from ' + wsName + ' workspace.' : '.'), 'success');
+			}
+		}
+	});
+};
+
+function onDecorativeToggled(isDecorative) {
+	var altContainer = document.getElementById('altTextContainer');
+	var imgPreview = document.getElementById('featuredImgPreview');
+	if (altContainer) {
+		if (isDecorative) {
+			altContainer.style.opacity = '0.45';
+			altContainer.style.pointerEvents = 'none';
+		} else {
+			altContainer.style.opacity = '1';
+			altContainer.style.pointerEvents = 'auto';
+		}
+	}
+	if (imgPreview) {
+		if (isDecorative) {
+			imgPreview.setAttribute('aria-hidden', 'true');
+			imgPreview.setAttribute('alt', '');
+		} else {
+			imgPreview.removeAttribute('aria-hidden');
+			var altInput = document.getElementById('featuredImageAlt');
+			imgPreview.setAttribute('alt', altInput ? altInput.value : '');
+		}
+	}
+	updateAdaComplianceStatus();
+	if (window.PageA11yLinter && typeof window.PageA11yLinter.scheduleScan === 'function') {
+		window.PageA11yLinter.scheduleScan();
+	}
+}
+
+function suggestAltFromHeadline() {
+	var titleEl = document.getElementById('pgTitle');
+	var headline = (titleEl ? titleEl.value : '').trim();
+	if (!headline) {
+		if (typeof window.adminAlert === 'function') {
+			window.adminAlert({ title: 'Page Title Required', message: 'Please enter a page title above first so we can suggest matching image alt text.', type: 'info' });
+		} else if (typeof window.showToast === 'function') {
+			window.showToast('Please enter a page title first.', 'warning');
+		}
+		if (titleEl) titleEl.focus();
+		return;
+	}
+
+	var altInput = document.getElementById('featuredImageAlt');
+	if (altInput) {
+		var suggestion = headline;
+		if (suggestion.length > 120) {
+			suggestion = suggestion.substring(0, 117).trim() + '...';
+		}
+		altInput.value = suggestion;
+		updateAltCharCount(suggestion);
+		updateAdaComplianceStatus();
+		altInput.focus();
+		if (window.PageA11yLinter && typeof window.PageA11yLinter.scheduleScan === 'function') {
+			window.PageA11yLinter.scheduleScan();
+		}
+		if (typeof window.showToast === 'function') {
+			window.showToast('Alt text populated from page title. Edit as needed for visual accuracy.', 'success');
+		}
+	}
+}
+
+function updateAltCharCount(val) {
+	var counter = document.getElementById('altCharCounter');
+	if (counter) {
+		var len = (val || '').length;
+		counter.textContent = len + '/150 rec.';
+		if (len > 150) {
+			counter.style.color = 'var(--admin-warning, #d97706)';
+		} else {
+			counter.style.color = 'var(--admin-text-muted)';
+		}
+	}
+}
+
+function onAltInput(val) {
+	updateAltCharCount(val);
+	updateAdaComplianceStatus();
+	if (window.PageA11yLinter && typeof window.PageA11yLinter.scheduleScan === 'function') {
+		window.PageA11yLinter.scheduleScan();
+	}
+}
+
+function updateDescCharCount(val) {
+	var counter = document.getElementById('descCharCounter');
+	if (counter) {
+		counter.textContent = (val || '').length + '/2000';
+	}
+}
+
+function updateCaptionCharCount(val) {
+	var counter = document.getElementById('captionCharCounter');
+	if (counter) {
+		counter.textContent = (val || '').length + '/1000';
+	}
+}
+
+function updateAdaComplianceStatus() {
+	var imgInput = document.getElementById('featuredImage');
+	var decInput = document.getElementById('featuredImageDecorative');
+	var altInput = document.getElementById('featuredImageAlt');
+	var badge = document.getElementById('featuredImgAdaBadge');
+	var badgeText = document.getElementById('featuredImgAdaText');
+	var notice = document.getElementById('altAuditNotice');
+
+	if (!badge || !badgeText) return;
+
+	var imgUrl = (imgInput ? imgInput.value : '').trim();
+	var isDec = decInput ? decInput.checked : false;
+	var altText = (altInput ? altInput.value : '').trim();
+
+	// Reset badge classes
+	badge.className = 'badge';
+
+	if (!imgUrl) {
+		badge.classList.add('badge-neutral');
+		badgeText.textContent = 'No Image';
+		badge.title = 'No cover image selected';
+		if (notice) notice.style.display = 'none';
+		return;
+	}
+
+	if (isDec) {
+		badge.classList.add('badge-info');
+		badgeText.textContent = 'Decorative (H67 Pass)';
+		badge.title = 'Marked decorative (WCAG Technique H67). Screen readers will ignore this image.';
+		if (notice) {
+			notice.style.display = 'block';
+			notice.style.background = 'var(--admin-bg-subtle, #f1f5f9)';
+			notice.style.color = 'var(--admin-text-muted)';
+			notice.style.border = '1px solid var(--admin-border-subtle)';
+			notice.innerHTML = '<strong>Decorative Image:</strong> Assistive technologies will skip this image (<code>alt=""</code>, <code>aria-hidden="true"</code>).';
+		}
+		return;
+	}
+
+	if (!altText) {
+		badge.classList.add('badge-danger');
+		badgeText.textContent = 'Alt Text Required';
+		badge.title = 'ADA Title II / WCAG 1.1.1 Issue: Non-decorative images must have descriptive alternative text.';
+		if (notice) {
+			notice.style.display = 'block';
+			notice.style.background = '#fef2f2';
+			notice.style.color = '#991b1b';
+			notice.style.border = '1px solid #fecaca';
+			notice.innerHTML = '<strong>⚠️ ADA Title II / WCAG 1.1.1 Requirement:</strong> Alternative text is required for non-decorative images so screen reader users receive equal access.';
+		}
+		return;
+	}
+
+	// Audit quality of alt text
+	var fileExtRegex = /\.(jpe?g|png|gif|webp|svg|bmp|tiff)$/i;
+	var genericWordRegex = /^(image|photo|picture|photograph|graphic|pic|img)$/i;
+	var startsWithGeneric = /^(photo|image|picture) of /i;
+
+	if (fileExtRegex.test(altText) || genericWordRegex.test(altText) || startsWithGeneric.test(altText)) {
+		badge.classList.add('badge-warning');
+		badgeText.textContent = 'Generic Alt Warning';
+		badge.title = 'Alt text contains file names or generic phrases like "image of".';
+		if (notice) {
+			notice.style.display = 'block';
+			notice.style.background = '#fffbeb';
+			notice.style.color = '#92400e';
+			notice.style.border = '1px solid #fde68a';
+			notice.innerHTML = '<strong>⚠️ Quality Suggestion:</strong> Avoid raw file names (<code>.jpg</code>) or starting with <em>"photo of"</em> or <em>"image of"</em>. Describe what is actually happening in the photo.';
+		}
+		return;
+	}
+
+	// Alt text provided and valid
+	badge.classList.add('badge-success');
+	badgeText.textContent = 'ADA Pass (WCAG AA)';
+	badge.title = 'Meets WCAG 2.1 Level AA and ADA Title II non-text content criteria.';
+	if (notice) notice.style.display = 'none';
+}
+
+window.addEventListener('cmsadmin:workspaceChanged', function(e) {
+	if (e && e.detail && e.detail.id) {
+		var newName = (e.detail.name || e.detail.title || getActiveWorkspaceName(e.detail.id));
+		var badgeNameEl = document.getElementById('featuredImgWsName');
+		if (badgeNameEl && newName) {
+			badgeNameEl.textContent = newName;
+		}
+	}
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+	var altInput = document.getElementById('featuredImageAlt');
+	if (altInput) updateAltCharCount(altInput.value);
+	var capInput = document.getElementById('featuredImageCaption');
+	if (capInput) updateCaptionCharCount(capInput.value);
+	var descInput = document.getElementById('featuredImageDescription');
+	if (descInput) updateDescCharCount(descInput.value);
+	updateAdaComplianceStatus();
+});
 
 /* ==========================================================================
    Feature 2.2: Page Revision History & Rollback Studio (RCW 42.56 Compliance)
@@ -3020,6 +3485,42 @@ function executeRollback(pageId, revisionId, versionNumber) {
 				if (ta) ta.value = pageObj.body;
 			}
 		}
+		if (pageObj.layout !== undefined) {
+			var lay = document.getElementById("pgLayout");
+			if (lay) {
+				lay.value = pageObj.layout;
+				updateSidebarAvailability();
+			}
+		}
+		if (pageObj.imageAttachment !== undefined) {
+			var fi = document.getElementById("featuredImage");
+			if (fi) fi.value = pageObj.imageAttachment || "";
+			updateImagePreview(pageObj.imageAttachment || "");
+		}
+		if (pageObj.imageAlt !== undefined) {
+			var fa = document.getElementById("featuredImageAlt");
+			if (fa) { fa.value = pageObj.imageAlt || ""; updateAltCharCount(fa.value); }
+		}
+		if (pageObj.imageTitle !== undefined) {
+			var fc = document.getElementById("featuredImageCaption");
+			if (fc) { fc.value = pageObj.imageTitle || ""; updateCaptionCharCount(fc.value); }
+		}
+		if (pageObj.imageDescription !== undefined) {
+			var fd = document.getElementById("featuredImageDescription");
+			if (fd) { fd.value = pageObj.imageDescription || ""; updateDescCharCount(fd.value); }
+		}
+		if (pageObj.imageAttribution !== undefined) {
+			var fcr = document.getElementById("featuredImageCredit");
+			if (fcr) fcr.value = pageObj.imageAttribution || "";
+		}
+		if (pageObj.imageDecorative !== undefined) {
+			var fdec = document.getElementById("featuredImageDecorative");
+			if (fdec) {
+				fdec.checked = (pageObj.imageDecorative == 1 || pageObj.imageDecorative === true || pageObj.imageDecorative === "1");
+				onDecorativeToggled(fdec.checked);
+			}
+		}
+		updateAdaComplianceStatus();
 
 		if (typeof window.adminToast === "function") {
 			window.adminToast("Successfully restored Version " + versionNumber + ". Safety backup recorded.", "success");
@@ -3049,44 +3550,99 @@ function createManualSnapshot() {
 		return;
 	}
 
-	var note = prompt("Enter an optional description or note for this snapshot checkpoint:", "Manual checkpoint snapshot");
-	if (note === null) return;
+	function doSaveSnapshot(noteText) {
+		var btn = document.getElementById("btnManualSnapshot");
+		if (btn) btn.disabled = true;
 
-	var btn = document.getElementById("btnManualSnapshot");
-	if (btn) btn.disabled = true;
-
-	fetch("/pages/snapshot-revision", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			"Accept": "application/json"
-		},
-		body: JSON.stringify({
-			pageId: pageId,
-			changeSummary: note.trim() || "Manual checkpoint snapshot"
+		fetch("/pages/snapshot-revision", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"Accept": "application/json"
+			},
+			body: JSON.stringify({
+				pageId: pageId,
+				changeSummary: (noteText || "").trim() || "Manual checkpoint snapshot"
+			})
 		})
-	})
-	.then(function(res) { return res.json(); })
-	.then(function(data) {
-		if (btn) btn.disabled = false;
-		if (data && data.success) {
-			if (typeof window.adminToast === "function") {
-				window.adminToast(data.message || "Snapshot recorded.", "success");
+		.then(function(res) { return res.json(); })
+		.then(function(data) {
+			if (btn) btn.disabled = false;
+			if (data && data.success) {
+				if (typeof window.adminToast === "function") {
+					window.adminToast(data.message || "Snapshot recorded.", "success");
+				}
+				loadRevisionsTimeline(data.revisionId);
+			} else {
+				if (typeof window.adminToast === "function") {
+					window.adminToast("Failed to create snapshot: " + (data.message || "Unknown error"), "danger");
+				}
 			}
-			loadRevisionsTimeline(data.revisionId);
-		} else {
+		})
+		.catch(function(err) {
+			console.error("createManualSnapshot error:", err);
+			if (btn) btn.disabled = false;
 			if (typeof window.adminToast === "function") {
-				window.adminToast("Failed to create snapshot: " + (data.message || "Unknown error"), "danger");
+				window.adminToast("Network error creating snapshot.", "danger");
 			}
-		}
-	})
-	.catch(function(err) {
-		console.error("createManualSnapshot error:", err);
-		if (btn) btn.disabled = false;
-		if (typeof window.adminToast === "function") {
-			window.adminToast("Network error creating snapshot.", "danger");
-		}
-	});
+		});
+	}
+
+	var existing = document.getElementById("pgSnapshotPromptBackdrop");
+	if (existing) existing.remove();
+
+	var backdrop = document.createElement("div");
+	backdrop.id = "pgSnapshotPromptBackdrop";
+	backdrop.style.cssText = "position:fixed; inset:0; z-index:100005; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:1rem;";
+
+	var modal = document.createElement("div");
+	modal.setAttribute("role", "dialog");
+	modal.setAttribute("aria-modal", "true");
+	modal.style.cssText = "background:var(--admin-surface, #fff); border:1px solid var(--admin-border, #cbd5e1); border-radius:0.75rem; width:100%; max-width:440px; box-shadow:0 20px 50px rgba(15,23,42,0.25); overflow:hidden;";
+
+	modal.innerHTML =
+		'<div style="padding:0.85rem 1.1rem; border-bottom:1px solid var(--admin-border-subtle, #e2e8f0); display:flex; justify-content:space-between; align-items:center; background:var(--admin-bg, #f8fafc);">' +
+			'<strong style="font-size:0.92rem; color:var(--admin-text-main);">Create Checkpoint Snapshot</strong>' +
+			'<button type="button" id="pgSnapshotModalCloseBtn" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.4rem;">&times;</button>' +
+		'</div>' +
+		'<div style="padding:1rem 1.1rem;">' +
+			'<label for="pgSnapshotModalInput" style="display:block; font-size:0.8rem; font-weight:600; color:var(--admin-text-main); margin-bottom:0.4rem;">Snapshot description or note:</label>' +
+			'<input type="text" id="pgSnapshotModalInput" class="form-control" style="width:100%;" value="Manual checkpoint snapshot">' +
+		'</div>' +
+		'<div style="padding:0.75rem 1.1rem; border-top:1px solid var(--admin-border-subtle, #e2e8f0); display:flex; justify-content:flex-end; gap:0.5rem; background:var(--admin-bg, #f8fafc);">' +
+			'<button type="button" id="pgSnapshotModalCancelBtn" class="btn btn-outline btn-sm">Cancel</button>' +
+			'<button type="button" id="pgSnapshotModalApplyBtn" class="btn btn-primary btn-sm">Create Snapshot</button>' +
+		'</div>';
+
+	backdrop.appendChild(modal);
+	document.body.appendChild(backdrop);
+
+	var input = document.getElementById("pgSnapshotModalInput");
+	var closeBtn = document.getElementById("pgSnapshotModalCloseBtn");
+	var cancelBtn = document.getElementById("pgSnapshotModalCancelBtn");
+	var applyBtn = document.getElementById("pgSnapshotModalApplyBtn");
+
+	function close() {
+		if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+	}
+	function submit() {
+		var val = input ? input.value : "";
+		close();
+		doSaveSnapshot(val);
+	}
+
+	if (closeBtn) closeBtn.onclick = close;
+	if (cancelBtn) cancelBtn.onclick = close;
+	if (applyBtn) applyBtn.onclick = submit;
+	backdrop.onclick = function(e) { if (e.target === backdrop) close(); };
+	if (input) {
+		input.focus();
+		input.select();
+		input.onkeydown = function(e) {
+			if (e.key === "Enter") { e.preventDefault(); submit(); }
+			if (e.key === "Escape") { e.preventDefault(); close(); }
+		};
+	}
 }
 
 /* ==========================================================================
@@ -3098,7 +3654,7 @@ window.PageA11yLinter = (function() {
 		passed: true,
 		criticalCount: 0,
 		warningCount: 0,
-		categories: { images: 0, headings: 0, links: 0, tables: 0, format: 0 },
+		categories: { cover: 0, images: 0, headings: 0, links: 0, tables: 0, format: 0 },
 		issues: []
 	};
 	var _scanDebounceTimer = null;
@@ -3153,11 +3709,80 @@ window.PageA11yLinter = (function() {
 		temp.innerHTML = html;
 
 		var issues = [];
-		var catCounts = { images: 0, headings: 0, links: 0, tables: 0, format: 0 };
+		var catCounts = { cover: 0, images: 0, headings: 0, links: 0, tables: 0, format: 0 };
 		var criticalCount = 0;
 		var warningCount = 0;
 
-		// --- Rule Group 1: Images (WCAG 1.1.1 Non-text Content) ---
+		// --- Rule Group 1: Featured Cover Image (WCAG 1.1.1 Non-text Content) ---
+		var featImgInput = document.getElementById("featuredImage");
+		var featImgUrl = featImgInput ? featImgInput.value.trim() : "";
+		var featImgDec = document.getElementById("featuredImageDecorative");
+		var isDecorativeCover = featImgDec ? featImgDec.checked : false;
+		var featAltInput = document.getElementById("featuredImageAlt");
+		var featAlt = featAltInput ? featAltInput.value.trim() : "";
+
+		if (featImgUrl) {
+			if (!isDecorativeCover && !featAlt) {
+				criticalCount++;
+				catCounts.cover++;
+				issues.push({
+					id: "cover-missing-alt",
+					category: "cover",
+					severity: "error",
+					rule: "WCAG 1.1.1 (Non-text Content)",
+					title: "Cover Image Missing Alt Text",
+					message: "The featured cover image has no alternative text. Screen reader users cannot discern what is portrayed.",
+					snippet: '<img src="' + escapeHtml(featImgUrl.length > 50 ? featImgUrl.substring(0, 47) + '...' : featImgUrl) + '">',
+					suggestion: "Provide descriptive alt text or mark the cover photo as decorative if purely illustrative.",
+					selector: "#featuredImageAlt",
+					index: 0,
+					quickFixType: "focus-input",
+					meta: { inputId: "featuredImageAlt" }
+				});
+			} else if (!isDecorativeCover && featAlt) {
+				var genericNamesCover = ["image", "photo", "picture", "graphic", "screenshot", "img", "icon", "placeholder", "file", "download"];
+				var lowerCover = featAlt.toLowerCase().replace(/[^a-z0-9]/g, "");
+				var fileExtRegexCover = /\.(jpe?g|png|gif|webp|svg|bmp|tiff)$/i;
+
+				if (genericNamesCover.indexOf(lowerCover) !== -1 || fileExtRegexCover.test(featAlt) || /^(photo|image|picture) of /i.test(featAlt)) {
+					warningCount++;
+					catCounts.cover++;
+					issues.push({
+						id: "cover-generic-alt",
+						category: "cover",
+						severity: "warning",
+						rule: "WCAG 1.1.1 (Descriptive Alt Text)",
+						title: "Generic Cover Image Alt Text",
+						message: 'Alternative text "' + escapeHtml(featAlt) + '" appears to be a generic placeholder or filename.',
+						snippet: '<img alt="' + escapeHtml(featAlt) + '">',
+						suggestion: "Describe what is specifically portrayed in the photograph or use 'Suggest from Title'.",
+						selector: "#featuredImageAlt",
+						index: 0,
+						quickFixType: "focus-input",
+						meta: { inputId: "featuredImageAlt" }
+					});
+				} else if (featAlt.length > 150) {
+					warningCount++;
+					catCounts.cover++;
+					issues.push({
+						id: "cover-long-alt",
+						category: "cover",
+						severity: "warning",
+						rule: "WCAG 1.1.1 (Concise Alt Text)",
+						title: "Excessively Long Alt Text (" + featAlt.length + " chars)",
+						message: "Alt text exceeds recommended 150 characters. Screen readers read alt text without pausing.",
+						snippet: '<img alt="' + escapeHtml(featAlt.substring(0, 60)) + '...">',
+						suggestion: "Shorten alt text to under 150 characters and place extended narrative in the visible Caption or Description field.",
+						selector: "#featuredImageAlt",
+						index: 0,
+						quickFixType: "focus-input",
+						meta: { inputId: "featuredImageAlt" }
+					});
+				}
+			}
+		}
+
+		// --- Rule Group 2: Content Body Images (WCAG 1.1.1 Non-text Content) ---
 		var imgs = temp.querySelectorAll("img");
 		var genericNames = ["image", "photo", "picture", "graphic", "screenshot", "img", "icon", "placeholder", "file", "download"];
 		imgs.forEach(function(img, idx) {
@@ -3711,6 +4336,7 @@ window.PageA11yLinter = (function() {
 
 		// 2. Update Category Chips
 		var chipMap = {
+			cover: { chip: "chipA11yCover", count: "countA11yCover" },
 			images: { chip: "chipA11yImages", count: "countA11yImages" },
 			headings: { chip: "chipA11yHeadings", count: "countA11yHeadings" },
 			links: { chip: "chipA11yLinks", count: "countA11yLinks" },
@@ -3783,7 +4409,7 @@ window.PageA11yLinter = (function() {
 		var filtered = _lastResults.issues.filter(function(issue) {
 			if (_activeFilter === "errors") return issue.severity === "error";
 			if (_activeFilter === "warnings") return issue.severity === "warning";
-			if (_activeFilter === "images" || _activeFilter === "headings" || _activeFilter === "links" || _activeFilter === "tables" || _activeFilter === "format") {
+			if (_activeFilter === "cover" || _activeFilter === "images" || _activeFilter === "headings" || _activeFilter === "links" || _activeFilter === "tables" || _activeFilter === "format") {
 				return issue.category === _activeFilter;
 			}
 			return true;
@@ -4371,6 +4997,15 @@ window.PageA11yLinter = (function() {
 		if (metaDescInput) {
 			metaDescInput.addEventListener("input", scheduleScan);
 		}
+
+		var featImg = document.getElementById("featuredImage");
+		if (featImg) featImg.addEventListener("input", scheduleScan);
+
+		var featAlt = document.getElementById("featuredImageAlt");
+		if (featAlt) featAlt.addEventListener("input", scheduleScan);
+
+		var featDec = document.getElementById("featuredImageDecorative");
+		if (featDec) featDec.addEventListener("change", scheduleScan);
 
 		// Poll for JBDEditor async readiness
 		var pollCount = 0;

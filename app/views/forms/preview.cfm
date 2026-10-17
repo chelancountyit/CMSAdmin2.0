@@ -30,12 +30,31 @@
 			*, *::before, *::after { box-sizing: border-box; }
 			body {
 				margin: 0;
-				padding: 2rem 1rem;
+				padding: 2rem 1rem !important;
 				font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-				background-color: var(--bg);
+				/*background-color: var(--bg);*/
 				color: var(--text);
 				font-size: 15px;
 				line-height: 1.5;
+			}
+			/* When embedded in an iframe on public pages, eliminate inner padding and inner scrollbar */
+			html.is-embedded, body.is-embedded {
+				margin: 0 !important;
+				padding: 0.25rem 0 0.5rem 0 !important;
+				background: transparent !important;
+				overflow: hidden !important;
+				height: auto !important;
+			}
+			body.is-embedded .form-wrapper {
+				max-width: 100% !important;
+				margin: 0 !important;
+				padding: 0 !important;
+			}
+			body.is-embedded .form-card {
+				box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+			}
+			#wheels-debugbar {
+				display: none !important;
 			}
 			.form-wrapper {
 				max-width: 900px;
@@ -520,6 +539,31 @@
 
 		<script>
 			(function() {
+				// Detect if rendered inside an iframe on public pages
+				if (window.self !== window.top) {
+					document.documentElement.classList.add("is-embedded");
+					document.body.classList.add("is-embedded");
+				}
+
+				// Post actual form content height to parent window with +50px container buffer without infinite loop feedback
+				let lastSentHeight = 0;
+				function sendHeightToParent() {
+					if (window.parent && window.parent !== window) {
+						var wrapper = document.querySelector(".form-wrapper") || document.querySelector(".form-card");
+						if (!wrapper) return;
+						var h = Math.ceil(wrapper.getBoundingClientRect().height);
+						if (!h || h <= 0) return;
+						// Include requested additional 50px height buffer for comfortable container padding
+						var hWithBuffer = h + 50;
+						if (Math.abs(hWithBuffer - lastSentHeight) < 4) return;
+						lastSentHeight = hWithBuffer;
+						window.parent.postMessage({
+							type: "chelan-form-resize",
+							height: hWithBuffer
+						}, "*");
+					}
+				}
+
 				// Record exact form render timestamp for submission speed-trap anti-spam check
 				document.getElementById("_cf_form_load_time").value = Date.now();
 
@@ -696,16 +740,27 @@
 				};
 
 				let activeForm = null;
-				const urlParams = new URLSearchParams(window.location.search);
-				const templateParam = urlParams.get("template");
+				<cfif StructKeyExists(variables, "fbPublicFormJson") and Len(Trim(variables.fbPublicFormJson)) and variables.fbPublicFormJson neq "{}">
+				try {
+					const dbForm = <cfoutput>#variables.fbPublicFormJson#</cfoutput>;
+					if (dbForm && typeof dbForm === "object" && Object.keys(dbForm).length > 0) {
+						activeForm = dbForm;
+					}
+				} catch(err) {}
+				</cfif>
 
-				if (templateParam && TEMPLATE_PRESETS[templateParam]) {
-					activeForm = TEMPLATE_PRESETS[templateParam];
-				} else {
-					try {
-						const saved = localStorage.getItem("cmsadmin_active_form");
-						if (saved) activeForm = JSON.parse(saved);
-					} catch(e) {}
+				if (!activeForm) {
+					const urlParams = new URLSearchParams(window.location.search);
+					const templateParam = urlParams.get("template");
+
+					if (templateParam && TEMPLATE_PRESETS[templateParam]) {
+						activeForm = TEMPLATE_PRESETS[templateParam];
+					} else {
+						try {
+							const saved = localStorage.getItem("cmsadmin_active_form");
+							if (saved) activeForm = JSON.parse(saved);
+						} catch(e) {}
+					}
 				}
 
 				if (!activeForm) {
@@ -981,6 +1036,7 @@
 						
 						const heading = document.getElementById("successHeading");
 						if (heading) heading.focus();
+						sendHeightToParent();
 					}
 				});
 
@@ -999,6 +1055,7 @@
 							}
 						}
 					});
+					sendHeightToParent();
 				});
 
 				function escapeHTML(str) {
@@ -1010,6 +1067,12 @@
 						.replace(/"/g, "&quot;")
 						.replace(/'/g, "&#039;");
 				}
+
+				// Auto-emit height upon initial load and window resizing
+				sendHeightToParent();
+				setTimeout(sendHeightToParent, 100);
+				setTimeout(sendHeightToParent, 400);
+				window.addEventListener("load", sendHeightToParent);
 			})();
 		</script>
 	</body>

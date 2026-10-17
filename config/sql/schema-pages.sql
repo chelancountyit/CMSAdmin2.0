@@ -46,6 +46,7 @@ BEGIN
         [imageAlt]             NVARCHAR(255) NULL,                                          -- ADA Title II / WCAG AA accessible alternative text
         [imageTitle]           NVARCHAR(255) NULL,                                          -- Image tooltip / descriptive title
         [imageDescription]     NVARCHAR(MAX) NULL,                                          -- Detailed caption or long description
+        [imageDecorative]      BIT NOT NULL CONSTRAINT [DF_pages_imageDecorative] DEFAULT (0), -- WCAG 2.1 H67 decorative image flag
 
         -- Classification & Features
         [isService]            BIT NOT NULL CONSTRAINT [DF_pages_isService] DEFAULT (0),    -- 1 if public county citizen service, 0 otherwise

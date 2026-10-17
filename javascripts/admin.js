@@ -309,6 +309,115 @@ window.hidePageLoader = function () {
   window.finishTopProgress();
 };
 
+window.getActiveWorkspaceCode = function () {
+  const wsContainer = document.getElementById("workspaceDropdownContainer");
+  if (!wsContainer) return "";
+  const wsId = (wsContainer.getAttribute("data-active-ws-id") || "").trim();
+  if (!wsId || wsId.toLowerCase() === "global" || wsId.toLowerCase() === "all") return "";
+  return wsId;
+};
+
+// Global workspace creation guard: block creating content when no workspace is selected, while keeping Administration 100% accessible
+document.addEventListener("click", function (e) {
+  if (window.getActiveWorkspaceCode()) return;
+
+  const target = e.target instanceof Element ? e.target : null;
+  if (!target) return;
+
+  // Never block anything inside the workspace selector dropdown or prompt dialog
+  if (target.closest("#workspaceDropdownContainer") || target.closest("#adminPromptBackdrop")) return;
+
+  // Check if clicking a creation link (<a>) outside of Administration (workspaces, users, settings)
+  const link = target.closest("a[href]");
+  if (link) {
+    const rawHref = (link.getAttribute("href") || "").trim();
+    if (rawHref && !rawHref.startsWith("#") && !rawHref.startsWith("javascript:")) {
+      let url;
+      try {
+        url = new URL(link.href, window.location.origin);
+      } catch (err) {
+        url = null;
+      }
+      if (url && url.origin === window.location.origin) {
+        const path = url.pathname.toLowerCase();
+        const ctrl = (url.searchParams.get("controller") || "").toLowerCase();
+        const act = (url.searchParams.get("action") || "").toLowerCase();
+        const hasId = Number(url.searchParams.get("id") || 0) > 0;
+
+        const isAdminRoute = path.includes("/workspaces") || path.includes("/users") || path.includes("/settings") ||
+          ["workspaces", "users", "settings", "sessions", "main", "documentation"].includes(ctrl);
+
+        if (!isAdminRoute) {
+          const isBlockedModuleLink =
+            path === "/events" || path.startsWith("/events/") ||
+            path === "/calendar" || path.startsWith("/calendar/") ||
+            path === "/alerts" || path.startsWith("/alerts/") ||
+            path.includes("/pages/howdoi") || path.includes("/pages/how-do-i") ||
+            ctrl === "events" || ctrl === "alerts" ||
+            (ctrl === "pages" && (act === "howdoi" || act === "how-do-i"));
+
+          const isCreateLink =
+            path.endsWith("/new") || path.includes("/new/") ||
+            path.endsWith("/create") ||
+            path.endsWith("/upload") || path.includes("/media/upload") ||
+            ((path.includes("/forms/builder") || path.includes("/form-builder") || (ctrl === "forms" && act === "builder")) && !hasId) ||
+            ((path.includes("/pages/edit") || (ctrl === "pages" && act === "edit")) && !hasId) ||
+            ["new", "create", "upload"].includes(act);
+
+          if (isBlockedModuleLink || isCreateLink) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.adminAlert({
+              title: "Workspace Required",
+              message: isBlockedModuleLink
+                ? "Please select a workspace from the top header before opening this module."
+                : "Please select a workspace from the top header before creating content.",
+              type: "warning"
+            });
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  // Check if clicking a content-creation button when not on an Administration page
+  const pagePath = window.location.pathname.toLowerCase();
+  const pageParams = new URLSearchParams(window.location.search);
+  const pageCtrl = (pageParams.get("controller") || "").toLowerCase();
+  const onAdminPage = pagePath.includes("/workspaces") || pagePath.includes("/users") || pagePath.includes("/settings") ||
+    ["workspaces", "users", "settings"].includes(pageCtrl);
+
+  if (!onAdminPage) {
+    const btn = target.closest("button");
+    if (btn) {
+      const btnId = (btn.id || "").toLowerCase();
+      const onclickAttr = (btn.getAttribute("onclick") || "").toLowerCase();
+      const isCreateBtn =
+        btnId === "navadditem" ||
+        btnId.includes("addpage") ||
+        btnId.includes("create") ||
+        btnId.includes("new") ||
+        btnId.includes("upload") ||
+        onclickAttr.includes("openaddpagemodal") ||
+        onclickAttr.includes("openmodal") ||
+        onclickAttr.includes("openupload") ||
+        onclickAttr.includes("create");
+
+      if (isCreateBtn && !onclickAttr.includes("workspacedropdownbtn")) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.adminAlert({
+          title: "Workspace Required",
+          message: "Please select a workspace from the top header before creating content.",
+          type: "warning"
+        });
+        return;
+      }
+    }
+  }
+}, true);
+
 // Automatic navigation click interceptor for seamless loading feedback
 document.addEventListener("click", function (e) {
   const link = e.target.closest("a");

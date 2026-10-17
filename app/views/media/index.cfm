@@ -17,14 +17,6 @@
 			<span>Media Library</span>
 		</h1>
 	</div>
-
-	<div class="page-actions" style="display:flex; gap:0.75rem; align-items:center;">
-		<span class="badge badge-neutral" style="font-size:0.85rem; padding:0.4rem 0.85rem; display:inline-flex; align-items:center; gap:0.45rem;">
-			#svgIcon(name="folder", size=16)#
-			<span>Workspace:</span>
-			<strong>#encodeForHTML(variables.activeWsName)#</strong>
-		</span>
-	</div>
 </div>
 
 <div class="filexplorer-scope admin-card"
