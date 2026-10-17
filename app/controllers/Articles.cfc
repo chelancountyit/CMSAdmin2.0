@@ -53,6 +53,7 @@ component extends="Controller" {
 		variables.stats = {
 			total: 0,
 			published: 0,
+			scheduled: 0,
 			draft: 0,
 			categoriesCount: ArrayLen(variables.categories)
 		};
@@ -62,6 +63,7 @@ component extends="Controller" {
 				SELECT 
 					COUNT(*) AS total,
 					SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END) AS published_cnt,
+					SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) AS scheduled_cnt,
 					SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS draft_cnt
 				FROM articles
 				WHERE deletedat IS NULL
@@ -69,6 +71,7 @@ component extends="Controller" {
 			if (local.qCounts.recordCount) {
 				variables.stats.total = Val(local.qCounts.total);
 				variables.stats.published = Val(local.qCounts.published_cnt);
+				variables.stats.scheduled = Val(local.qCounts.scheduled_cnt);
 				variables.stats.draft = Val(local.qCounts.draft_cnt);
 			}
 		} catch (any eStats) {}
@@ -233,7 +236,7 @@ component extends="Controller" {
 				SELECT id, title, slug, summary, content_html, category_id, tags,
 				       featured_image, featured_image_alt, featured_image_caption, featured_image_description, featured_image_credit, featured_image_decorative,
 				       author_name, author_title,
-				       status, siteid, published_at, meta_title, meta_description,
+				       status, siteid, published_at, publish_at, unpublish_at, meta_title, meta_description,
 				       created_by, modified_by, createdat, updatedat
 				FROM articles
 				WHERE id = :id AND deletedat IS NULL
@@ -259,6 +262,9 @@ component extends="Controller" {
 				}
 			}
 
+			local.rawPub = IsDate(local.q.publish_at ?: "") ? local.q.publish_at : (IsDate(local.q.published_at ?: "") ? local.q.published_at : Now());
+			local.rawUnpub = IsDate(local.q.unpublish_at ?: "") ? local.q.unpublish_at : "";
+
 			variables.article = {
 				id: local.q.id,
 				title: local.q.title,
@@ -277,7 +283,9 @@ component extends="Controller" {
 				author_title: local.q.author_title ?: "",
 				status: local.q.status ?: "published",
 				siteid: Len(local.artWs) ? local.artWs : variables.activeWorkspaceId,
-				published_at: local.q.published_at ?: Now(),
+				published_at: local.rawPub,
+				publish_at: local.rawPub,
+				unpublish_at: local.rawUnpub,
 				meta_title: local.q.meta_title ?: "",
 				meta_description: local.q.meta_description ?: ""
 			};
@@ -314,7 +322,7 @@ component extends="Controller" {
 		local.authorName = Left(Trim(local.body.author_name ?: "Public Information Officer"), 255);
 		local.authorTitle = Left(Trim(local.body.author_title ?: ""), 255);
 		local.status = LCase(Trim(local.body.status ?: "published"));
-		if (!ListFindNoCase("published,draft,archived", local.status)) local.status = "published";
+		if (!ListFindNoCase("published,draft,archived,scheduled", local.status)) local.status = "published";
 
 		local.siteid = Len(Trim(local.body.siteid ?: "")) ? LCase(Trim(local.body.siteid)) : "global";
 		local.metaTitle = Left(Trim(local.body.meta_title ?: ""), 255);
@@ -323,7 +331,12 @@ component extends="Controller" {
 		local.publishedAt = Now();
 		if (StructKeyExists(local.body, "published_at") && Len(Trim(local.body.published_at)) && IsDate(local.body.published_at)) {
 			local.publishedAt = ParseDateTime(local.body.published_at);
+		} else if (StructKeyExists(local.body, "publish_at") && Len(Trim(local.body.publish_at)) && IsDate(local.body.publish_at)) {
+			local.publishedAt = ParseDateTime(local.body.publish_at);
 		}
+
+		local.hasUnpublishAt = StructKeyExists(local.body, "unpublish_at") && Len(Trim(local.body.unpublish_at)) && IsDate(local.body.unpublish_at);
+		local.unpublishAt = local.hasUnpublishAt ? ParseDateTime(local.body.unpublish_at) : "";
 
 		if (!Len(local.title)) {
 			return renderJsonEnvelope(false, "Article title is required.", {}, 400);
@@ -357,6 +370,8 @@ component extends="Controller" {
 					    status = :status,
 					    siteid = :siteid,
 					    published_at = :published_at,
+					    publish_at = :published_at,
+					    unpublish_at = :unpublish_at,
 					    meta_title = :meta_title,
 					    meta_description = :meta_description,
 					    modified_by = :modified_by,
@@ -381,6 +396,7 @@ component extends="Controller" {
 					status: { value: local.status, cfsqltype: "cf_sql_varchar" },
 					siteid: { value: local.siteid, cfsqltype: "cf_sql_varchar" },
 					published_at: { value: local.publishedAt, cfsqltype: "cf_sql_timestamp" },
+					unpublish_at: local.hasUnpublishAt ? { value: local.unpublishAt, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
 					meta_title: { value: local.metaTitle, cfsqltype: "cf_sql_varchar", null: !Len(local.metaTitle) },
 					meta_description: { value: local.metaDescription, cfsqltype: "cf_sql_varchar", null: !Len(local.metaDescription) },
 					modified_by: { value: local.currentActor, cfsqltype: "cf_sql_varchar" }
@@ -393,13 +409,13 @@ component extends="Controller" {
 						title, slug, summary, content_html, category_id, tags,
 						featured_image, featured_image_alt, featured_image_caption, featured_image_description, featured_image_credit, featured_image_decorative,
 						author_name, author_title,
-						status, siteid, published_at, meta_title, meta_description,
+						status, siteid, published_at, publish_at, unpublish_at, meta_title, meta_description,
 						created_by, modified_by, createdat, updatedat
 					) VALUES (
 						:title, :slug, :summary, :content_html, :category_id, :tags,
 						:featured_image, :featured_image_alt, :featured_image_caption, :featured_image_description, :featured_image_credit, :featured_image_decorative,
 						:author_name, :author_title,
-						:status, :siteid, :published_at, :meta_title, :meta_description,
+						:status, :siteid, :published_at, :published_at, :unpublish_at, :meta_title, :meta_description,
 						:created_by, :modified_by, SYSUTCDATETIME(), SYSUTCDATETIME()
 					);
 					SELECT SCOPE_IDENTITY() AS new_id;
@@ -421,6 +437,7 @@ component extends="Controller" {
 					status: { value: local.status, cfsqltype: "cf_sql_varchar" },
 					siteid: { value: local.siteid, cfsqltype: "cf_sql_varchar" },
 					published_at: { value: local.publishedAt, cfsqltype: "cf_sql_timestamp" },
+					unpublish_at: local.hasUnpublishAt ? { value: local.unpublishAt, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
 					meta_title: { value: local.metaTitle, cfsqltype: "cf_sql_varchar", null: !Len(local.metaTitle) },
 					meta_description: { value: local.metaDescription, cfsqltype: "cf_sql_varchar", null: !Len(local.metaDescription) },
 					created_by: { value: local.currentActor, cfsqltype: "cf_sql_varchar" },
@@ -931,6 +948,12 @@ component extends="Controller" {
 
 				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('articles') AND name = 'featured_image_decorative')
 					ALTER TABLE articles ADD featured_image_decorative BIT NOT NULL CONSTRAINT DF_articles_featured_image_decorative DEFAULT 0;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('articles') AND name = 'publish_at')
+					ALTER TABLE articles ADD publish_at DATETIME2 NULL;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('articles') AND name = 'unpublish_at')
+					ALTER TABLE articles ADD unpublish_at DATETIME2 NULL;
 			", {}, { datasource: "ChelanCountyWebsite" });
 		} catch (any e) {}
 	}

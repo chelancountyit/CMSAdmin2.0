@@ -12,6 +12,55 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 16, 2026 — RFP & Municipal Solicitations Manager Module (TODO 3.5)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Database Schema (`config/sql/schema-rfp-manager.sql`), Core Controller (`app/controllers/Rfps.cfc`), Base Controller & Public Security (`app/controllers/Controller.cfc`), Scheduled Transitions Integration (`app/global/functions.cfm`), Admin Views (`app/views/rfps/index.cfm`, `app/views/rfps/edit.cfm`), Public Views (`app/views/rfps/publicList.cfm`, `app/views/rfps/publicView.cfm`), Routes (`config/routes.cfm`), Sidebar Navigation (`app/views/layout.cfm`), View Helpers (`app/views/helpers.cfm`), Documentation Series (`.doclib/011_RFP_AND_SOLICITATIONS_MANAGER.md`, `.doclib/000_SERIES_INDEX.md`).
+- **Key Deliverables:**
+  1. **Architectural Scope Alignment (Announcement-First Model):**
+     - Per county requirements, streamlined the module from a heavy procurement ERP down to a high-efficiency **Solicitation & Announcement Board**. Eliminated unnecessary vendor login, planholder gatekeeping, and complex sealed-bid evaluation machinery.
+     - Public views focus strictly on clear scopes of work, direct specifications PDF downloads, sequenced addenda revisions, and precise submittal instructions ("How to Submit").
+  2. **Relational Database Schema & Filtered Indexes (`config/sql/schema-rfp-manager.sql`):**
+     - Created `dbo.rfp_solicitations` with workspace scoping (`site_id`), statutory milestone dates, budget range, and BOCC award fields.
+     - Created `dbo.rfp_addenda` with sequential numbering, title, change summaries, and cascade delete.
+     - Applied filtered nonclustered unique indexes (`UX_rfp_solicitations_slug_site`, `UX_rfp_solicitations_number`, `IX_rfp_solicitations_status`) with `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;`.
+  3. **Core Procurement Controller (`app/controllers/Rfps.cfc`):**
+     - Full CRUD with trigger-safe `OUTPUT INSERTED.id INTO @InsertedTable` patterns.
+     - Multi-faceted filter engine supporting workspace, status, type, and keyword search.
+     - Sequenced Addenda manager with automatic numbering and file attachment via Media Picker.
+     - Public bid board controller actions (`publicList`, `publicView`) opened in `Controller.cfc` (`isPublicRequest()`).
+  4. **Automated Lifecycle Integration (`app/global/functions.cfm`):**
+     - Added steps 9 & 10 to `evaluateScheduledTransitions()` automatically shifting `Scheduled` solicitations to `Open` on publication date, and `Open` solicitations to `Under Review` the minute the submission deadline expires.
+  5. **Admin UI & Public Bid Board Views:**
+     - `index.cfm`: Streamlined announcement directory with 4 KPI cards (Total, Active/Open, Closing Soon, Closed/Awarded), search/filter bar, and clean management actions.
+     - `edit.cfm`: Completely unified 2-column layout replacing multi-tab overhead. Features project identification, rich-text scope, specs packet & addenda picker, submittal instructions, important dates, and department contacts.
+     - Polished URL Slug input group with single-line `https://chelancounty.gov/bids/` prefix (`white-space: nowrap`), seamless monospace input, and live `/bids/[slug]` preview.
+     - `publicList.cfm` & `publicView.cfm`: High-accessibility (WCAG 2.1 AA) public bid board and clean solicitation notice with countdown urgency badges, specifications PDF download, and delivery requirements card.
+- **Verification:** Verified SQL schema migration via `sqlcmd`, tested public endpoints `http://cmsadmin.chelancounty.gov/bids` and `http://cmsadmin.chelancounty.gov/bids/manson-boulevard-roadway-drainage-improvements` returning HTTP 200, verified admin edit studio `http://cmsadmin.chelancounty.gov/rfps/edit?id=1` with zero errors, and logged milestone.
+
+---
+
+### Session: October 16, 2026 — Scheduled Publishing & Expiration Automation (TODO 3.2)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Database Schema (`config/sql/schema-scheduled-publishing.sql`), Core Scheduler Engine (`app/global/functions.cfm`, `app/events/onrequeststart.cfm`), Scheduler Controller & REST API (`app/controllers/Scheduler.cfc`, `app/controllers/Controller.cfc`, `config/routes.cfm`), Pages Module (`app/controllers/Pages.cfc`, `app/views/pages/edit.cfm`), Articles Module (`app/controllers/Articles.cfc`, `app/views/articles/edit.cfm`, `app/views/articles/index.cfm`), Calendar Events Module (`app/controllers/Events.cfc`, `app/views/events/index.cfm`), Jobs & Careers Module (`app/controllers/Jobs.cfc`, `app/views/jobs/edit.cfm`, `app/views/jobs/index.cfm`), Settings Diagnostics (`app/controllers/Settings.cfc`, `app/views/settings/system.cfm`).
+- **Key Deliverables:**
+  1. **Database Schema & Filtered Nonclustered Indexes (`config/sql/schema-scheduled-publishing.sql`):**
+     - Added `publish_at` and `unpublish_at` (`DATETIME2 NULL`) to `pages`, `articles`, `calendar_events`, `job_listings`, and `job_postings`.
+     - Standardized dual-column support (`PublishAt`/`publish_at` and `UnpublishAt`/`unpublish_at` on `pages`; `published_at`/`publish_at` on `articles`; `PostDate`/`ApplicationDeadline` on `job_listings`; `open_date`/`close_date` on `job_postings`).
+     - Created filtered nonclustered indexes with `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` for high-speed queries on pending scheduled releases and active expirations.
+  2. **Core Transition Evaluator & Throttled Request Worker:**
+     - Implemented `evaluateScheduledTransitions()` and `getScheduledPublishingSummary()` in `app/global/functions.cfm`.
+     - Integrated throttled execution in `app/events/onrequeststart.cfm` (executing at most once every 60 seconds protected by mutex lock `application.schedulerLock`).
+     - Added `Scheduler.cfc` providing authenticated and public API endpoints (`/scheduler/run`, `/scheduler/status`, `/api/v1/scheduler/run`, `/api/v1/scheduler/status`).
+  3. **Multi-Module UI & Workflow Integration:**
+     - **Pages:** Supported `publish_at` and `unpublish_at` in `Pages.cfc` and added "Unpublish / Expire On" input to Section 2 of `pages/edit.cfm`.
+     - **Articles:** Supported `scheduled` and `archived` states in `Articles.cfc`, added `unpublish_at` datetime picker and `scheduled` status option in `articles/edit.cfm`, and added a Scheduled metric card and filter in `articles/index.cfm`.
+     - **Calendar Events:** Added `Scheduled` and `Archived` statuses in `Events.cfc`, updated `save()` INSERT/UPDATE queries, and integrated `evPublishAt` and `evUnpublishAt` fields and payload serialization in `events/index.cfm`.
+     - **Careers & Job Listings:** Added `Scheduled` and `Archived` lifecycle support to `Jobs.cfc`, updated `save()` with `publish_at` and `unpublish_at` persistence, added release/expiration datetime inputs to `jobs/edit.cfm`, and added a Scheduled KPI card, filter dropdown, and badge rendering to `jobs/index.cfm`.
+     - **System Diagnostics:** Added an "Automated Publishing & Expiration Worker" telemetry card to `settings/system.cfm` displaying live pending queues across all 4 modules, worker interval status, and an interactive "Run Evaluator Now" trigger with toast feedback.
+- **Verification:** Verified `/api/v1/scheduler/status` and `/api/v1/scheduler/run` REST endpoints, simulated automated article publishing (`scheduled` &rarr; `published`) upon passing release datetime, and confirmed clean database state.
+
+---
+
 ### Session: October 16, 2026 — Navigation Manager Restoration, Page Save SQL Trigger Fix & ADA Inspect Diagnostics
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** Navigation Manager (`app/controllers/Navigation.cfc`, `app/views/navigation/index.cfm`), Pages Module (`app/controllers/Pages.cfc`, `app/views/pages/edit.cfm`), Articles Module (`app/views/articles/edit.cfm`)
@@ -156,4 +205,19 @@ This log maintains a chronological, permanent record of engineering milestones, 
      - Fixed `FK_page_FolderExplorer_pages` foreign key constraint conflict during `save()` by replacing `SET ContentID = 0` with `SET ContentID = NULL` inside a guarded `try/catch` block.
 
 
+
+
+---
+
+### Milestone 10: ADA Pre-Flight Linter & Scorecard Synchronization (`pages/edit.cfm` & `articles/edit.cfm`)
+- **Files Modified:**
+  - `app/views/pages/edit.cfm`, `app/views/articles/edit.cfm`
+- **Issue:**
+  - The companion **ADA Pre-Flight** scorecard badge displayed `PASS` (in green) and 'Content ready for public release. Meets ADA WCAG 2.1 AA.' even when active warning diagnostics (e.g. `Top-Level Section Skips <h2> (Found <h3>)`) were rendered in the inline diagnostic list.
+- **Root Causes & Engineering Solutions:**
+  1. **Asynchronous Editor Binding:** `getEditor()` was called once during `DOMContentLoaded` before `JBDEditor` finished initializing. As a result, input and change listeners were not bound to the editor content area, causing scans not to trigger dynamically during user editing. Added `bindEditorEvents()` with async polling and on-demand binding inside `getHtmlContent()`.
+  2. **Authoritative Scan on Drawer Toggle:** `openDrawer()` and `toggleDrawer()` previously called `renderDrawerList()` without invoking `scan()`. Updated both to immediately trigger `scan()`, ensuring the latest editor DOM is parsed and the scorecard badge, summary, and diagnostic cards are freshly computed.
+  3. **Strict Scorecard Self-Healing in `renderPublishInlineList()`:** Added direct synchronization of `##pgA11yPublishBadge` / `##articleA11yPublishBadge` and summary text inside `renderPublishInlineList()` based on `_lastResults.issues`. When warnings exist, the badge automatically reflects `1 WARNING` / `X WARNINGS` (`badge-warning`), and turns `badge-success` / `PASS` only when 0 violations and 0 warnings exist.
+  4. **Pluralization Grammar:** Corrected badge label grammar from `1 WARNINGS` to `1 WARNING` and `1 CRITICAL`.
+  5. **Early Return Clearing Bug in `renderDrawerList()`:** Previously, when all issues were resolved (`filtered.length === 0`), `renderDrawerList()` returned early before calling `renderPublishInlineList()`. Consequently, `#pgA11yPublishInlineList` was never cleared, leaving stale diagnostic cards (e.g. `WARN: Top-Level Section Skips <h2>`) visible in the sidebar Publish card while the rest of the linter reported `Compliant` / `PASS`. Removed the early return blockage, called `renderPublishInlineList()` directly from `renderUI()`, and updated `lnkInspectA11yText` to dynamically reflect exact issue counts (`Inspect Diagnostics (X)` vs `View Audit Summary`).
 

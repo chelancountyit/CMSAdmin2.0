@@ -32,9 +32,11 @@ component extends="wheels.Controller" {
 		if (local.ctrl == "sessions" || local.ctrl == "up") return true;
 		if (local.ctrl == "forms" && (local.act == "submit" || local.act == "preview")) return true;
 		if (local.ctrl == "jobs" && (local.act == "publiclist" || local.act == "publicview" || local.act == "apply" || local.act == "submitapplication")) return true;
+		if (local.ctrl == "rfps" && (local.act == "publiclist" || local.act == "publicview" || local.act == "registerplanholder")) return true;
 		if (local.ctrl == "events" && (local.act == "exportics" || local.act == "ics")) return true;
 		if (local.ctrl == "alerts" && (local.act == "apiactive" || local.act == "active")) return true;
 		if (local.ctrl == "articles" && local.act == "api") return true;
+		if (local.ctrl == "scheduler" && (local.act == "apirun" || local.act == "apistatus")) return true;
 		if (listFindNoCase("pressreleases,press-releases", local.ctrl) && (local.act == "api" || local.act == "view")) return true;
 		return false;
 	}

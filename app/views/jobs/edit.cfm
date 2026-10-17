@@ -165,14 +165,35 @@
 						<label for="StatusCode" class="form-label" style="font-weight:600;">Status Code</label>
 						<select id="StatusCode" name="StatusCode" class="form-control">
 							<option value="Active" <cfif variables.job.statusCode eq "Active">selected</cfif>>Active (Accepting Applications)</option>
+							<option value="Scheduled" <cfif variables.job.statusCode eq "Scheduled">selected</cfif>>Scheduled (Automated Release)</option>
 							<option value="Draft" <cfif variables.job.statusCode eq "Draft">selected</cfif>>Draft (Internal Preview Only)</option>
 							<option value="Reviewing" <cfif variables.job.statusCode eq "Reviewing">selected</cfif>>Reviewing (Application Review Stage)</option>
 							<option value="Closed" <cfif variables.job.statusCode eq "Closed">selected</cfif>>Closed (Recruitment Concluded)</option>
 						</select>
 					</div>
 
+					<div style="border-top:1px dashed var(--admin-border); padding-top:0.75rem;">
+						<label for="publish_at" class="form-label" style="font-weight:600;">
+							Publish At (Release Date)
+						</label>
+						<input type="datetime-local" id="publish_at" name="publish_at" class="form-control" value="<cfoutput>#variables.job.publishAt#</cfoutput>">
+						<div class="pg-help" style="font-size:0.72rem; color:var(--admin-text-muted); margin-top:0.25rem;">
+							Future dates will set status to Scheduled until the worker releases it.
+						</div>
+					</div>
+
+					<div style="border-top:1px dashed var(--admin-border); padding-top:0.75rem;">
+						<label for="unpublish_at" class="form-label" style="font-weight:600;">
+							Unpublish / Close At (Auto-Archive)
+						</label>
+						<input type="datetime-local" id="unpublish_at" name="unpublish_at" class="form-control" value="<cfoutput>#variables.job.unpublishAt#</cfoutput>">
+						<div class="pg-help" style="font-size:0.72rem; color:var(--admin-text-muted); margin-top:0.25rem;">
+							When reached, status automatically transitions to Closed.
+						</div>
+					</div>
+
 					<div>
-						<label for="PostDate" class="form-label" style="font-weight:600;">Post Date</label>
+						<label for="PostDate" class="form-label" style="font-weight:600;">Post Date (Public Display)</label>
 						<input type="date" id="PostDate" name="PostDate" class="form-control" value="<cfoutput>#variables.job.postDate#</cfoutput>">
 					</div>
 

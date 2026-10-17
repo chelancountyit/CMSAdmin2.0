@@ -278,7 +278,8 @@ component extends="Controller" {
 				"usableGB": diskUsableGB,
 				"percent": diskPercent
 			},
-			"db": dbStatus
+			"db": dbStatus,
+			"scheduler": getScheduledPublishingSummary()
 		};
 	}
 

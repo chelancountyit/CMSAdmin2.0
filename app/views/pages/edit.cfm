@@ -707,9 +707,19 @@
 						</cfloop>
 					</select>
 				</div>
-				<div class="pg-field" id="pgScheduleWrap" <cfif page.visibility neq "Scheduled">hidden</cfif>>
+				<div class="pg-field" id="pgScheduleWrap" <cfif page.visibility neq "Scheduled" and not len(trim(page.publishAt ?: ''))>hidden</cfif>>
 					<label for="pgPublishAt" class="form-label">Publish On</label>
-					<input type="datetime-local" id="pgPublishAt" name="publishAt" class="form-control" style="width:100%;">
+					<input type="datetime-local" id="pgPublishAt" name="publishAt" class="form-control" value="#page.publishAt ?: ''#" style="width:100%;">
+				</div>
+				<div class="pg-field" id="pgUnpublishWrap" style="margin-top:0.6rem;">
+					<label for="pgUnpublishAt" class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+						<span>Unpublish / Expire On</span>
+						<span class="pg-help" style="display:inline; margin:0; font-weight:normal; font-size:0.75rem;">(optional)</span>
+					</label>
+					<input type="datetime-local" id="pgUnpublishAt" name="unpublishAt" class="form-control" value="#page.unpublishAt ?: ''#" style="width:100%;">
+					<div style="font-size:0.72rem; color:var(--admin-text-muted); margin-top:0.2rem;">
+						Auto-archives on date (e.g. election notices, RFP closures, seasonal alerts).
+					</div>
 				</div>
 				<cfif not isNew>
 					<div class="pg-field" style="margin-top:0.6rem; margin-bottom:0.75rem;">
@@ -1756,6 +1766,7 @@
 			return parseInt(el.dataset.folderId || (r && r.dataset.id) || 0, 10) || 0;
 		}).filter(function(id) { return id > 0; });
 		var publishAtEl = document.getElementById("pgPublishAt");
+		var unpublishAtEl = document.getElementById("pgUnpublishAt");
 		var parentAssignmentEl = document.getElementById("pgParent");
 		var parentVal = parentAssignmentEl ? parentAssignmentEl.value : "Top Level - Called from URL";
 		var menuItemTargetVal = "";
@@ -1854,6 +1865,7 @@
 			status: document.getElementById("pgStatus").value,
 			visibility: document.getElementById("pgVisibility").value,
 			publishAt: (publishAtEl && publishAtEl.value) ? publishAtEl.value : "",
+			unpublishAt: (unpublishAtEl && unpublishAtEl.value) ? unpublishAtEl.value : "",
 			layout: layout.value,
 			parent: parentVal,
 			menuItemTarget: menuItemTargetVal,
@@ -3101,11 +3113,32 @@ window.PageA11yLinter = (function() {
 			.replace(/'/g, '&#39;');
 	}
 
+	var _editorBound = false;
+	function bindEditorEvents() {
+		var ed = getEditor();
+		if (!ed) return false;
+		if (_editorBound) return true;
+
+		if (ed.contentArea) {
+			ed.contentArea.addEventListener("input", scheduleScan);
+			ed.contentArea.addEventListener("keyup", scheduleScan);
+			ed.contentArea.addEventListener("paste", function() { setTimeout(scan, 80); });
+		}
+		if (typeof ed.on === "function") {
+			ed.on("change", scheduleScan);
+			ed.on("input", scheduleScan);
+			ed.on("paste", function() { setTimeout(scan, 80); });
+		}
+		_editorBound = true;
+		return true;
+	}
+
 	function getEditor() {
 		return (typeof JBDEditor !== "undefined") ? JBDEditor.get("#pgContent") : null;
 	}
 
 	function getHtmlContent() {
+		if (!_editorBound) bindEditorEvents();
 		var ed = getEditor();
 		if (ed && typeof ed.getHTML === "function") {
 			return ed.getHTML();
@@ -3711,10 +3744,10 @@ window.PageA11yLinter = (function() {
 			pubBadge.className = "badge";
 			if (res.criticalCount > 0) {
 				pubBadge.classList.add("badge-danger");
-				pubBadge.textContent = res.criticalCount + " CRITICAL";
+				pubBadge.textContent = (res.criticalCount === 1) ? "1 CRITICAL" : (res.criticalCount + " CRITICAL");
 			} else if (res.warningCount > 0) {
 				pubBadge.classList.add("badge-warning");
-				pubBadge.textContent = res.warningCount + " WARNINGS";
+				pubBadge.textContent = (res.warningCount === 1) ? "1 WARNING" : (res.warningCount + " WARNINGS");
 			} else {
 				pubBadge.classList.add("badge-success");
 				pubBadge.textContent = "PASS";
@@ -3738,8 +3771,9 @@ window.PageA11yLinter = (function() {
 		if (tabErr) tabErr.textContent = res.criticalCount;
 		if (tabWarn) tabWarn.textContent = res.warningCount;
 
-		// 5. Render Issues Drawer List
+		// 5. Render Issues Drawer List and Publish Scorecard Inline List
 		renderDrawerList();
+		renderPublishInlineList();
 	}
 
 	function renderDrawerList() {
@@ -3767,6 +3801,7 @@ window.PageA11yLinter = (function() {
 					'No issues found matching this filter.' +
 				'</div>';
 			}
+			renderPublishInlineList();
 			return;
 		}
 
@@ -3817,9 +3852,52 @@ window.PageA11yLinter = (function() {
 
 	function renderPublishInlineList() {
 		var inlineEl = document.getElementById("pgA11yPublishInlineList");
+		var pubBadge = document.getElementById("pgA11yPublishBadge");
+		var pubSummary = document.getElementById("pgA11yPublishSummary");
+
+		var issues = (_lastResults && _lastResults.issues) ? _lastResults.issues : [];
+		var critCount = issues.filter(function(i) { return i.severity === "error"; }).length;
+		var warnCount = issues.filter(function(i) { return i.severity === "warning"; }).length;
+
+		// Ensure Publish Scorecard badge and summary are always 100% in lockstep with issues
+		if (pubBadge) {
+			pubBadge.className = "badge";
+			if (critCount > 0) {
+				pubBadge.classList.add("badge-danger");
+				pubBadge.textContent = (critCount === 1) ? "1 CRITICAL" : (critCount + " CRITICAL");
+			} else if (warnCount > 0) {
+				pubBadge.classList.add("badge-warning");
+				pubBadge.textContent = (warnCount === 1) ? "1 WARNING" : (warnCount + " WARNINGS");
+			} else {
+				pubBadge.classList.add("badge-success");
+				pubBadge.textContent = "PASS";
+			}
+		}
+		if (pubSummary) {
+			if (critCount > 0) {
+				pubSummary.innerHTML = '<span style="color:#b91c1c; font-weight:600;">' + critCount + ' critical barrier' + (critCount === 1 ? '' : 's') + ' detected.</span> Resolution recommended before publishing.';
+			} else if (warnCount > 0) {
+				pubSummary.innerHTML = '<span style="color:#b45309; font-weight:600;">Compliant with ' + warnCount + ' best-practice recommendation' + (warnCount === 1 ? '' : 's') + '.</span>';
+			} else {
+				pubSummary.textContent = "Content ready for public release. Meets ADA WCAG 2.1 AA.";
+			}
+		}
+
+		// Update Inspect Diagnostics link text to match exact live issue count
+		var lnkText = document.getElementById("lnkInspectA11yText");
+		var drawer = document.getElementById("pgA11yIssuesDrawer");
+		var isDrawerOpen = drawer && (!drawer.hidden && drawer.style.display !== "none");
+		if (lnkText) {
+			if (issues.length === 0) {
+				lnkText.textContent = isDrawerOpen ? "Hide Audit Summary" : "View Audit Summary";
+			} else {
+				lnkText.textContent = isDrawerOpen ? ("Hide Diagnostics (" + issues.length + ")") : ("Inspect Diagnostics (" + issues.length + ")");
+			}
+		}
+
 		if (!inlineEl) return;
 
-		if (!_lastResults.issues || _lastResults.issues.length === 0) {
+		if (issues.length === 0) {
 			inlineEl.innerHTML = '<div style="padding:0.5rem 0.6rem; border-radius:6px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-size:0.74rem; line-height:1.35;">' +
 				'<strong>100% WCAG 2.1 AA Compliant</strong><br>No accessibility barriers detected.' +
 			'</div>';
@@ -3827,7 +3905,7 @@ window.PageA11yLinter = (function() {
 		}
 
 		var inlineHtml = "";
-		_lastResults.issues.forEach(function(issue) {
+		issues.forEach(function(issue) {
 			var isErr = (issue.severity === "error");
 			var borderColor = isErr ? "#ef4444" : "#f59e0b";
 			var bgColor = isErr ? "#fffbfb" : "#fffdf9";
@@ -4155,6 +4233,9 @@ window.PageA11yLinter = (function() {
 		var lnkText = document.getElementById("lnkInspectA11yText");
 		var lnkChevron = document.getElementById("lnkInspectA11yChevron");
 
+		var issues = (_lastResults && _lastResults.issues) ? _lastResults.issues : [];
+		var issueCount = issues.length;
+
 		if (drawer) {
 			drawer.hidden = !isOpen;
 			drawer.style.display = isOpen ? "flex" : "none";
@@ -4169,7 +4250,11 @@ window.PageA11yLinter = (function() {
 			lnkInspect.setAttribute("aria-expanded", String(isOpen));
 		}
 		if (lnkText) {
-			lnkText.textContent = isOpen ? "Hide Diagnostics" : "Inspect Diagnostics";
+			if (issueCount === 0) {
+				lnkText.textContent = isOpen ? "Hide Audit Summary" : "View Audit Summary";
+			} else {
+				lnkText.textContent = isOpen ? ("Hide Diagnostics (" + issueCount + ")") : ("Inspect Diagnostics (" + issueCount + ")");
+			}
 		}
 		if (lnkChevron) {
 			lnkChevron.style.transform = isOpen ? "rotate(180deg)" : "rotate(0deg)";
@@ -4189,9 +4274,9 @@ window.PageA11yLinter = (function() {
 	}
 
 	function openDrawer(source) {
-		var drawer = document.getElementById("pgA11yIssuesDrawer");
-		renderDrawerList();
+		scan(); // Force fresh scan so results and scorecard are 100% synchronized
 		syncDrawerState(true);
+		var drawer = document.getElementById("pgA11yIssuesDrawer");
 		if (drawer) {
 			if (source !== "publish") {
 				drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -4224,14 +4309,13 @@ window.PageA11yLinter = (function() {
 
 		// Ensure drawer is open when filtering
 		openDrawer();
-		renderDrawerList();
 	}
 
 	function scheduleScan() {
 		if (_scanDebounceTimer) clearTimeout(_scanDebounceTimer);
 		_scanDebounceTimer = setTimeout(function() {
 			scan();
-		}, 300);
+		}, 250);
 	}
 
 	function init() {
@@ -4269,13 +4353,8 @@ window.PageA11yLinter = (function() {
 			};
 		});
 
-		// Bind reactive editor input listeners
-		var ed = getEditor();
-		if (ed && ed.contentArea) {
-			ed.contentArea.addEventListener("input", scheduleScan);
-			ed.contentArea.addEventListener("keyup", scheduleScan);
-			ed.contentArea.addEventListener("paste", function() { setTimeout(scan, 100); });
-		}
+		// Bind editor readiness and reactive input listeners
+		bindEditorEvents();
 
 		var ta = document.getElementById("pgContent");
 		if (ta) {
@@ -4293,8 +4372,18 @@ window.PageA11yLinter = (function() {
 			metaDescInput.addEventListener("input", scheduleScan);
 		}
 
-		// Initial scan after short delay for editor init
-		setTimeout(scan, 400);
+		// Poll for JBDEditor async readiness
+		var pollCount = 0;
+		var pollTimer = setInterval(function() {
+			pollCount++;
+			if (bindEditorEvents() || pollCount > 15) {
+				clearInterval(pollTimer);
+				scan();
+			}
+		}, 120);
+
+		// Initial scan
+		setTimeout(scan, 150);
 	}
 
 	// Auto-init on DOMContentLoaded or immediate

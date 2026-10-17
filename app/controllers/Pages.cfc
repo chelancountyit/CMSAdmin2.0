@@ -290,6 +290,8 @@ component extends="Controller" {
 		local.visibility = Trim(local.req.visibility ?: "Published");
 		local.hasPublishAt = StructKeyExists(local.req, "publishAt") && Len(Trim(local.req.publishAt)) && IsDate(local.req.publishAt);
 		local.publishAtDate = local.hasPublishAt ? ParseDateTime(local.req.publishAt) : "";
+		local.hasUnpublishAt = StructKeyExists(local.req, "unpublishAt") && Len(Trim(local.req.unpublishAt)) && IsDate(local.req.unpublishAt);
+		local.unpublishAtDate = local.hasUnpublishAt ? ParseDateTime(local.req.unpublishAt) : "";
 		local.layout = Trim(local.req.layout ?: "Full");
 		local.pageAssignment = Trim(local.req.parent ?: "");
 		local.menuItemTarget = Trim(local.req.menuItemTarget ?: "");
@@ -437,6 +439,9 @@ component extends="Controller" {
 				    StatusCode = :status,
 				    Visibility = :visibility,
 				    PublishAt = :publishAt,
+				    publish_at = :publishAt,
+				    UnpublishAt = :unpublishAt,
+				    unpublish_at = :unpublishAt,
 				    isPublished = :isPub,
 				    LayoutType = :layout,
 				    MenuSelected = :menuSelected,
@@ -463,6 +468,7 @@ component extends="Controller" {
 				status: { value: local.status, cfsqltype: "cf_sql_nvarchar" },
 				visibility: { value: local.visibility, cfsqltype: "cf_sql_nvarchar" },
 				publishAt: local.hasPublishAt ? { value: local.publishAtDate, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
+				unpublishAt: local.hasUnpublishAt ? { value: local.unpublishAtDate, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
 				isPub: { value: local.isPub, cfsqltype: "cf_sql_bit" },
 				layout: { value: local.layout, cfsqltype: "cf_sql_nvarchar" },
 				menuSelected: { value: local.menuSelected, cfsqltype: "cf_sql_nvarchar" },
@@ -1332,7 +1338,7 @@ component extends="Controller" {
 				       StatusCode, Permalink, Title, MetaTitle, MetaDesc, MetaKeyWords,
 				       Summary, Body, imageAttachment, imageAttribution, imageAlt, imageTitle, imageDescription,
 				       isService, hasArchive, ShowInMenu, isLocked, SidebarIDs, SortOrder,
-				       isPublished, Visibility, PublishAt, ViewCount, Created, CreatedBy, Modified, ModifiedBy
+				       isPublished, Visibility, PublishAt, publish_at, UnpublishAt, unpublish_at, ViewCount, Created, CreatedBy, Modified, ModifiedBy
 				FROM pages
 				WHERE ContentID = :id AND DeletedAt IS NULL
 			", { id: { value: arguments.contentId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
@@ -1358,6 +1364,9 @@ component extends="Controller" {
 					local.updatedStr = DateFormat(local.row.Created, "mm/dd/yyyy") & " " & TimeFormat(local.row.Created, "hh:mm:ss");
 				}
 
+				local.rawPub = IsDate(local.row.publish_at ?: "") ? local.row.publish_at : (IsDate(local.row.PublishAt ?: "") ? local.row.PublishAt : "");
+				local.rawUnpub = IsDate(local.row.unpublish_at ?: "") ? local.row.unpublish_at : (IsDate(local.row.UnpublishAt ?: "") ? local.row.UnpublishAt : "");
+
 				local.res = {
 					id: local.row.ContentID,
 					title: local.row.Title ?: "",
@@ -1368,6 +1377,8 @@ component extends="Controller" {
 					layout: Len(Trim(local.row.LayoutType)) ? local.row.LayoutType : "Full",
 					status: local.row.StatusCode ?: "Active",
 					visibility: local.row.Visibility ?: "Published",
+					publishAt: IsDate(local.rawPub) ? DateFormat(local.rawPub, "yyyy-mm-dd") & "T" & TimeFormat(local.rawPub, "HH:mm") : "",
+					unpublishAt: IsDate(local.rawUnpub) ? DateFormat(local.rawUnpub, "yyyy-mm-dd") & "T" & TimeFormat(local.rawUnpub, "HH:mm") : "",
 					isPublished: (local.row.isPublished == 1),
 					menuItem: (local.row.ShowInMenu == 1),
 					locked: (local.row.isLocked == 1),

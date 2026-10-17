@@ -80,10 +80,10 @@ Operational efficiencies that streamline multi-department publishing and media t
   - [ ] Extend page and article statuses: `Draft` &rarr; `In Review` &rarr; `Approved` &rarr; `Published` &rarr; `Archived`.
   - [ ] Permissions gate: Authors submit drafts for review; PIO and Department Heads approve or request revisions.
   - [ ] In-app review drawer with editorial comments and email notification dispatch.
-- [ ] **3.2 Scheduled Publishing & Expiration Automation**
-  - [ ] Add `publish_at` and `unpublish_at` datetime fields to `pages`, `calendar_events`, `job_postings`, and `articles`.
-  - [ ] Scheduled background worker (or request-level evaluator) to transition items between scheduled, active, and archived states.
-  - [ ] Ideal for election dates, RFP bid closures, seasonal road advisories, and parks notices.
+- [x] **3.2 Scheduled Publishing & Expiration Automation**
+  - [x] Add `publish_at` and `unpublish_at` datetime fields to `pages`, `calendar_events`, `job_postings`, and `articles`.
+  - [x] Scheduled background worker (or request-level evaluator) to transition items between scheduled, active, and archived states.
+  - [x] Ideal for election dates, RFP bid closures, seasonal road advisories, and parks notices.
 - [ ] **3.3 Media Asset Usage Cross-Referencing & Broken Link Guard**
   - [ ] Scan page bodies, sub-pages, events, and forms for referenced `/files/...` asset paths.
   - [ ] Display an "Attached To" list in the Media Inspector showing all pages using an asset.
@@ -92,6 +92,14 @@ Operational efficiencies that streamline multi-department publishing and media t
   - [ ] Dedicated PRR intake form with statutory tracking under Washington State Public Records Act (RCW 42.56).
   - [ ] 5-business-day response deadline countdown timer with automated warnings.
   - [ ] Internal notes, status tracking (`Received`, `Under Review`, `Clarification Requested`, `Records Assembled`, `Closed`), and secure download package generation.
+- [x] **3.5 RFP & Municipal Solicitations Manager (RCW 39.04, RCW 39.80, RCW 36.32)**
+  - [x] Database Schema (`dbo.rfp_solicitations`, `dbo.rfp_addenda`, `dbo.rfp_planholders`, `dbo.rfp_bids`) with filtered nonclustered indexes.
+  - [x] Full procurement classification: RFP (Proposals), RFQ (Qualifications under RCW 39.80), ITB (Call for Bids under RCW 39.04), SWR (Small Works Roster), and Sole Source Notices.
+  - [x] Milestone & Deadline Engine with automated lock-out and Scheduled Worker integration (`Draft/Scheduled` -> `Open` -> `Under Review`).
+  - [x] Sequenced Addenda Studio with Media Library Picker integration and change logs.
+  - [x] Planholders Registry with self-registration, DBE tracking, duplicate prevention, and CSV export.
+  - [x] Unsealed Bid Tabulation & Board of County Commissioners (BOCC) Contract Award Studio.
+  - [x] Public Bid Board (`/bids`) and public solicitation dossiers (`/bids/view?slug=...`).
 
 ---
 

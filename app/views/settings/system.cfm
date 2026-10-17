@@ -289,6 +289,84 @@
 			</table>
 		</div>
 
+		<!--- Telemetry Card 5: Automated Publishing & Expiration Scheduler --->
+		<div class="card" style="padding:1.5rem; border:1px solid var(--admin-border); border-radius:var(--radius-lg); background:var(--admin-surface); box-shadow:var(--shadow-sm);">
+			<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--admin-border); padding-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+				<div style="display:flex; align-items:center; gap:0.6rem;">
+					<span style="color:var(--admin-primary);">#svgIcon(name="clock", size=20)#</span>
+					<h2 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--admin-text-main);">Automated Publishing &amp; Expiration Worker</h2>
+				</div>
+				<button type="button" id="btnRunSchedulerNow" class="btn btn-outline-primary btn-sm" style="display:inline-flex; align-items:center; gap:0.4rem;">
+					#svgIcon(name="play", size=13)#
+					<span>Run Evaluator Now</span>
+				</button>
+			</div>
+
+			<cfset sch = diagnostics.scheduler ?: {}>
+			<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.75rem; margin-bottom:1rem;">
+				<div style="padding:0.75rem; border-radius:var(--radius-md); background:var(--admin-bg); border:1px solid var(--admin-border); text-align:center;">
+					<div style="font-size:0.72rem; text-transform:uppercase; font-weight:600; color:var(--admin-text-muted);">Pending Pages</div>
+					<div style="font-size:1.25rem; font-weight:700; color:var(--admin-text-main); margin-top:0.25rem;">
+						#Val(sch.pages_pending_publish ?: 0)# <span style="font-size:0.75rem; font-weight:normal; color:var(--admin-text-muted);">/ #Val(sch.pages_pending_unpublish ?: 0)#</span>
+					</div>
+					<div style="font-size:0.68rem; color:var(--admin-text-muted);">Pub / Unpub</div>
+				</div>
+
+				<div style="padding:0.75rem; border-radius:var(--radius-md); background:var(--admin-bg); border:1px solid var(--admin-border); text-align:center;">
+					<div style="font-size:0.72rem; text-transform:uppercase; font-weight:600; color:var(--admin-text-muted);">Pending Articles</div>
+					<div style="font-size:1.25rem; font-weight:700; color:var(--admin-text-main); margin-top:0.25rem;">
+						#Val(sch.articles_pending_publish ?: 0)# <span style="font-size:0.75rem; font-weight:normal; color:var(--admin-text-muted);">/ #Val(sch.articles_pending_unpublish ?: 0)#</span>
+					</div>
+					<div style="font-size:0.68rem; color:var(--admin-text-muted);">Pub / Unpub</div>
+				</div>
+
+				<div style="padding:0.75rem; border-radius:var(--radius-md); background:var(--admin-bg); border:1px solid var(--admin-border); text-align:center;">
+					<div style="font-size:0.72rem; text-transform:uppercase; font-weight:600; color:var(--admin-text-muted);">Pending Events</div>
+					<div style="font-size:1.25rem; font-weight:700; color:var(--admin-text-main); margin-top:0.25rem;">
+						#Val(sch.events_pending_publish ?: 0)# <span style="font-size:0.75rem; font-weight:normal; color:var(--admin-text-muted);">/ #Val(sch.events_pending_unpublish ?: 0)#</span>
+					</div>
+					<div style="font-size:0.68rem; color:var(--admin-text-muted);">Pub / Unpub</div>
+				</div>
+
+				<div style="padding:0.75rem; border-radius:var(--radius-md); background:var(--admin-bg); border:1px solid var(--admin-border); text-align:center;">
+					<div style="font-size:0.72rem; text-transform:uppercase; font-weight:600; color:var(--admin-text-muted);">Pending Jobs</div>
+					<div style="font-size:1.25rem; font-weight:700; color:var(--admin-text-main); margin-top:0.25rem;">
+						#Val(sch.jobs_pending_publish ?: 0)# <span style="font-size:0.75rem; font-weight:normal; color:var(--admin-text-muted);">/ #Val(sch.jobs_pending_unpublish ?: 0)#</span>
+					</div>
+					<div style="font-size:0.68rem; color:var(--admin-text-muted);">Pub / Unpub</div>
+				</div>
+			</div>
+
+			<table class="table" style="width:100%; margin:0; border-collapse:collapse; font-size:0.875rem;">
+				<tbody>
+					<tr style="border-bottom:1px solid var(--admin-border);">
+						<td style="padding:0.65rem 0; font-weight:600; color:var(--admin-text-main); width:35%;">Throttled Worker Interval</td>
+						<td style="padding:0.65rem 0; color:var(--admin-text-muted);">
+							Every <strong>60 seconds</strong> on incoming request start (Mutex lock protected)
+						</td>
+					</tr>
+					<tr style="border-bottom:1px solid var(--admin-border);">
+						<td style="padding:0.65rem 0; font-weight:600; color:var(--admin-text-main);">Last Execution Timestamp</td>
+						<td style="padding:0.65rem 0; font-family:monospace; color:var(--admin-text-muted);">
+							#EncodeForHTML(sch.lastRunAt ?: "Awaiting first run")#
+						</td>
+					</tr>
+					<tr style="border-bottom:1px solid var(--admin-border);">
+						<td style="padding:0.65rem 0; font-weight:600; color:var(--admin-text-main);">REST Automation Endpoint</td>
+						<td style="padding:0.65rem 0; font-family:monospace; font-size:0.82rem; color:var(--admin-text-muted);">
+							<code>GET /scheduler/run</code> or <code>GET /api/v1/scheduler/run</code>
+						</td>
+					</tr>
+					<tr>
+						<td style="padding:0.65rem 0; font-weight:600; color:var(--admin-text-main);">State Transitions Supported</td>
+						<td style="padding:0.65rem 0; color:var(--admin-text-muted);">
+							<code>Scheduled &rarr; Active/Published</code> &bull; <code>Active &rarr; Archived/Closed</code> (Pages, Articles, Events, Careers)
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
 	</div>
 
 	<!--- Sidebar Actions & Navigation Column --->
@@ -379,4 +457,49 @@
 
 </div>
 </cfoutput>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+	var btnRun = document.getElementById("btnRunSchedulerNow");
+	if (!btnRun) return;
+
+	btnRun.addEventListener("click", function () {
+		btnRun.disabled = true;
+		var origHtml = btnRun.innerHTML;
+		btnRun.innerHTML = '<span>Running Evaluator...</span>';
+
+		fetch("/api/v1/scheduler/run", {
+			method: "POST",
+			headers: { "Accept": "application/json" },
+			credentials: "same-origin"
+		})
+		.then(function (r) { return r.json(); })
+		.then(function (data) {
+			btnRun.disabled = false;
+			btnRun.innerHTML = origHtml;
+			var success = Boolean(data && (data.success || data.SUCCESS));
+			var msg = (data && data.message) ? data.message : "Evaluator execution finished.";
+			var details = (data && data.data) ? data.data : (data ? data.result : null);
+			if (details && typeof details === "object") {
+				msg += " (" + (details.published || 0) + " published, " + (details.archived || 0) + " archived/closed across modules)";
+			}
+			if (typeof window.showToast === "function") {
+				window.showToast(msg, success ? "success" : "info");
+			} else if (typeof window.adminAlert === "function") {
+				window.adminAlert(msg, { title: "Publishing Scheduler", type: success ? "success" : "info" });
+			}
+			setTimeout(function () { window.location.reload(); }, 1200);
+		})
+		.catch(function (err) {
+			btnRun.disabled = false;
+			btnRun.innerHTML = origHtml;
+			if (typeof window.showToast === "function") {
+				window.showToast("Failed to run evaluator: " + err.message, "danger");
+			} else if (typeof window.adminAlert === "function") {
+				window.adminAlert("Failed to run evaluator: " + err.message, { title: "Scheduler Error", type: "danger" });
+			}
+		});
+	});
+});
+</script>
 

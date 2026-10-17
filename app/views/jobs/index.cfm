@@ -48,6 +48,14 @@
 
 	<div class="stat-card">
 		<div class="stat-info">
+			<span class="stat-label">Scheduled (Future)</span>
+			<span class="stat-value">#variables.metrics.scheduled#</span>
+		</div>
+		<div class="stat-icon-wrapper stat-icon-info" aria-hidden="true">#svgIcon(name="clock", size=24)#</div>
+	</div>
+
+	<div class="stat-card">
+		<div class="stat-info">
 			<span class="stat-label">Draft Listings</span>
 			<span class="stat-value">#variables.metrics.draft#</span>
 		</div>
@@ -79,6 +87,7 @@
 				<label for="jobsStatus" class="form-label" style="font-size:0.775rem;">Status</label>
 				<select id="jobsStatus" name="status" class="form-control" style="padding:0.5rem 0.75rem; font-size:0.85rem;" onchange="this.form.submit()">
 					<option value="Active" <cfif variables.selectedStatus eq "Active">selected</cfif>>Active</option>
+					<option value="Scheduled" <cfif variables.selectedStatus eq "Scheduled">selected</cfif>>Scheduled</option>
 					<option value="Draft" <cfif variables.selectedStatus eq "Draft">selected</cfif>>Draft</option>
 					<option value="Reviewing" <cfif variables.selectedStatus eq "Reviewing">selected</cfif>>Reviewing</option>
 					<option value="Closed" <cfif variables.selectedStatus eq "Closed">selected</cfif>>Closed</option>
@@ -224,6 +233,7 @@
 							<td style="text-align:center;">
 								<cfset badgeClass = "badge-neutral">
 								<cfif StatusCode eq "Active"><cfset badgeClass = "badge-success">
+								<cfelseif StatusCode eq "Scheduled"><cfset badgeClass = "badge-info">
 								<cfelseif StatusCode eq "Reviewing"><cfset badgeClass = "badge-warning">
 								<cfelseif StatusCode eq "Closed"><cfset badgeClass = "badge-danger">
 								<cfelseif StatusCode eq "Draft"><cfset badgeClass = "badge-neutral">

@@ -48,11 +48,12 @@ component extends="Controller" {
 		// Query Job Listings with Joined Application Counts
 		try {
 			variables.qJobs = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT 
 					jl.JobID, jl.SiteID, jl.Title, jl.Permalink,
 					jl.FLSAClassificationID, jl.JobClasificationID, jl.isSupervisor, jl.DirectSupervisor,
 					jl.Location, jl.Address, jl.City, jl.State, jl.Zip,
-					jl.PostDate, jl.MinSalary, jl.MaxSalary, jl.SalarySchedule, jl.SalaryGroup,
+					jl.PostDate, jl.publish_at, jl.unpublish_at, jl.MinSalary, jl.MaxSalary, jl.SalarySchedule, jl.SalaryGroup,
 					jl.ClassCode, jl.StatusCode, jl.ApplicationDeadline, jl.Attachment,
 					jl.Created, jl.Createdby, jl.Modified, jl.Modifiedby,
 					COALESCE(cw.name, jl.SiteID) AS department_name,
@@ -71,7 +72,7 @@ component extends="Controller" {
 				) appCounts ON jl.JobID = appCounts.JobID
 				#local.sqlWhere#
 				ORDER BY 
-					CASE WHEN jl.StatusCode = 'Active' THEN 1 WHEN jl.StatusCode = 'Draft' THEN 2 ELSE 3 END ASC,
+					CASE WHEN jl.StatusCode = 'Active' THEN 1 WHEN jl.StatusCode = 'Scheduled' THEN 2 WHEN jl.StatusCode = 'Draft' THEN 3 ELSE 4 END ASC,
 					jl.PostDate DESC
 			", local.queryParams, { datasource: "ChelanCountyWebsite" });
 		} catch (any e) {
@@ -106,6 +107,8 @@ component extends="Controller" {
 			state: "WA",
 			zip: "98801",
 			postDate: DateFormat(Now(), "yyyy-mm-dd"),
+			publishAt: "",
+			unpublishAt: "",
 			minSalary: "",
 			maxSalary: "",
 			salarySchedule: "Hourly",
@@ -136,6 +139,7 @@ component extends="Controller" {
 
 		try {
 			local.qJob = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT TOP 1 * FROM job_listings WHERE JobID = :id AND DeletedAt IS NULL
 			", { id: { value: local.jobId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
 
@@ -143,6 +147,20 @@ component extends="Controller" {
 				flashInsert(error="Job posting not found or has been removed.");
 				redirectTo(controller="jobs", action="index");
 				return;
+			}
+
+			local.publishAtStr = "";
+			if (structKeyExists(local.qJob, "publish_at") && IsDate(local.qJob.publish_at)) {
+				local.publishAtStr = DateFormat(local.qJob.publish_at, "yyyy-mm-dd") & "T" & TimeFormat(local.qJob.publish_at, "HH:mm");
+			} else if (IsDate(local.qJob.PostDate)) {
+				local.publishAtStr = DateFormat(local.qJob.PostDate, "yyyy-mm-dd") & "T" & TimeFormat(local.qJob.PostDate, "HH:mm");
+			}
+
+			local.unpublishAtStr = "";
+			if (structKeyExists(local.qJob, "unpublish_at") && IsDate(local.qJob.unpublish_at)) {
+				local.unpublishAtStr = DateFormat(local.qJob.unpublish_at, "yyyy-mm-dd") & "T" & TimeFormat(local.qJob.unpublish_at, "HH:mm");
+			} else if (IsDate(local.qJob.ApplicationDeadline)) {
+				local.unpublishAtStr = DateFormat(local.qJob.ApplicationDeadline, "yyyy-mm-dd") & "T" & TimeFormat(local.qJob.ApplicationDeadline, "HH:mm");
 			}
 
 			variables.job = {
@@ -164,6 +182,8 @@ component extends="Controller" {
 				state: local.qJob.State,
 				zip: local.qJob.Zip,
 				postDate: IsDate(local.qJob.PostDate) ? DateFormat(local.qJob.PostDate, "yyyy-mm-dd") : "",
+				publishAt: local.publishAtStr,
+				unpublishAt: local.unpublishAtStr,
 				minSalary: local.qJob.MinSalary,
 				maxSalary: local.qJob.MaxSalary,
 				salarySchedule: local.qJob.SalarySchedule,
@@ -237,6 +257,29 @@ component extends="Controller" {
 		local.hasAppDeadline = (!local.isOpenUntilFilled && IsDate(local.req.ApplicationDeadline ?: ""));
 		local.appDeadline = local.hasAppDeadline ? CreateODBCDateTime(local.req.ApplicationDeadline) : "";
 
+		local.publishAt = "";
+		if (structKeyExists(local.req, "publish_at") && IsDate(local.req.publish_at)) {
+			local.publishAt = CreateODBCDateTime(local.req.publish_at);
+		} else if (structKeyExists(local.req, "publishAt") && IsDate(local.req.publishAt)) {
+			local.publishAt = CreateODBCDateTime(local.req.publishAt);
+		} else {
+			local.publishAt = local.postDate;
+		}
+
+		local.unpublishAt = "";
+		if (structKeyExists(local.req, "unpublish_at") && IsDate(local.req.unpublish_at)) {
+			local.unpublishAt = CreateODBCDateTime(local.req.unpublish_at);
+		} else if (structKeyExists(local.req, "unpublishAt") && IsDate(local.req.unpublishAt)) {
+			local.unpublishAt = CreateODBCDateTime(local.req.unpublishAt);
+		} else if (local.hasAppDeadline) {
+			local.unpublishAt = local.appDeadline;
+		}
+
+		// Auto-set status to Scheduled if publishAt is in the future and status was Active
+		if (IsDate(local.publishAt) && DateCompare(local.publishAt, Now()) > 0 && local.statusCode == "Active") {
+			local.statusCode = "Scheduled";
+		}
+
 		local.actor = getActorName();
 
 		// Handle Attachment Upload
@@ -257,15 +300,16 @@ component extends="Controller" {
 		try {
 			if (local.isNew) {
 				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 					INSERT INTO job_listings (
 						SiteID, Title, Permalink, FLSAClassificationID, JobClasificationID, isSupervisor, DirectSupervisor,
 						Description, Qualification, Responsibilities, AdditionalInformation, Location, Address, City, State, Zip,
-						PostDate, MinSalary, MaxSalary, SalarySchedule, SalaryGroup, ClassCode, StatusCode, ApplicationDeadline,
+						PostDate, publish_at, unpublish_at, MinSalary, MaxSalary, SalarySchedule, SalaryGroup, ClassCode, StatusCode, ApplicationDeadline,
 						Attachment, Createdby, Created, Modified, Modifiedby
 					) VALUES (
 						:siteId, :title, :permalink, :flsaId, :classifId, :isSup, :directSup,
 						:desc, :qual, :resp, :addInfo, :loc, :addr, :city, :state, :zip,
-						:postDate, :minSal, :maxSal, :salSched, :salGrp, :classCode, :status, :appDeadline,
+						:postDate, :pubAt, :unpubAt, :minSal, :maxSal, :salSched, :salGrp, :classCode, :status, :appDeadline,
 						:att, :actor, SYSUTCDATETIME(), SYSUTCDATETIME(), :actor
 					)
 				", {
@@ -286,6 +330,8 @@ component extends="Controller" {
 					state: { value: local.state, cfsqltype: "cf_sql_varchar" },
 					zip: { value: local.zip, cfsqltype: "cf_sql_varchar" },
 					postDate: { value: local.postDate, cfsqltype: "cf_sql_timestamp" },
+					pubAt: { value: local.publishAt, cfsqltype: "cf_sql_timestamp", null: !IsDate(local.publishAt) },
+					unpubAt: { value: local.unpublishAt, cfsqltype: "cf_sql_timestamp", null: !IsDate(local.unpublishAt) },
 					minSal: { value: local.minSalary, cfsqltype: "cf_sql_decimal", null: !IsNumeric(local.minSalary) },
 					maxSal: { value: local.maxSalary, cfsqltype: "cf_sql_decimal", null: !IsNumeric(local.maxSalary) },
 					salSched: { value: local.salarySchedule, cfsqltype: "cf_sql_varchar" },
@@ -316,6 +362,7 @@ component extends="Controller" {
 				flashInsert(success="Job listing '" & local.title & "' posted successfully!");
 			} else {
 				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 					UPDATE job_listings SET
 						SiteID = :siteId,
 						Title = :title,
@@ -334,6 +381,8 @@ component extends="Controller" {
 						State = :state,
 						Zip = :zip,
 						PostDate = :postDate,
+						publish_at = :pubAt,
+						unpublish_at = :unpubAt,
 						MinSalary = :minSal,
 						MaxSalary = :maxSal,
 						SalarySchedule = :salSched,
@@ -363,6 +412,8 @@ component extends="Controller" {
 					state: { value: local.state, cfsqltype: "cf_sql_varchar" },
 					zip: { value: local.zip, cfsqltype: "cf_sql_varchar" },
 					postDate: { value: local.postDate, cfsqltype: "cf_sql_timestamp" },
+					pubAt: { value: local.publishAt, cfsqltype: "cf_sql_timestamp", null: !IsDate(local.publishAt) },
+					unpubAt: { value: local.unpublishAt, cfsqltype: "cf_sql_timestamp", null: !IsDate(local.unpublishAt) },
 					minSal: { value: local.minSalary, cfsqltype: "cf_sql_decimal", null: !IsNumeric(local.minSalary) },
 					maxSal: { value: local.maxSalary, cfsqltype: "cf_sql_decimal", null: !IsNumeric(local.maxSalary) },
 					salSched: { value: local.salarySchedule, cfsqltype: "cf_sql_varchar" },
@@ -1103,7 +1154,7 @@ component extends="Controller" {
 	}
 
 	private struct function getJobMetrics(string siteId = "all") {
-		local.m = { total: 0, active: 0, draft: 0, closed: 0, total_applications: 0, new_applications: 0 };
+		local.m = { total: 0, active: 0, scheduled: 0, draft: 0, closed: 0, total_applications: 0, new_applications: 0 };
 		local.whereClause = " WHERE DeletedAt IS NULL ";
 		local.p = {};
 		if (arguments.siteId != "all" && Len(arguments.siteId)) {
@@ -1112,15 +1163,18 @@ component extends="Controller" {
 		}
 		try {
 			local.q = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT 
 					COUNT(*) AS total,
 					SUM(CASE WHEN StatusCode = 'Active' THEN 1 ELSE 0 END) AS active,
+					SUM(CASE WHEN StatusCode = 'Scheduled' THEN 1 ELSE 0 END) AS scheduled,
 					SUM(CASE WHEN StatusCode = 'Draft' THEN 1 ELSE 0 END) AS draft,
 					SUM(CASE WHEN StatusCode = 'Closed' THEN 1 ELSE 0 END) AS closed
 				FROM job_listings #local.whereClause#
 			", local.p, { datasource: "ChelanCountyWebsite" });
 
 			local.qApps = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT 
 					COUNT(*) AS total_apps,
 					SUM(CASE WHEN Status = 'New' THEN 1 ELSE 0 END) AS new_apps
@@ -1130,6 +1184,7 @@ component extends="Controller" {
 
 			local.m.total = Val(local.q.total);
 			local.m.active = Val(local.q.active);
+			local.m.scheduled = Val(local.q.scheduled);
 			local.m.draft = Val(local.q.draft);
 			local.m.closed = Val(local.q.closed);
 			local.m.total_applications = Val(local.qApps.total_apps);

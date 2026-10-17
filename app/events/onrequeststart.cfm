@@ -1,3 +1,23 @@
 <cfscript>
-// Place code here that should be executed on the "onRequestStart" event.
+// Chelan County CMSAdmin 2.0 — Request Start Lifecycle Event
+// Automated Publishing & Expiration Evaluator (Throttled to run at most once every 60 seconds)
+if (!structKeyExists(application, "schedulerLock")) {
+	application.schedulerLock = false;
+}
+
+if (!structKeyExists(application, "lastSchedulerRun") || dateDiff("s", application.lastSchedulerRun, Now()) >= 60) {
+	if (!application.schedulerLock) {
+		application.schedulerLock = true;
+		try {
+			if (structKeyExists(variables, "evaluateScheduledTransitions") || structKeyExists(getGlobalScope(), "evaluateScheduledTransitions")) {
+				application.lastSchedulerResult = evaluateScheduledTransitions();
+				application.lastSchedulerRun = Now();
+			}
+		} catch (any eSched) {
+			writeLog(type="error", file="scheduler", text="Auto-evaluator error: #eSched.message# #eSched.detail#");
+		} finally {
+			application.schedulerLock = false;
+		}
+	}
+}
 </cfscript>

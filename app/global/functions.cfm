@@ -624,4 +624,338 @@ public string function formatTimeAgo(required any dateVal) {
 	if (diffDays < 7) return diffDays & "d ago";
 	return dateFormat(arguments.dateVal, "mmm d, yyyy");
 }
+
+/**
+ * Evaluates and transitions scheduled & expiring items across Pages, Articles, Events, and Careers.
+ * Respects SQL Server filtered index invariants and logs state transitions.
+ */
+public struct function evaluateScheduledTransitions() {
+	var report = {
+		"timestamp": Now(),
+		"success": true,
+		"pages_published": 0,
+		"pages_archived": 0,
+		"articles_published": 0,
+		"articles_archived": 0,
+		"events_published": 0,
+		"events_archived": 0,
+		"jobs_published": 0,
+		"jobs_archived": 0,
+		"total_transitions": 0,
+		"errors": []
+	};
+
+	// 1. Pages — Scheduled Release -> Published
+	try {
+		var qPagesPub = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE pages
+			SET Visibility = 'Published',
+			    StatusCode = 'Active',
+			    isPublished = 1,
+			    PublishAt = COALESCE(PublishAt, publish_at),
+			    publish_at = COALESCE(publish_at, PublishAt),
+			    Modified = SYSUTCDATETIME(),
+			    ModifiedBy = 'Auto-Scheduler'
+			WHERE DeletedAt IS NULL
+			  AND (Visibility = 'Scheduled' OR (isPublished = 0 AND StatusCode = 'Active' AND Visibility <> 'Draft' AND Visibility <> 'Hidden'))
+			  AND (publish_at IS NOT NULL OR PublishAt IS NOT NULL)
+			  AND COALESCE(publish_at, PublishAt) <= SYSUTCDATETIME()
+			  AND (unpublish_at IS NULL OR unpublish_at > SYSUTCDATETIME())
+			  AND (UnpublishAt IS NULL OR UnpublishAt > SYSUTCDATETIME());
+		", {}, { datasource: "ChelanCountyWebsite", result: "rPagesPub" });
+		report.pages_published = Val(rPagesPub.recordCount ?: 0);
+	} catch (any ePagesPub) {
+		arrayAppend(report.errors, "Pages Publish: " & ePagesPub.message);
+	}
+
+	// 2. Pages — Expired -> Archived/Hidden
+	try {
+		var qPagesArch = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE pages
+			SET Visibility = 'Hidden',
+			    StatusCode = 'Archived',
+			    isPublished = 0,
+			    Modified = SYSUTCDATETIME(),
+			    ModifiedBy = 'Auto-Scheduler'
+			WHERE DeletedAt IS NULL
+			  AND (unpublish_at IS NOT NULL OR UnpublishAt IS NOT NULL)
+			  AND COALESCE(unpublish_at, UnpublishAt) <= SYSUTCDATETIME()
+			  AND (Visibility <> 'Hidden' OR StatusCode <> 'Archived' OR isPublished = 1);
+		", {}, { datasource: "ChelanCountyWebsite", result: "rPagesArch" });
+		report.pages_archived = Val(rPagesArch.recordCount ?: 0);
+	} catch (any ePagesArch) {
+		arrayAppend(report.errors, "Pages Archive: " & ePagesArch.message);
+	}
+
+	// 3. Articles — Scheduled -> Published
+	try {
+		var qArtPub = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE articles
+			SET status = 'published',
+			    published_at = COALESCE(published_at, publish_at, SYSUTCDATETIME()),
+			    publish_at = COALESCE(publish_at, published_at, SYSUTCDATETIME()),
+			    updatedat = SYSUTCDATETIME(),
+			    modified_by = 'Auto-Scheduler'
+			WHERE deletedat IS NULL
+			  AND status = 'scheduled'
+			  AND publish_at IS NOT NULL
+			  AND publish_at <= SYSUTCDATETIME()
+			  AND (unpublish_at IS NULL OR unpublish_at > SYSUTCDATETIME());
+		", {}, { datasource: "ChelanCountyWebsite", result: "rArtPub" });
+		report.articles_published = Val(rArtPub.recordCount ?: 0);
+	} catch (any eArtPub) {
+		arrayAppend(report.errors, "Articles Publish: " & eArtPub.message);
+	}
+
+	// 4. Articles — Expired -> Archived
+	try {
+		var qArtArch = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE articles
+			SET status = 'archived',
+			    updatedat = SYSUTCDATETIME(),
+			    modified_by = 'Auto-Scheduler'
+			WHERE deletedat IS NULL
+			  AND unpublish_at IS NOT NULL
+			  AND unpublish_at <= SYSUTCDATETIME()
+			  AND status <> 'archived';
+		", {}, { datasource: "ChelanCountyWebsite", result: "rArtArch" });
+		report.articles_archived = Val(rArtArch.recordCount ?: 0);
+	} catch (any eArtArch) {
+		arrayAppend(report.errors, "Articles Archive: " & eArtArch.message);
+	}
+
+	// 5. Calendar Events — Scheduled -> Published
+	try {
+		var qEvPub = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE calendar_events
+			SET status = 'Published',
+			    updatedat = SYSUTCDATETIME(),
+			    modified_by = 'Auto-Scheduler'
+			WHERE deletedat IS NULL
+			  AND status = 'Scheduled'
+			  AND publish_at IS NOT NULL
+			  AND publish_at <= SYSUTCDATETIME()
+			  AND (unpublish_at IS NULL OR unpublish_at > SYSUTCDATETIME());
+		", {}, { datasource: "ChelanCountyWebsite", result: "rEvPub" });
+		report.events_published = Val(rEvPub.recordCount ?: 0);
+	} catch (any eEvPub) {
+		arrayAppend(report.errors, "Events Publish: " & eEvPub.message);
+	}
+
+	// 6. Calendar Events — Expired -> Archived
+	try {
+		var qEvArch = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE calendar_events
+			SET status = 'Archived',
+			    updatedat = SYSUTCDATETIME(),
+			    modified_by = 'Auto-Scheduler'
+			WHERE deletedat IS NULL
+			  AND unpublish_at IS NOT NULL
+			  AND unpublish_at <= SYSUTCDATETIME()
+			  AND status NOT IN ('Archived', 'Cancelled');
+		", {}, { datasource: "ChelanCountyWebsite", result: "rEvArch" });
+		report.events_archived = Val(rEvArch.recordCount ?: 0);
+	} catch (any eEvArch) {
+		arrayAppend(report.errors, "Events Archive: " & eEvArch.message);
+	}
+
+	// 7. Job Listings / Careers — Scheduled -> Active
+	try {
+		var qJobPub = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE job_listings
+			SET StatusCode = 'Active',
+			    Modified = SYSUTCDATETIME(),
+			    Modifiedby = 'Auto-Scheduler'
+			WHERE DeletedAt IS NULL
+			  AND StatusCode = 'Scheduled'
+			  AND (publish_at IS NOT NULL OR PostDate IS NOT NULL)
+			  AND COALESCE(publish_at, PostDate) <= SYSUTCDATETIME()
+			  AND (unpublish_at IS NULL OR unpublish_at > SYSUTCDATETIME());
+		", {}, { datasource: "ChelanCountyWebsite", result: "rJobPub" });
+		report.jobs_published = Val(rJobPub.recordCount ?: 0);
+
+		// Synchronize job_postings if present
+		queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE job_postings
+			SET status = 'active', updatedat = SYSUTCDATETIME(), updated_by = 'Auto-Scheduler'
+			WHERE deletedat IS NULL
+			  AND status = 'scheduled'
+			  AND (publish_at IS NOT NULL OR open_date IS NOT NULL)
+			  AND COALESCE(publish_at, open_date) <= SYSUTCDATETIME()
+			  AND (unpublish_at IS NULL OR unpublish_at > SYSUTCDATETIME());
+		", {}, { datasource: "ChelanCountyWebsite" });
+	} catch (any eJobPub) {
+		arrayAppend(report.errors, "Jobs Publish: " & eJobPub.message);
+	}
+
+	// 8. Job Listings / Careers — Expired (Deadline passed) -> Closed
+	try {
+		var qJobArch = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE job_listings
+			SET StatusCode = 'Closed',
+			    Modified = SYSUTCDATETIME(),
+			    Modifiedby = 'Auto-Scheduler'
+			WHERE DeletedAt IS NULL
+			  AND (unpublish_at IS NOT NULL OR ApplicationDeadline IS NOT NULL)
+			  AND COALESCE(unpublish_at, ApplicationDeadline) <= SYSUTCDATETIME()
+			  AND StatusCode NOT IN ('Archived', 'Closed');
+		", {}, { datasource: "ChelanCountyWebsite", result: "rJobArch" });
+		report.jobs_archived = Val(rJobArch.recordCount ?: 0);
+
+		// Synchronize job_postings if present
+		queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE job_postings
+			SET status = 'closed', updatedat = SYSUTCDATETIME(), updated_by = 'Auto-Scheduler'
+			WHERE deletedat IS NULL
+			  AND (unpublish_at IS NOT NULL OR close_date IS NOT NULL)
+			  AND COALESCE(unpublish_at, close_date) <= SYSUTCDATETIME()
+			  AND status NOT IN ('archived', 'closed');
+		", {}, { datasource: "ChelanCountyWebsite" });
+	} catch (any eJobArch) {
+		arrayAppend(report.errors, "Jobs Archive: " & eJobArch.message);
+	}
+
+	// 9. RFP Solicitations — Scheduled -> Open
+	try {
+		var qRfpPub = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE dbo.rfp_solicitations
+			SET status = 'Open',
+			    updated_at = SYSUTCDATETIME(),
+			    updated_by = 'Auto-Scheduler'
+			WHERE deleted_at IS NULL
+			  AND status = 'Scheduled'
+			  AND publish_at IS NOT NULL
+			  AND publish_at <= SYSUTCDATETIME();
+		", {}, { datasource: "ChelanCountyWebsite", result: "rRfpPub" });
+		report.rfps_published = Val(rRfpPub.recordCount ?: 0);
+	} catch (any eRfpPub) {
+		arrayAppend(report.errors, "RFPs Publish: " & eRfpPub.message);
+	}
+
+	// 10. RFP Solicitations — Expired Deadline -> Under Review (Closed for Bids)
+	try {
+		var qRfpClose = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			UPDATE dbo.rfp_solicitations
+			SET status = 'Under Review',
+			    updated_at = SYSUTCDATETIME(),
+			    updated_by = 'Auto-Scheduler'
+			WHERE deleted_at IS NULL
+			  AND status = 'Open'
+			  AND submission_deadline <= SYSUTCDATETIME();
+		", {}, { datasource: "ChelanCountyWebsite", result: "rRfpClose" });
+		report.rfps_closed = Val(rRfpClose.recordCount ?: 0);
+	} catch (any eRfpClose) {
+		arrayAppend(report.errors, "RFPs Close: " & eRfpClose.message);
+	}
+
+	report.total_transitions = report.pages_published + report.pages_archived
+		+ report.articles_published + report.articles_archived
+		+ report.events_published + report.events_archived
+		+ report.jobs_published + report.jobs_archived
+		+ (structKeyExists(report, "rfps_published") ? report.rfps_published : 0)
+		+ (structKeyExists(report, "rfps_closed") ? report.rfps_closed : 0);
+
+	report.success = (arrayLen(report.errors) == 0);
+
+	return report;
+}
+
+/**
+ * Returns summary statistics on pending scheduled and expiring items across modules.
+ */
+public struct function getScheduledPublishingSummary() {
+	var summary = {
+		"pages_scheduled": 0,
+		"pages_expiring": 0,
+		"articles_scheduled": 0,
+		"articles_expiring": 0,
+		"events_scheduled": 0,
+		"events_expiring": 0,
+		"jobs_scheduled": 0,
+		"jobs_expiring": 0,
+		"total_pending_actions": 0,
+		"last_run": structKeyExists(application, "lastSchedulerRun") ? application.lastSchedulerRun : "",
+		"last_result": structKeyExists(application, "lastSchedulerResult") ? application.lastSchedulerResult : {}
+	};
+
+	try {
+		var qP = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			SELECT 
+				SUM(CASE WHEN Visibility = 'Scheduled' AND COALESCE(publish_at, PublishAt) > SYSUTCDATETIME() THEN 1 ELSE 0 END) AS sched_cnt,
+				SUM(CASE WHEN Visibility = 'Published' AND (unpublish_at IS NOT NULL OR UnpublishAt IS NOT NULL) AND COALESCE(unpublish_at, UnpublishAt) > SYSUTCDATETIME() THEN 1 ELSE 0 END) AS exp_cnt
+			FROM pages
+			WHERE DeletedAt IS NULL;
+		", {}, { datasource: "ChelanCountyWebsite" });
+		if (qP.recordCount) {
+			summary.pages_scheduled = Val(qP.sched_cnt ?: 0);
+			summary.pages_expiring = Val(qP.exp_cnt ?: 0);
+		}
+	} catch (any eP) {}
+
+	try {
+		var qA = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			SELECT 
+				SUM(CASE WHEN status = 'scheduled' AND publish_at > SYSUTCDATETIME() THEN 1 ELSE 0 END) AS sched_cnt,
+				SUM(CASE WHEN status = 'published' AND unpublish_at IS NOT NULL AND unpublish_at > SYSUTCDATETIME() THEN 1 ELSE 0 END) AS exp_cnt
+			FROM articles
+			WHERE deletedat IS NULL;
+		", {}, { datasource: "ChelanCountyWebsite" });
+		if (qA.recordCount) {
+			summary.articles_scheduled = Val(qA.sched_cnt ?: 0);
+			summary.articles_expiring = Val(qA.exp_cnt ?: 0);
+		}
+	} catch (any eA) {}
+
+	try {
+		var qE = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			SELECT 
+				SUM(CASE WHEN status = 'Scheduled' AND publish_at > SYSUTCDATETIME() THEN 1 ELSE 0 END) AS sched_cnt,
+				SUM(CASE WHEN status = 'Published' AND unpublish_at IS NOT NULL AND unpublish_at > SYSUTCDATETIME() THEN 1 ELSE 0 END) AS exp_cnt
+			FROM calendar_events
+			WHERE deletedat IS NULL;
+		", {}, { datasource: "ChelanCountyWebsite" });
+		if (qE.recordCount) {
+			summary.events_scheduled = Val(qE.sched_cnt ?: 0);
+			summary.events_expiring = Val(qE.exp_cnt ?: 0);
+		}
+	} catch (any eE) {}
+
+	try {
+		var qJ = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			SELECT 
+				SUM(CASE WHEN StatusCode = 'Scheduled' AND COALESCE(publish_at, PostDate) > SYSUTCDATETIME() THEN 1 ELSE 0 END) AS sched_cnt,
+				SUM(CASE WHEN StatusCode = 'Active' AND (unpublish_at IS NOT NULL OR ApplicationDeadline IS NOT NULL) AND COALESCE(unpublish_at, ApplicationDeadline) > SYSUTCDATETIME() THEN 1 ELSE 0 END) AS exp_cnt
+			FROM job_listings
+			WHERE DeletedAt IS NULL;
+		", {}, { datasource: "ChelanCountyWebsite" });
+		if (qJ.recordCount) {
+			summary.jobs_scheduled = Val(qJ.sched_cnt ?: 0);
+			summary.jobs_expiring = Val(qJ.exp_cnt ?: 0);
+		}
+	} catch (any eJ) {}
+
+	summary.total_pending_actions = summary.pages_scheduled + summary.pages_expiring
+		+ summary.articles_scheduled + summary.articles_expiring
+		+ summary.events_scheduled + summary.events_expiring
+		+ summary.jobs_scheduled + summary.jobs_expiring;
+
+	return summary;
+}
 </cfscript>
+

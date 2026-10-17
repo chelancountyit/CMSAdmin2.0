@@ -542,9 +542,11 @@
 				<select id="evStatusFilter" class="form-control" style="padding:0.5rem 0.75rem; font-size:0.85rem;">
 					<option value="">All Statuses</option>
 					<option value="Published">Published</option>
+					<option value="Scheduled">Scheduled</option>
 					<option value="Draft">Draft</option>
 					<option value="Postponed">Postponed</option>
 					<option value="Cancelled">Cancelled</option>
+					<option value="Archived">Archived</option>
 				</select>
 			</div>
 
@@ -734,12 +736,16 @@
 							<td style="text-align:center;">
 								<cfif ev.status eq "Published">
 									<span class="badge badge-success">Published</span>
+								<cfelseif ev.status eq "Scheduled">
+									<span class="badge badge-info" style="background:##0284c7; color:##fff;">Scheduled</span>
 								<cfelseif ev.status eq "Draft">
 									<span class="badge badge-neutral">Draft</span>
 								<cfelseif ev.status eq "Postponed">
 									<span class="badge badge-warning">Postponed</span>
+								<cfelseif ev.status eq "Archived">
+									<span class="badge badge-neutral" style="background:var(--admin-border);">Archived</span>
 								<cfelse>
-									<span class="badge badge-danger">Cancelled</span>
+									<span class="badge badge-danger">#EncodeForHTML(ev.status)#</span>
 								</cfif>
 							</td>
 						</tr>
@@ -847,9 +853,11 @@
 						<label for="evStatus" class="form-label" style="font-weight:600;">Status</label>
 						<select id="evStatus" class="form-control">
 							<option value="Published">Published</option>
+							<option value="Scheduled">Scheduled (Auto-Publish)</option>
 							<option value="Draft">Draft</option>
 							<option value="Postponed">Postponed</option>
 							<option value="Cancelled">Cancelled</option>
+							<option value="Archived">Archived</option>
 						</select>
 					</div>
 
@@ -921,6 +929,22 @@
 					<div style="grid-column: span 2;" id="evEndTimeWrap">
 						<label for="evEndTime" class="form-label" style="font-weight:600;">End Time</label>
 						<input type="text" id="evEndTime" class="form-control" placeholder="11:30 AM">
+					</div>
+
+					<div style="grid-column: span 6; border-top:1px dashed var(--admin-border); padding-top:0.75rem;">
+						<label for="evPublishAt" class="form-label" style="font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+							<span>Publish At (Automated Release)</span>
+							<span style="font-size:0.72rem; color:var(--admin-text-muted); font-weight:normal;">Leave blank to publish immediately</span>
+						</label>
+						<input type="datetime-local" id="evPublishAt" class="form-control">
+					</div>
+
+					<div style="grid-column: span 6; border-top:1px dashed var(--admin-border); padding-top:0.75rem;">
+						<label for="evUnpublishAt" class="form-label" style="font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+							<span>Unpublish / Archive At (Automatic Expiration)</span>
+							<span style="font-size:0.72rem; color:var(--admin-text-muted); font-weight:normal;">Leave blank for indefinite</span>
+						</label>
+						<input type="datetime-local" id="evUnpublishAt" class="form-control">
 					</div>
 				</div>
 			</div>
@@ -1225,7 +1249,9 @@
 			contactPhone: String(getField(raw, "contactPhone", "")),
 			isFeatured: Boolean(getField(raw, "isFeatured", false)),
 			isPublicNotice: Boolean(getField(raw, "isPublicNotice", false)),
-			status: String(getField(raw, "status", "Published"))
+			status: String(getField(raw, "status", "Published")),
+			publishAt: String(getField(raw, "publishAt", "")),
+			unpublishAt: String(getField(raw, "unpublishAt", ""))
 		};
 	}
 
@@ -1617,6 +1643,8 @@
 		document.getElementById("evContactName").value = isEdit ? evObj.contactName : "";
 		document.getElementById("evContactEmail").value = isEdit ? evObj.contactEmail : "";
 		document.getElementById("evContactPhone").value = isEdit ? evObj.contactPhone : "";
+		document.getElementById("evPublishAt").value = (isEdit && evObj.publishAt) ? evObj.publishAt.slice(0, 16) : "";
+		document.getElementById("evUnpublishAt").value = (isEdit && evObj.unpublishAt) ? evObj.unpublishAt.slice(0, 16) : "";
 
 		eventModal.classList.add("is-open");
 		setTimeout(function () { document.getElementById("evTitle").focus(); }, 50);
@@ -1640,6 +1668,8 @@
 			categoryId: Number(document.getElementById("evCategoryId").value || 0),
 			siteId: document.getElementById("evSiteId").value,
 			status: document.getElementById("evStatus").value,
+			publish_at: document.getElementById("evPublishAt").value || "",
+			unpublish_at: document.getElementById("evUnpublishAt").value || "",
 			summary: document.getElementById("evSummary").value.trim(),
 			description: document.getElementById("evDescription").value.trim(),
 			isFeatured: document.getElementById("evIsFeatured").checked,

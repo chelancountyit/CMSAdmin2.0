@@ -459,6 +459,7 @@
 					</label>
 					<select id="articleStatus" name="status" class="form-control">
 						<option value="published" <cfif (article.status ?: "") eq "published">selected</cfif>>Published Live</option>
+						<option value="scheduled" <cfif (article.status ?: "") eq "scheduled">selected</cfif>>Scheduled for Release</option>
 						<option value="draft" <cfif (article.status ?: "") eq "draft">selected</cfif>>Draft</option>
 						<option value="archived" <cfif (article.status ?: "") eq "archived">selected</cfif>>Archived</option>
 					</select>
@@ -469,6 +470,17 @@
 						Publish Date &amp; Time
 					</label>
 					<input type="datetime-local" id="publishedAt" name="published_at" class="form-control" value="#DateFormat(article.published_at ?: Now(), 'yyyy-mm-dd')#T#TimeFormat(article.published_at ?: Now(), 'HH:mm')#">
+				</div>
+
+				<div style="margin-bottom:1rem;">
+					<label for="unpublishAt" style="display:flex; justify-content:space-between; align-items:center; font-weight:600; font-size:0.8rem; margin-bottom:0.3rem; color:var(--admin-text-muted);">
+						<span>Expiration / Archive On</span>
+						<span style="font-weight:normal; font-size:0.75rem;">(optional)</span>
+					</label>
+					<input type="datetime-local" id="unpublishAt" name="unpublish_at" class="form-control" value="<cfif IsDate(article.unpublish_at ?: '')>#DateFormat(article.unpublish_at, 'yyyy-mm-dd')#T#TimeFormat(article.unpublish_at, 'HH:mm')#</cfif>">
+					<small style="display:block; margin-top:0.25rem; font-size:0.72rem; color:var(--admin-text-muted);">
+						Automatically transitions to Archived status upon reaching this timestamp.
+					</small>
 				</div>
 
 				<div style="margin-bottom:1rem;">
@@ -1203,12 +1215,33 @@ window.ArticleA11yLinter = (function() {
 			.replace(/'/g, '&#39;');
 	}
 
+	var _editorBound = false;
+	function bindEditorEvents() {
+		var ed = getEditor();
+		if (!ed) return false;
+		if (_editorBound) return true;
+
+		if (ed.contentArea) {
+			ed.contentArea.addEventListener("input", scheduleScan);
+			ed.contentArea.addEventListener("keyup", scheduleScan);
+			ed.contentArea.addEventListener("paste", function() { setTimeout(scan, 80); });
+		}
+		if (typeof ed.on === "function") {
+			ed.on("change", scheduleScan);
+			ed.on("input", scheduleScan);
+			ed.on("paste", function() { setTimeout(scan, 80); });
+		}
+		_editorBound = true;
+		return true;
+	}
+
 	function getEditor() {
 		var ta = document.getElementById("articleContent");
 		return (typeof JBDEditor !== "undefined" && ta) ? JBDEditor.get(ta) : null;
 	}
 
 	function getHtmlContent() {
+		if (!_editorBound) bindEditorEvents();
 		var ed = getEditor();
 		if (ed && typeof ed.getHTML === "function") {
 			return ed.getHTML();
@@ -1867,10 +1900,10 @@ window.ArticleA11yLinter = (function() {
 			pubBadge.className = "badge";
 			if (res.criticalCount > 0) {
 				pubBadge.classList.add("badge-danger");
-				pubBadge.textContent = res.criticalCount + " CRITICAL";
+				pubBadge.textContent = (res.criticalCount === 1) ? "1 CRITICAL" : (res.criticalCount + " CRITICAL");
 			} else if (res.warningCount > 0) {
 				pubBadge.classList.add("badge-warning");
-				pubBadge.textContent = res.warningCount + " WARNINGS";
+				pubBadge.textContent = (res.warningCount === 1) ? "1 WARNING" : (res.warningCount + " WARNINGS");
 			} else {
 				pubBadge.classList.add("badge-success");
 				pubBadge.textContent = "PASS";
@@ -1894,8 +1927,9 @@ window.ArticleA11yLinter = (function() {
 		if (tabErr) tabErr.textContent = res.criticalCount;
 		if (tabWarn) tabWarn.textContent = res.warningCount;
 
-		// 5. Render Issues Drawer List
+		// 5. Render Issues Drawer List and Publish Scorecard Inline List
 		renderDrawerList();
+		renderPublishInlineList();
 	}
 
 	function renderDrawerList() {
@@ -1923,6 +1957,7 @@ window.ArticleA11yLinter = (function() {
 					'No issues found matching this filter.' +
 				'</div>';
 			}
+			renderPublishInlineList();
 			return;
 		}
 
@@ -1973,9 +2008,52 @@ window.ArticleA11yLinter = (function() {
 
 	function renderPublishInlineList() {
 		var inlineEl = document.getElementById("articleA11yPublishInlineList");
+		var pubBadge = document.getElementById("articleA11yPublishBadge");
+		var pubSummary = document.getElementById("articleA11yPublishSummary");
+
+		var issues = (_lastResults && _lastResults.issues) ? _lastResults.issues : [];
+		var critCount = issues.filter(function(i) { return i.severity === "error"; }).length;
+		var warnCount = issues.filter(function(i) { return i.severity === "warning"; }).length;
+
+		// Ensure Publish Scorecard badge and summary are always 100% in lockstep with issues
+		if (pubBadge) {
+			pubBadge.className = "badge";
+			if (critCount > 0) {
+				pubBadge.classList.add("badge-danger");
+				pubBadge.textContent = (critCount === 1) ? "1 CRITICAL" : (critCount + " CRITICAL");
+			} else if (warnCount > 0) {
+				pubBadge.classList.add("badge-warning");
+				pubBadge.textContent = (warnCount === 1) ? "1 WARNING" : (warnCount + " WARNINGS");
+			} else {
+				pubBadge.classList.add("badge-success");
+				pubBadge.textContent = "PASS";
+			}
+		}
+		if (pubSummary) {
+			if (critCount > 0) {
+				pubSummary.innerHTML = '<span style="color:#b91c1c; font-weight:600;">' + critCount + ' critical barrier' + (critCount === 1 ? '' : 's') + ' detected.</span> Review recommended before publishing.';
+			} else if (warnCount > 0) {
+				pubSummary.innerHTML = '<span style="color:#b45309; font-weight:600;">Compliant with ' + warnCount + ' best-practice recommendation' + (warnCount === 1 ? '' : 's') + '.</span>';
+			} else {
+				pubSummary.textContent = "Article ready for public release. Meets ADA WCAG 2.1 AA.";
+			}
+		}
+
+		// Update Inspect Diagnostics link text to match exact live issue count
+		var lnkText = document.getElementById("lnkInspectArticleA11yText");
+		var drawer = document.getElementById("articleA11yIssuesDrawer");
+		var isDrawerOpen = drawer && (!drawer.hidden && drawer.style.display !== "none");
+		if (lnkText) {
+			if (issues.length === 0) {
+				lnkText.textContent = isDrawerOpen ? "Hide Audit Summary" : "View Audit Summary";
+			} else {
+				lnkText.textContent = isDrawerOpen ? ("Hide Diagnostics (" + issues.length + ")") : ("Inspect Diagnostics (" + issues.length + ")");
+			}
+		}
+
 		if (!inlineEl) return;
 
-		if (!_lastResults.issues || _lastResults.issues.length === 0) {
+		if (issues.length === 0) {
 			inlineEl.innerHTML = '<div style="padding:0.5rem 0.6rem; border-radius:6px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-size:0.74rem; line-height:1.35;">' +
 				'<strong>100% WCAG 2.1 AA Compliant</strong><br>No accessibility barriers detected.' +
 			'</div>';
@@ -1983,7 +2061,7 @@ window.ArticleA11yLinter = (function() {
 		}
 
 		var inlineHtml = "";
-		_lastResults.issues.forEach(function(issue) {
+		issues.forEach(function(issue) {
 			var isErr = (issue.severity === "error");
 			var borderColor = isErr ? "#ef4444" : "#f59e0b";
 			var bgColor = isErr ? "#fffbfb" : "#fffdf9";
@@ -2203,6 +2281,9 @@ window.ArticleA11yLinter = (function() {
 		var lnkText = document.getElementById("lnkInspectArticleA11yText");
 		var lnkChevron = document.getElementById("lnkInspectArticleA11yChevron");
 
+		var issues = (_lastResults && _lastResults.issues) ? _lastResults.issues : [];
+		var issueCount = issues.length;
+
 		if (drawer) {
 			drawer.hidden = !isOpen;
 			drawer.style.display = isOpen ? "flex" : "none";
@@ -2217,7 +2298,11 @@ window.ArticleA11yLinter = (function() {
 			lnkInspect.setAttribute("aria-expanded", String(isOpen));
 		}
 		if (lnkText) {
-			lnkText.textContent = isOpen ? "Hide Diagnostics" : "Inspect Diagnostics";
+			if (issueCount === 0) {
+				lnkText.textContent = isOpen ? "Hide Audit Summary" : "View Audit Summary";
+			} else {
+				lnkText.textContent = isOpen ? ("Hide Diagnostics (" + issueCount + ")") : ("Inspect Diagnostics (" + issueCount + ")");
+			}
 		}
 		if (lnkChevron) {
 			lnkChevron.style.transform = isOpen ? "rotate(180deg)" : "rotate(0deg)";
@@ -2237,9 +2322,9 @@ window.ArticleA11yLinter = (function() {
 	}
 
 	function openDrawer(source) {
-		var drawer = document.getElementById("articleA11yIssuesDrawer");
-		renderDrawerList();
+		scan(); // Force fresh scan so results and scorecard are 100% synchronized
 		syncDrawerState(true);
+		var drawer = document.getElementById("articleA11yIssuesDrawer");
 		if (drawer) {
 			if (source !== "publish") {
 				drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -2271,14 +2356,13 @@ window.ArticleA11yLinter = (function() {
 		});
 
 		openDrawer();
-		renderDrawerList();
 	}
 
 	function scheduleScan() {
 		if (_scanDebounceTimer) clearTimeout(_scanDebounceTimer);
 		_scanDebounceTimer = setTimeout(function() {
 			scan();
-		}, 300);
+		}, 250);
 	}
 
 	function init() {
@@ -2306,16 +2390,21 @@ window.ArticleA11yLinter = (function() {
 		var statSelect = document.getElementById("articleStatus");
 		if (statSelect) statSelect.addEventListener("change", scheduleScan);
 
-		// Editor attach listener
-		setTimeout(function() {
-			var ed = getEditor();
-			if (ed && ed.contentArea) {
-				ed.contentArea.addEventListener("input", scheduleScan);
-				ed.contentArea.addEventListener("keyup", scheduleScan);
-				ed.contentArea.addEventListener("paste", function() { setTimeout(scan, 100); });
+		// Bind editor readiness and reactive input listeners
+		bindEditorEvents();
+
+		// Poll for JBDEditor async readiness
+		var pollCount = 0;
+		var pollTimer = setInterval(function() {
+			pollCount++;
+			if (bindEditorEvents() || pollCount > 15) {
+				clearInterval(pollTimer);
+				scan();
 			}
-			scan();
-		}, 300);
+		}, 120);
+
+		// Initial scan
+		setTimeout(scan, 150);
 	}
 
 	return {
@@ -2408,6 +2497,7 @@ async function saveArticleForm() {
 		status: document.getElementById('articleStatus').value,
 		siteid: document.getElementById('siteid').value,
 		published_at: document.getElementById('publishedAt').value,
+		unpublish_at: (document.getElementById('unpublishAt') ? document.getElementById('unpublishAt').value : ''),
 		meta_title: document.getElementById('metaTitle').value.trim(),
 		meta_description: document.getElementById('metaDescription').value.trim()
 	};

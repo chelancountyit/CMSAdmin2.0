@@ -16,6 +16,26 @@
 		.post(name="formSubmit", pattern="forms/submit", to="forms##submit")
 		.get(name="formSubmitGet", pattern="forms/submit", to="forms##submit")
 
+		// RFP & Solicitations Management Routes
+		.get(name="rfpsIndex", pattern="rfps", to="rfps##index")
+		.get(name="rfpsNew", pattern="rfps/new", to="rfps##new")
+		.get(name="rfpsEdit", pattern="rfps/edit", to="rfps##edit")
+		.post(name="rfpsSave", pattern="rfps/save", to="rfps##save")
+		.post(name="rfpsDelete", pattern="rfps/delete", to="rfps##delete")
+		.post(name="rfpsStatus", pattern="rfps/status", to="rfps##updateStatus")
+		.post(name="rfpsAddendumSave", pattern="rfps/addendum/save", to="rfps##saveAddendum")
+		.post(name="rfpsAddendumDelete", pattern="rfps/addendum/delete", to="rfps##deleteAddendum")
+		.get(name="rfpsPlanholders", pattern="rfps/planholders", to="rfps##planholders")
+		.post(name="rfpsPlanholderSave", pattern="rfps/planholder/save", to="rfps##savePlanholder")
+		.post(name="rfpsPlanholderDelete", pattern="rfps/planholder/delete", to="rfps##deletePlanholder")
+		.get(name="rfpsExportPlanholdersCsv", pattern="rfps/planholders/export", to="rfps##exportPlanholdersCsv")
+		.post(name="rfpsBidSave", pattern="rfps/bid/save", to="rfps##saveBid")
+		.post(name="rfpsBidDelete", pattern="rfps/bid/delete", to="rfps##deleteBid")
+		.get(name="rfpsPublicList", pattern="bids", to="rfps##publicList")
+		.get(name="rfpsPublicView", pattern="bids/view", to="rfps##publicView")
+		.get(name="rfpsPublicViewDirect", pattern="bids/[slug]", to="rfps##publicView")
+		.post(name="rfpsRegisterPlanholder", pattern="bids/register", to="rfps##registerPlanholder")
+
 		// Job Postings & HRM Recruitment Routes
 		.get(name="jobsIndex", pattern="jobs", to="jobs##index")
 		.get(name="jobsNew", pattern="jobs/new", to="jobs##new")
@@ -176,6 +196,15 @@
 		.post(name="settingsSaveMedia", pattern="settings/save-media", to="settings##saveMedia")
 		.post(name="settingsSaveMediaDirect", pattern="settings/saveMedia", to="settings##saveMedia")
 		.get(name="settingsSystem", pattern="settings/system", to="settings##system")
+		.post(name="settingsRunScheduler", pattern="settings/run-scheduler", to="scheduler##run")
+
+		// Automated Publishing & Expiration Scheduler Routes
+		.get(name="schedulerRun", pattern="scheduler/run", to="scheduler##run")
+		.post(name="schedulerRunPost", pattern="scheduler/run", to="scheduler##run")
+		.get(name="schedulerStatus", pattern="scheduler/status", to="scheduler##status")
+		.get(name="apiSchedulerRun", pattern="api/v1/scheduler/run", to="scheduler##apiRun")
+		.post(name="apiSchedulerRunPost", pattern="api/v1/scheduler/run", to="scheduler##apiRun")
+		.get(name="apiSchedulerStatus", pattern="api/v1/scheduler/status", to="scheduler##apiStatus")
 
 		// Authentication & Security Routes
 		.get(name="login", pattern="login", to="sessions##new")

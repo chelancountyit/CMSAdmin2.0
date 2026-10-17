@@ -218,7 +218,7 @@
 				// Active Emergency Alerts indicator
 				activeEmergencyAlertsCount = 0;
 				try {
-					local.qEmerg = queryExecute("SELECT COUNT(*) AS cnt FROM emergency_alerts WHERE is_active = 1 AND deletedat IS NULL", {}, { datasource: "ChelanCountyWebsite" });
+					local.qEmerg = queryExecute("SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON; SELECT COUNT(*) AS cnt FROM emergency_alerts WHERE is_active = 1 AND deletedat IS NULL", {}, { datasource: "ChelanCountyWebsite" });
 					activeEmergencyAlertsCount = Val(local.qEmerg.cnt);
 				} catch (any e) {}
 			</cfscript>
@@ -594,6 +594,28 @@
 										</li>
 										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'forms' and structKeyExists(params, 'action') and params.action eq 'builder' ? 'active' : '')#</cfoutput>">
 											<a href="<cfoutput>#urlFor(controller='forms', action='builder')#</cfoutput>" class="submenu-link">+ Create / Builder Studio</a>
+										</li>
+									</ul>
+								</li>
+
+								<!--- RFP & Solicitations Management Menu Item with Submenu --->
+								<li class="nav-item has-submenu <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'rfps' ? 'open active' : '')#</cfoutput>">
+									<a href="javascript:void(0)" class="nav-link">
+										<span class="nav-link-main">
+											<span class="nav-icon"><cfoutput>#svgIcon(name="gavel", size=18)#</cfoutput></span>
+											<span class="nav-text">Bids &amp; RFPs</span>
+										</span>
+										<cfoutput>#svgIcon(name="chevron-right", size=14, class="nav-caret")#</cfoutput>
+									</a>
+									<ul class="nav-submenu">
+										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'rfps' and structKeyExists(params, 'action') and (params.action eq 'index' or params.action eq 'edit') ? 'active' : '')#</cfoutput>">
+											<a href="<cfoutput>#urlFor(controller='rfps', action='index')#</cfoutput>" class="submenu-link">All Solicitations</a>
+										</li>
+										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'rfps' and structKeyExists(params, 'action') and params.action eq 'new' ? 'active' : '')#</cfoutput>">
+											<a href="<cfoutput>#urlFor(controller='rfps', action='new')#</cfoutput>" class="submenu-link">+ Post New RFP / Bid</a>
+										</li>
+										<li class="submenu-item">
+											<a href="<cfoutput>#urlFor(controller='rfps', action='publicList')#</cfoutput>" target="_blank" rel="noopener" class="submenu-link">Public Bid Board &#8599;</a>
 										</li>
 									</ul>
 								</li>

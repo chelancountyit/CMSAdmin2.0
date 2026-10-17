@@ -77,7 +77,7 @@ component extends="Controller" {
 		local.isPublicNotice = StructKeyExists(local.req, "isPublicNotice") ? evToBoolean(local.req.isPublicNotice, false) : false;
 
 		local.status = Trim(local.req.status ?: "Published");
-		if (!ListFindNoCase("Published,Draft,Cancelled,Postponed", local.status)) {
+		if (!ListFindNoCase("Published,Draft,Cancelled,Postponed,Scheduled,Archived", local.status)) {
 			local.status = "Published";
 		}
 
@@ -137,6 +137,12 @@ component extends="Controller" {
 			local.endDateFormatted = local.startDateFormatted;
 		}
 
+		local.hasPublishAt = StructKeyExists(local.req, "publish_at") && Len(Trim(local.req.publish_at)) && IsDate(local.req.publish_at);
+		local.publishAt = local.hasPublishAt ? ParseDateTime(local.req.publish_at) : "";
+
+		local.hasUnpublishAt = StructKeyExists(local.req, "unpublish_at") && Len(Trim(local.req.unpublish_at)) && IsDate(local.req.unpublish_at);
+		local.unpublishAt = local.hasUnpublishAt ? ParseDateTime(local.req.unpublish_at) : "";
+
 		local.actor = evCurrentActor();
 
 		try {
@@ -169,6 +175,8 @@ component extends="Controller" {
 					    is_featured         = :isFeatured,
 					    is_public_notice    = :isNotice,
 					    status              = :status,
+					    publish_at          = :publishAt,
+					    unpublish_at        = :unpublishAt,
 					    modified_by         = :actor,
 					    updatedat           = SYSUTCDATETIME()
 					WHERE id = :id AND deletedat IS NULL
@@ -197,6 +205,8 @@ component extends="Controller" {
 					isFeatured:   { value: local.isFeatured ? 1 : 0, cfsqltype: "cf_sql_bit" },
 					isNotice:     { value: local.isPublicNotice ? 1 : 0, cfsqltype: "cf_sql_bit" },
 					status:       { value: local.status, cfsqltype: "cf_sql_nvarchar" },
+					publishAt:    local.hasPublishAt ? { value: local.publishAt, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
+					unpublishAt:  local.hasUnpublishAt ? { value: local.unpublishAt, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
 					actor:        { value: local.actor, cfsqltype: "cf_sql_nvarchar" },
 					id:           { value: local.id, cfsqltype: "cf_sql_integer" }
 				}, { datasource: "ChelanCountyWebsite" });
@@ -210,7 +220,7 @@ component extends="Controller" {
 						location_name, location_address, room_number,
 						virtual_meeting_url, virtual_meeting_id, agenda_url, minutes_url,
 						contact_name, contact_email, contact_phone,
-						is_featured, is_public_notice, status,
+						is_featured, is_public_notice, status, publish_at, unpublish_at,
 						created_by, modified_by, createdat, updatedat
 					)
 					OUTPUT INSERTED.id AS newId
@@ -220,7 +230,7 @@ component extends="Controller" {
 						:locName, :locAddr, :roomNum,
 						:virtUrl, :virtId, :agendaUrl, :minutesUrl,
 						:contactName, :contactEmail, :contactPhone,
-						:isFeatured, :isNotice, :status,
+						:isFeatured, :isNotice, :status, :publishAt, :unpublishAt,
 						:actor, :actor, SYSUTCDATETIME(), SYSUTCDATETIME()
 					)
 				", {
@@ -248,7 +258,8 @@ component extends="Controller" {
 					isFeatured:   { value: local.isFeatured ? 1 : 0, cfsqltype: "cf_sql_bit" },
 					isNotice:     { value: local.isPublicNotice ? 1 : 0, cfsqltype: "cf_sql_bit" },
 					status:       { value: local.status, cfsqltype: "cf_sql_nvarchar" },
-					actor:        { value: local.actor, cfsqltype: "cf_sql_nvarchar" }
+					publishAt:    local.hasPublishAt ? { value: local.publishAt, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
+					unpublishAt:  local.hasUnpublishAt ? { value: local.unpublishAt, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
 				}, { datasource: "ChelanCountyWebsite" });
 				local.id = Val(local.ins.newId);
 			}
@@ -1032,7 +1043,7 @@ component extends="Controller" {
 				       e.location_name, e.location_address, e.room_number,
 				       e.virtual_meeting_url, e.virtual_meeting_id, e.agenda_url, e.minutes_url,
 				       e.contact_name, e.contact_email, e.contact_phone,
-				       e.is_featured, e.is_public_notice, e.status,
+				       e.is_featured, e.is_public_notice, e.status, e.publish_at, e.unpublish_at,
 				       e.created_by, e.modified_by, e.createdat, e.updatedat,
 				       c.name AS category_name, c.slug AS category_slug, c.color AS category_color,
 				       c.badge_class AS category_badge, c.icon AS category_icon
@@ -1051,6 +1062,9 @@ component extends="Controller" {
 				local.sDateStr = IsDate(local.r.start_date) ? DateFormat(local.r.start_date, "yyyy-mm-dd") : DateFormat(Now(), "yyyy-mm-dd");
 				local.eDateStr = IsDate(local.r.end_date) ? DateFormat(local.r.end_date, "yyyy-mm-dd") : local.sDateStr;
 				local.updatedStr = IsDate(local.r.updatedat) ? DateFormat(local.r.updatedat, "mm/dd/yyyy") : "";
+
+				local.pubStr = IsDate(local.r.publish_at ?: "") ? DateFormat(local.r.publish_at, "yyyy-mm-dd") & "T" & TimeFormat(local.r.publish_at, "HH:mm") : "";
+				local.unpubStr = IsDate(local.r.unpublish_at ?: "") ? DateFormat(local.r.unpublish_at, "yyyy-mm-dd") & "T" & TimeFormat(local.r.unpublish_at, "HH:mm") : "";
 
 				ArrayAppend(local.events, {
 					"id":                 Val(local.r.id),
@@ -1086,6 +1100,8 @@ component extends="Controller" {
 					"isFeatured":         (local.r.is_featured == 1),
 					"isPublicNotice":     (local.r.is_public_notice == 1),
 					"status":             Len(Trim(local.r.status ?: "")) ? local.r.status : "Published",
+					"publishAt":          local.pubStr,
+					"unpublishAt":        local.unpubStr,
 					"updated":            local.updatedStr,
 					"author":             Len(Trim(local.r.modified_by ?: "")) ? local.r.modified_by : (local.r.created_by ?: "Admin")
 				});

@@ -215,6 +215,18 @@ public string function svgIcon(required string name, string class = "", numeric 
 		case "pest":
 		case "infestation":
 			return '<svg #baseAttrs#><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>';
+		case "gavel":
+		case "bids":
+		case "rfps":
+		case "rfp":
+		case "solicitations":
+			return '<svg #baseAttrs#><path d="m14 13-7.5 7.5a2.12 2.12 0 1 1-3-3L11 10"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/></svg>';
+		case "award":
+		case "badge-check":
+			return '<svg #baseAttrs#><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>';
+		case "file-signature":
+		case "contract":
+			return '<svg #baseAttrs#><path d="M20 19.5v.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8.5L20 7.5V11"/><path d="M14 2v6h6"/><path d="M18.42 15.61a2.1 2.1 0 1 1 2.97 2.97L16.95 23 13 24l1-3.95 4.42-4.44Z"/></svg>';
 		default:
 			return '<svg #baseAttrs#><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
 	}
@@ -233,7 +245,11 @@ public string function statusBadge(required string status) {
 		case "published":
 		case "active":
 		case "live":
+		case "open":
 			badgeClass = "badge-success";
+			break;
+		case "awarded":
+			badgeClass = "badge-purple";
 			break;
 		case "draft":
 			badgeClass = "badge-neutral";
@@ -241,11 +257,15 @@ public string function statusBadge(required string status) {
 		case "scheduled":
 		case "pending":
 		case "in review":
+		case "under review":
+		case "award pending":
 			badgeClass = "badge-warning";
 			break;
 		case "trash":
 		case "inactive":
 		case "archived":
+		case "cancelled":
+		case "closed":
 			badgeClass = "badge-danger";
 			break;
 		case "featured":

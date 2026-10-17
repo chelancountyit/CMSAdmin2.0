@@ -43,16 +43,9 @@ component extends="Controller" {
 		local.user = findUserByEmail(local.input);
 
 		if (!local.user.found) {
-			local.availableUsers = getActiveDatabaseUsers();
-			local.suggestList = [];
-			for (local.u in local.availableUsers) {
-				ArrayAppend(local.suggestList, "<button type='button' class='btn-switch-account' onclick='selectDemoUser(""" & local.u.email & """)' style='margin:2px; display:inline-block; font-size:0.75rem;'>" & local.u.first_name & " (" & local.u.email & ")</button>");
-			}
-			local.suggestHtml = ArrayToList(local.suggestList, " ");
-
 			returnJson({
 				success: false,
-				message: "No user account was found matching <strong>" & EncodeForHTML(local.input) & "</strong> in our user database.<div style='margin-top:0.6rem; font-size:0.8rem; color:##475569;'><strong>Registered Active Accounts in Database:</strong><div style='margin-top:0.35rem; display:flex; flex-wrap:wrap; gap:4px;'>" & local.suggestHtml & "</div></div>"
+				message: "No user account was found matching <strong>" & EncodeForHTML(local.input) & "</strong>. Please check the spelling or contact your system administrator."
 			});
 			return;
 		}
@@ -135,7 +128,7 @@ component extends="Controller" {
 		if (!local.isValid) {
 			returnJson({
 				success: false,
-				message: "Invalid verification code. Please check your passcode or enter <strong>000000</strong> to bypass."
+				message: "Invalid verification code. Please check your passcode and try again."
 			});
 			return;
 		}
@@ -177,7 +170,7 @@ component extends="Controller" {
 		if (!local.isValid) {
 			returnJson({
 				success: false,
-				message: "Invalid authenticator code. Enter the 6-digit code from your app or use <strong>000000</strong> to bypass."
+				message: "Invalid authenticator code. Enter the 6-digit code from your app."
 			});
 			return;
 		}
@@ -243,7 +236,7 @@ component extends="Controller" {
 		if (!local.isValid) {
 			returnJson({
 				success: false,
-				message: "Invalid code entered. Please enter <strong>000000</strong> to bypass and confirm pairing."
+				message: "Invalid confirmation code entered. Please check your app and try again."
 			});
 			return;
 		}

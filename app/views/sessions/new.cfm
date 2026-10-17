@@ -657,24 +657,6 @@
 						<span id="btnCheckEmailSpinner" class="spinner-inline" style="display:none;"></span>
 					</button>
 				</form>
-
-				<!--- Fast-Click Database User Demo Accounts --->
-				<cfif ArrayLen(variables.sampleUsers) gt 0>
-					<div class="demo-accounts-section">
-						<div class="demo-section-title">
-							<span>#svgIcon(name="users", size=14)#</span>
-							<span>Quick Select From Database:</span>
-						</div>
-						<div class="demo-pills-list">
-							<cfloop array="#variables.sampleUsers#" index="local.u">
-								<button type="button" class="demo-user-pill" onclick="selectDemoUser('#local.u.email#')">
-									<strong style="color:##0f172a;">#local.u.first_name# #local.u.last_name#</strong>
-									<span class="badge #local.u.role_badge# demo-role-tag">#local.u.role_name#</span>
-								</button>
-							</cfloop>
-						</div>
-					</div>
-				</cfif>
 			</div>
 
 			<!--- STEP 2: VERIFICATION & AUTHENTICATOR CHOICE --->
@@ -766,15 +748,6 @@
 					</div>
 
 					<div id="otpInputState" style="display:none;">
-						<div class="bypass-alert">
-							<div>
-								<span>Passcode Sent! </span>
-								<span id="devOtpBox">Dev code: <code id="devOtpDisplay" style="font-weight:700;">123456</code></span>
-							</div>
-							<button type="button" class="bypass-chip" onclick="fillCode('otpInput', '000000')" title="Click to fill 000000 bypass">
-								Use 000000 Bypass
-							</button>
-						</div>
 
 						<form id="verifyOtpForm" onsubmit="handleVerifyOtp(event)">
 							<div class="form-group-custom">
@@ -812,15 +785,6 @@
 					<p style="font-size:0.83rem; color:##64748b; margin:0 0 0.85rem 0;">
 						Open Microsoft Authenticator or Google Authenticator and enter the current 6-digit code.
 					</p>
-
-					<div class="bypass-alert">
-						<div>
-							<strong>Testing Bypass:</strong> Use <code style="font-weight:800;">000000</code> to bypass
-						</div>
-						<button type="button" class="bypass-chip" onclick="fillCode('authCodeInput', '000000')" title="Click to pre-fill bypass">
-							Fill 000000
-						</button>
-					</div>
 
 					<form id="verifyAuthForm" onsubmit="handleVerifyAuthenticator(event)">
 						<div class="form-group-custom">
@@ -867,15 +831,6 @@
 								Copy
 							</button>
 						</div>
-					</div>
-
-					<div class="bypass-alert">
-						<div>
-							<strong>Bypass Confirmation:</strong> Enter <code>000000</code> to confirm pairing
-						</div>
-						<button type="button" class="bypass-chip" onclick="fillCode('connectCodeInput', '000000')" title="Click to pre-fill bypass">
-							Fill 000000
-						</button>
 					</div>
 
 					<form id="saveAuthForm" onsubmit="handleSaveAuthenticator(event)">
@@ -1079,7 +1034,7 @@
 				authBadge.innerText = 'Connected';
 				authBadge.className = 'badge badge-success';
 			} else {
-				authBadge.innerText = 'Available (Bypass: 000000)';
+				authBadge.innerText = 'Available';
 				authBadge.className = 'badge badge-neutral';
 			}
 
@@ -1189,7 +1144,7 @@
 			clearAlerts();
 			var code = document.getElementById('otpInput').value.trim();
 			if (!code) {
-				showError('Please enter the 6-digit passcode or 000000.');
+				showError('Please enter the 6-digit passcode.');
 				return;
 			}
 
@@ -1232,7 +1187,7 @@
 			clearAlerts();
 			var code = document.getElementById('authCodeInput').value.trim();
 			if (!code) {
-				showError('Please enter the 6-digit authenticator code or 000000.');
+				showError('Please enter the 6-digit authenticator code.');
 				return;
 			}
 
@@ -1331,7 +1286,7 @@
 			clearAlerts();
 			var code = document.getElementById('connectCodeInput').value.trim();
 			if (!code) {
-				showError('Please enter confirmation code or 000000.');
+				showError('Please enter confirmation code.');
 				return;
 			}
 

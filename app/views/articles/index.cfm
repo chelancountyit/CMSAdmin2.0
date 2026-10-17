@@ -44,7 +44,7 @@
 </div>
 
 <!--- Metric Cards --->
-<div class="grid grid-4" style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+<div class="grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
 	<div class="admin-card" style="padding:1.1rem; display:flex; align-items:center; gap:1rem; border-left:4px solid var(--admin-primary);">
 		<div style="width:42px; height:42px; border-radius:var(--radius-md); background:rgba(2, 132, 199, 0.1); display:flex; align-items:center; justify-content:center; color:var(--admin-primary);">
 			#svgIcon(name="article", size=22)#
@@ -62,6 +62,16 @@
 		<div>
 			<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-text-muted); font-weight:600;">Published Live</div>
 			<div style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main); line-height:1.2;">#Val(stats.published ?: 0)#</div>
+		</div>
+	</div>
+
+	<div class="admin-card" style="padding:1.1rem; display:flex; align-items:center; gap:1rem; border-left:4px solid ##0284c7;">
+		<div style="width:42px; height:42px; border-radius:var(--radius-md); background:rgba(2, 132, 199, 0.1); display:flex; align-items:center; justify-content:center; color:##0284c7;">
+			#svgIcon(name="calendar", size=22)#
+		</div>
+		<div>
+			<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-text-muted); font-weight:600;">Scheduled</div>
+			<div style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main); line-height:1.2;">#Val(stats.scheduled ?: 0)#</div>
 		</div>
 	</div>
 
@@ -100,6 +110,7 @@
 			<select name="status" class="form-control" onchange="this.form.submit()">
 				<option value="all" <cfif filterStatus eq 'all'>selected</cfif>>All Statuses</option>
 				<option value="published" <cfif filterStatus eq 'published'>selected</cfif>>Published Only</option>
+				<option value="scheduled" <cfif filterStatus eq 'scheduled'>selected</cfif>>Scheduled Only</option>
 				<option value="draft" <cfif filterStatus eq 'draft'>selected</cfif>>Drafts Only</option>
 				<option value="archived" <cfif filterStatus eq 'archived'>selected</cfif>>Archived</option>
 			</select>
@@ -203,6 +214,10 @@
 								<cfif art.status eq "published">
 									<button type="button" class="badge badge-success" style="cursor:pointer; border:none; padding:0.25rem 0.6rem; font-size:0.72rem;" onclick="toggleArticleStatus(#art.id#, 'draft')" title="Click to unpublish (switch to draft)">
 										Published
+									</button>
+								<cfelseif art.status eq "scheduled">
+									<button type="button" class="badge badge-info" style="cursor:pointer; border:none; padding:0.25rem 0.6rem; font-size:0.72rem; background:##0284c7; color:##fff;" onclick="toggleArticleStatus(#art.id#, 'draft')" title="Scheduled for release — click to revert to draft">
+										Scheduled
 									</button>
 								<cfelseif art.status eq "draft">
 									<button type="button" class="badge badge-warning" style="cursor:pointer; border:none; padding:0.25rem 0.6rem; font-size:0.72rem;" onclick="toggleArticleStatus(#art.id#, 'published')" title="Click to publish live">
