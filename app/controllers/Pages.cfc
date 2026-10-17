@@ -228,19 +228,22 @@ component extends="Controller" {
 			local.res = queryExecute("
 				SET ANSI_NULLS ON;
 				SET QUOTED_IDENTIFIER ON;
+				SET NOCOUNT ON;
+				DECLARE @InsertedPages TABLE (newId INT);
 				INSERT INTO pages (
 					SiteID, PageType, MenuSelected, LayoutType, ParentID,
 					StatusCode, Permalink, Title, MetaTitle, MetaDesc, MetaKeyWords,
 					Summary, Body, isService, hasArchive, ShowInMenu, isLocked,
 					isPublished, Visibility, ViewCount, Created, CreatedBy, Modified, ModifiedBy
 				)
-				OUTPUT INSERTED.ContentID AS newId
+				OUTPUT INSERTED.ContentID INTO @InsertedPages(newId)
 				VALUES (
 					:siteId, 0, '', :layout, 0,
 					'Active', :slug, :title, :title, '', '',
 					'', '', 0, 0, 0, 0,
 					0, 'Draft', 0, SYSUTCDATETIME(), :actor, SYSUTCDATETIME(), :actor
-				)
+				);
+				SELECT newId FROM @InsertedPages;
 			", {
 				siteId: { value: local.siteId, cfsqltype: "cf_sql_nvarchar" },
 				layout: { value: local.layout, cfsqltype: "cf_sql_nvarchar" },
@@ -298,10 +301,6 @@ component extends="Controller" {
 		}
 		local.sidebarJson = SerializeJSON(local.sidebarIds);
 
-		if (local.id <= 0) {
-			fxRenderJson({ success: false, SUCCESS: false, message: "Valid page ID is required." }, 400);
-			return;
-		}
 		if (!Len(local.title)) {
 			fxRenderJson({ success: false, SUCCESS: false, message: "Page title is required." }, 422);
 			return;
@@ -326,9 +325,45 @@ component extends="Controller" {
 		}
 
 		try {
+			// If saving a brand new page directly from /pages/edit (id <= 0), insert initial row first
+			if (local.id <= 0) {
+				local.newSiteId = LCase(Trim(local.req.siteId ?: activeWorkspaceId()));
+				if (!Len(local.newSiteId) || local.newSiteId == "all" || local.newSiteId == "global") {
+					fxRenderJson({ success: false, SUCCESS: false, message: "Please select a workspace before creating a page." }, 422);
+					return;
+				}
+				local.insRes = queryExecute("
+					SET ANSI_NULLS ON;
+					SET QUOTED_IDENTIFIER ON;
+					SET NOCOUNT ON;
+					DECLARE @InsertedPages TABLE (newId INT);
+					INSERT INTO pages (
+						SiteID, PageType, MenuSelected, LayoutType, ParentID,
+						StatusCode, Permalink, Title, MetaTitle, MetaDesc, MetaKeyWords,
+						Summary, Body, isService, hasArchive, ShowInMenu, isLocked,
+						isPublished, Visibility, ViewCount, Created, CreatedBy, Modified, ModifiedBy
+					)
+					OUTPUT INSERTED.ContentID INTO @InsertedPages(newId)
+					VALUES (
+						:siteId, 0, '', :layout, 0,
+						'Active', :slug, :title, :title, '', '',
+						'', '', 0, 0, 0, 0,
+						0, 'Draft', 0, SYSUTCDATETIME(), :actor, SYSUTCDATETIME(), :actor
+					);
+					SELECT newId FROM @InsertedPages;
+				", {
+					siteId: { value: local.newSiteId, cfsqltype: "cf_sql_nvarchar" },
+					layout: { value: local.layout, cfsqltype: "cf_sql_nvarchar" },
+					slug: { value: local.slug, cfsqltype: "cf_sql_nvarchar" },
+					title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
+					actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+				local.id = Val(local.insRes.newId);
+			}
+
 			// Retrieve existing record to check site, lock status, and avoid collisions
 			local.curPageQ = queryExecute("
-				SELECT SiteID, isLocked, isService, imageAttachment, imageAttribution, imageAlt, imageTitle, imageDescription
+				SELECT SiteID, Permalink, isLocked, isService, imageAttachment, imageAttribution, imageAlt, imageTitle, imageDescription
 				FROM pages
 				WHERE ContentID = :id AND DeletedAt IS NULL
 			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
@@ -445,7 +480,7 @@ component extends="Controller" {
 				id: { value: local.id, cfsqltype: "cf_sql_integer" }
 			}, { datasource: "ChelanCountyWebsite" });
 
-			// Sync checked Folder Explorer items for this page
+			// Sync checked Folder Explorer items for this page (avoid setting ContentID = 0 which violates FK_page_FolderExplorer_pages)
 			if (StructKeyExists(local.req, "folderListingIds")) {
 				local.rawFolderIds = IsArray(local.req.folderListingIds) ? local.req.folderListingIds : ListToArray(ToString(local.req.folderListingIds));
 				local.checkedFolderIds = [];
@@ -456,9 +491,11 @@ component extends="Controller" {
 					}
 				}
 				if (!local.folderListingEnabled || ArrayLen(local.checkedFolderIds) == 0) {
-					queryExecute("
-						UPDATE page_FolderExplorer SET ContentID = 0 WHERE ContentID = :pageId
-					", { pageId: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+					try {
+						queryExecute("
+							UPDATE page_FolderExplorer SET ContentID = NULL WHERE ContentID = :pageId
+						", { pageId: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+					} catch (any errFeNull) {}
 				} else {
 					local.fPlaceholders = [];
 					local.fParams = { pageId: { value: local.id, cfsqltype: "cf_sql_integer" } };
@@ -469,9 +506,13 @@ component extends="Controller" {
 					}
 					local.fInClause = ArrayToList(local.fPlaceholders, ", ");
 					queryExecute("
-						UPDATE page_FolderExplorer SET ContentID = 0 WHERE ContentID = :pageId AND ID NOT IN (" & local.fInClause & ");
 						UPDATE page_FolderExplorer SET ContentID = :pageId WHERE ID IN (" & local.fInClause & ");
 					", local.fParams, { datasource: "ChelanCountyWebsite" });
+					try {
+						queryExecute("
+							UPDATE page_FolderExplorer SET ContentID = NULL WHERE ContentID = :pageId AND ID NOT IN (" & local.fInClause & ");
+						", local.fParams, { datasource: "ChelanCountyWebsite" });
+					} catch (any errFeUnlink) {}
 				}
 			}
 
@@ -491,6 +532,8 @@ component extends="Controller" {
 			fxRenderJson({
 				success: true,
 				SUCCESS: true,
+				id: local.id,
+				ID: local.id,
 				message: "Page saved successfully.",
 				MESSAGE: "Page saved successfully.",
 				updated: local.updatedStr,
@@ -926,10 +969,15 @@ component extends="Controller" {
 				local.insertParams.layoutValue = { value: local.layoutValue, cfsqltype: "cf_sql_nvarchar" };
 
 				local.res = queryExecute("
+					SET ANSI_NULLS ON;
+					SET QUOTED_IDENTIFIER ON;
+					SET NOCOUNT ON;
+					DECLARE @InsertedRows TABLE (newId INT);
 					INSERT INTO page_FolderExplorer (ContentID, SiteID, Title, RelativePath, AbsolutePath, Absolute, Weight, Layout)
-					OUTPUT INSERTED.ID AS newId
+					OUTPUT INSERTED.ID INTO @InsertedRows(newId)
 					SELECT :contentId, :siteId, :title, :rel, :abs, :isAbs, ISNULL(MAX(Weight), 0) + 1, :layoutValue
-					FROM page_FolderExplorer WHERE SiteID IN (" & local.siteInClause & ")
+					FROM page_FolderExplorer WHERE SiteID IN (" & local.siteInClause & ");
+					SELECT newId FROM @InsertedRows;
 				", local.insertParams, { datasource: "ChelanCountyWebsite" });
 				local.id = local.res.newId;
 			}
@@ -1179,9 +1227,14 @@ component extends="Controller" {
 				local.insertParams.actor = { value: local.actor, cfsqltype: "cf_sql_nvarchar" };
 
 				local.res = queryExecute("
+					SET ANSI_NULLS ON;
+					SET QUOTED_IDENTIFIER ON;
+					SET NOCOUNT ON;
+					DECLARE @InsertedRows TABLE (newId INT);
 					INSERT INTO page_SubPage (ContentID, SiteID, Title, Body, Position, CreatedAt, CreatedBy)
-					OUTPUT INSERTED.ID AS newId
-					VALUES (:contentId, :siteId, :title, :body, :position, SYSDATETIME(), :actor)
+					OUTPUT INSERTED.ID INTO @InsertedRows(newId)
+					VALUES (:contentId, :siteId, :title, :body, :position, SYSDATETIME(), :actor);
+					SELECT newId FROM @InsertedRows;
 				", local.insertParams, { datasource: "ChelanCountyWebsite" });
 				local.id = local.res.newId;
 			}
@@ -1958,17 +2011,20 @@ component extends="Controller" {
 				local.ins = queryExecute("
 					SET ANSI_NULLS ON;
 					SET QUOTED_IDENTIFIER ON;
+					SET NOCOUNT ON;
+					DECLARE @InsertedRows TABLE (newId INT);
 					INSERT INTO how_do_i_items (
 						category_id, siteid, question, destination_type, page_id, form_id,
 						destination_url, open_in_new_tab, is_featured_mega_menu, sort_order,
 						is_published, created_by, modified_by, createdat, updatedat
 					)
-					OUTPUT INSERTED.id AS newId
+					OUTPUT INSERTED.id INTO @InsertedRows(newId)
 					VALUES (
 						:catId, :siteId, :question, :dtype, :pageId, :formId,
 						:durl, :newTab, :mega, :sortOrder,
 						:pub, :actor, :actor, SYSUTCDATETIME(), SYSUTCDATETIME()
-					)
+					);
+					SELECT newId FROM @InsertedRows;
 				", {
 					catId: { value: local.categoryId, cfsqltype: "cf_sql_integer" },
 					siteId: { value: local.siteId, cfsqltype: "cf_sql_nvarchar" },
@@ -2196,9 +2252,12 @@ component extends="Controller" {
 				local.ins = queryExecute("
 					SET ANSI_NULLS ON;
 					SET QUOTED_IDENTIFIER ON;
+					SET NOCOUNT ON;
+					DECLARE @InsertedRows TABLE (newId INT);
 					INSERT INTO how_do_i_categories (name, slug, icon, description, sort_order, is_active, is_system, createdat, updatedat)
-					OUTPUT INSERTED.id AS newId
-					VALUES (:name, :slug, :icon, :desc, :sortOrder, :isActive, 0, SYSUTCDATETIME(), SYSUTCDATETIME())
+					OUTPUT INSERTED.id INTO @InsertedRows(newId)
+					VALUES (:name, :slug, :icon, :desc, :sortOrder, :isActive, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
+					SELECT newId FROM @InsertedRows;
 				", {
 					name: { value: local.name, cfsqltype: "cf_sql_nvarchar" },
 					slug: { value: local.slug, cfsqltype: "cf_sql_nvarchar" },

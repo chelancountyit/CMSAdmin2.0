@@ -1,4 +1,7 @@
+<cfprocessingdirective pageencoding="utf-8">
 <cfset pageTitle = "Navigation Manager">
+<cfparam name="workspacePages" default="#[]#">
+<cfparam name="workspaceHomePath" default="/">
 <cfscript>
 	navIconNames = "folder,file-text,book,clipboard-list,calendar,building,briefcase,users,user,globe,map-pin,mail,phone,search,link,download,upload,shield,lock,info,help-circle,star,megaphone,bell,clock,hard-drive,grid,layers,settings,trending-up,tag,image,monitor,dashboard,chevron-left,chevron-right,chevron-up,chevron-down,code,arrow-left,arrow-right";
 	navIconSvgs = {};
@@ -98,7 +101,7 @@
 		<div class="card-body nav-manager-toolbar">
 			<div>
 				<div class="form-label" style="margin-bottom:0.25rem;">Side Menu</div>
-				<div class="pg-help">Manage this site’s side navigation. The main menu is managed separately.</div>
+				<div class="pg-help">Manage this site's side navigation. The main menu is managed separately.</div>
 				<div id="navMenuSummary" class="pg-help" aria-live="polite" style="margin-top:0.35rem;"></div>
 			</div>
 			<button type="button" class="btn btn-primary btn-sm" id="navAddItem">#svgIcon(name="plus", size=14)# <span>Add Menu Item</span></button>
@@ -169,13 +172,12 @@
 					<div class="pg-field" id="navigationPageWrap">
 						<label for="navigationPage" class="form-label">Select a page</label>
 						<select id="navigationPage" class="form-control nav-editor-input">
-							<option value="/index.cfm/pages/index">All Pages</option>
-							<option value="/index.cfm/pages/edit?id=1">Inuvika Remote Access Clients</option>
-							<option value="/index.cfm/pages/edit?id=4">About Us</option>
-							<option value="/index.cfm/pages/edit?id=5">Mission Statement</option>
-							<option value="/index.cfm/forms/index">Online Forms</option>
-							<option value="/index.cfm/navigation/index">Navigation Manager</option>
-							<option value="__workspace_home__" id="navigationWorkspaceHomeOption" hidden>Home</option>
+							<option value="__workspace_home__" id="navigationWorkspaceHomeOption">Home (#encodeForHTML(workspaceHomePath)#)</option>
+							<cfloop array="#workspacePages#" index="wsPage">
+								<cfif LCase(wsPage.url) NEQ LCase(workspaceHomePath)>
+									<option value="#encodeForHTMLAttribute(wsPage.url)#">#encodeForHTML(wsPage.title)# (#encodeForHTML(wsPage.url)#)</option>
+								</cfif>
+							</cfloop>
 						</select>
 						<div class="nav-editor-description">Home points to this workspace on the public county site.</div>
 					</div>
@@ -285,12 +287,12 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 	}
 
 	var workspaceHomeUrl = getField(config, "homeUrl") || "";
+	var workspaceHomePath = getField(config, "homePath") || "/";
 	var workspaceHomeValue = "__workspace_home__";
-	if (workspaceHomeUrl) {
+	if (homeOption) {
 		homeOption.hidden = false;
 		homeOption.value = workspaceHomeValue;
-		var homeAddress = new URL(workspaceHomeUrl, window.location.href);
-		homeOption.textContent = "Home - " + homeAddress.host + homeAddress.pathname.replace(/\/$/, "");
+		homeOption.textContent = "Home (" + workspaceHomePath + ")";
 	}
 
 	// admin.js re-broadcasts the saved workspace during page init; only user-driven switches should reload,
@@ -365,7 +367,7 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 	}
 
 	function saveOrder(nextItems, successMessage) {
-		treeStatus.textContent = "Saving menu order…";
+		treeStatus.textContent = "Saving menu order...";
 		postJson(getField(config, "reorderUrl"), { items: sortedItems(nextItems) }).then(function () {
 			sideMenu = nextItems;
 			render();
@@ -380,7 +382,7 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 		var current = items();
 		var activeCount = current.filter(function (item) { return item.active; }).length;
 		document.getElementById("navMenuSummary").textContent =
-			current.length + " items · " + activeCount + " active · " +
+			current.length + " items \u00B7 " + activeCount + " active \u00B7 " +
 			current.filter(function (item) { return item.parentId; }).length + " nested";
 
 		current.filter(function (item) { return !item.parentId; }).forEach(function (item) {
@@ -406,7 +408,7 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 		row.className = "nav-menu-row";
 		var grip = document.createElement("span");
 		grip.className = "nav-menu-grip";
-		grip.textContent = "⋮⋮";
+		grip.textContent = "\u22EE\u22EE";
 		grip.title = "Drag to reorder or nest";
 		grip.setAttribute("aria-hidden", "true");
 
@@ -418,16 +420,16 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 		title.appendChild(document.createTextNode(item.title));
 		var url = document.createElement("div");
 		url.className = "nav-menu-url";
-		url.textContent = item.url + (item.active ? "" : " · Inactive") + (item.newWindow ? " · Opens in new tab" : "");
+		url.textContent = item.url + (item.active ? "" : " \u00B7 Inactive") + (item.newWindow ? " \u00B7 Opens in new tab" : "");
 		details.appendChild(title);
 		details.appendChild(url);
 
 		var actions = document.createElement("div");
 		actions.className = "nav-menu-actions";
-		addAction(actions, "↑", "Move up", function () { moveItem(item.id, -1); });
-		addAction(actions, "↓", "Move down", function () { moveItem(item.id, 1); });
+		addAction(actions, "\u2191", "Move up", function () { moveItem(item.id, -1); });
+		addAction(actions, "\u2193", "Move down", function () { moveItem(item.id, 1); });
 		addAction(actions, "Edit", "Edit " + item.title, function () { editItem(item.id); });
-		addAction(actions, "×", "Remove " + item.title, function () { removeItem(item.id); });
+		addAction(actions, "\u00D7", "Remove " + item.title, function () { removeItem(item.id); });
 
 		row.appendChild(grip);
 		row.appendChild(details);
@@ -581,22 +583,40 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 		nameInput.value = item.title;
 		iconSelect.value = Array.from(iconSelect.options).some(function (o) { return o.value === item.icon; }) ? item.icon : "";
 		updateIconPreview();
+		renderParentChoices();
 		parentSelect.value = item.parentId;
 		document.getElementById("navigationStatus").value = item.active ? "Active" : "Inactive";
 		document.getElementById("navigationNewWindow").checked = item.newWindow;
-		var isWorkspaceHome = workspaceHomeUrl && item.url === workspaceHomeUrl;
-		var matchingPage = !isWorkspaceHome && Array.from(pageSelect.options).some(function (option) { return option.value === item.url; });
-		destinationType.value = matchingPage ? "page" : "custom";
+		var normalizedItemUrl = (item.url || "").replace(/\/+$/, "") || "/";
+		var normalizedHomeUrl = workspaceHomeUrl ? workspaceHomeUrl.replace(/\/+$/, "") : "";
+		var normalizedHomePath = (workspaceHomePath || "/").replace(/\/+$/, "") || "/";
+		var isWorkspaceHome = (normalizedHomeUrl && normalizedItemUrl.toLowerCase() === normalizedHomeUrl.toLowerCase()) ||
+			(normalizedItemUrl.toLowerCase() === normalizedHomePath.toLowerCase());
+		var matchingOption = !isWorkspaceHome && Array.from(pageSelect.options).find(function (option) {
+			return option.value.toLowerCase() === item.url.toLowerCase();
+		});
+		if (!isWorkspaceHome && !matchingOption && item.destinationType === "page" && item.url && item.url.indexOf("/") === 0) {
+			var dynamicOpt = document.createElement("option");
+			dynamicOpt.value = item.url;
+			dynamicOpt.textContent = item.title + " (" + item.url + ")";
+			pageSelect.appendChild(dynamicOpt);
+			matchingOption = dynamicOpt;
+		}
+		destinationType.value = (isWorkspaceHome || matchingOption) ? "page" : "custom";
 		updateDestination();
 		if (isWorkspaceHome) {
 			pageSelect.value = workspaceHomeValue;
 			customUrl.value = item.url;
-		} else if (matchingPage) pageSelect.value = item.url;
-		else customUrl.value = item.url;
+		} else if (matchingOption) {
+			pageSelect.value = matchingOption.value;
+			customUrl.value = item.url;
+		} else {
+			customUrl.value = item.url;
+		}
 		document.getElementById("navEditorTitle").textContent = "Edit Menu Item";
 		document.getElementById("navSaveItem").textContent = "Save Changes";
 		document.getElementById("navCancelEdit").hidden = false;
-		status.textContent = "Editing “" + item.title + "”.";
+		status.textContent = 'Editing "' + item.title + '".';
 		nameInput.focus();
 	}
 
@@ -618,7 +638,7 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 			acceptText: "Remove",
 			destructive: true
 		})) return;
-		status.textContent = "Removing menu item…";
+		status.textContent = "Removing menu item...";
 		postJson(getField(config, "deleteUrl"), { id: id }).then(function (result) {
 			sideMenu = current.filter(function (item) { return !removed.has(item.id); });
 			render();
@@ -640,8 +660,8 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 	form.addEventListener("submit", function (event) {
 		event.preventDefault();
 		var title = nameInput.value.trim();
-		var isWorkspaceHome = destinationType.value === "page" && pageSelect.value === workspaceHomeValue && workspaceHomeUrl;
-		var url = isWorkspaceHome ? workspaceHomeUrl : (destinationType.value === "page" ? pageSelect.value : customUrl.value.trim());
+		var isWorkspaceHome = destinationType.value === "page" && pageSelect.value === workspaceHomeValue;
+		var url = isWorkspaceHome ? (workspaceHomePath || workspaceHomeUrl || "/") : (destinationType.value === "page" ? pageSelect.value : customUrl.value.trim());
 		if (!title || !url) return;
 		var parentId = parentSelect.value;
 		var existing = editingId ? items().find(function (entry) { return String(entry.id) === String(editingId); }) : null;
@@ -652,7 +672,7 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 			id: existing ? existing.id : 0,
 			title: title,
 			url: url,
-			destinationType: isWorkspaceHome ? "custom" : destinationType.value,
+			destinationType: isWorkspaceHome ? "page" : destinationType.value,
 			parentId: parentId,
 			sortOrder: existing && String(existing.parentId || "") === String(parentId || "")
 				? existing.sortOrder
@@ -662,7 +682,7 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 			icon: iconSelect.value
 		};
 
-		status.textContent = "Saving menu item…";
+		status.textContent = "Saving menu item...";
 		postJson(getField(config, "saveUrl"), payload).then(function (result) {
 			var saved = normalizeItem(getField(result, "item"));
 			if (!saved || saved.id === undefined || saved.id === null) {
@@ -716,7 +736,7 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 			if (String(copy.id) === String(draggedId)) copy.parentId = targetItem.id;
 			return copy;
 		});
-		saveOrder(nextItems, "Menu item nested under “" + targetItem.title + "”.");
+		saveOrder(nextItems, 'Menu item nested under "' + targetItem.title + '".');
 	});
 
 	updateDestination();

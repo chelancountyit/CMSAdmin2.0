@@ -12,6 +12,24 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 16, 2026 — Navigation Manager Restoration, Page Save SQL Trigger Fix & ADA Inspect Diagnostics
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Navigation Manager (`app/controllers/Navigation.cfc`, `app/views/navigation/index.cfm`), Pages Module (`app/controllers/Pages.cfc`, `app/views/pages/edit.cfm`), Articles Module (`app/views/articles/edit.cfm`)
+- **Key Deliverables:**
+  1. **Navigation Manager Restoration (`Navigation.cfc`, `app/views/navigation/index.cfm`):**
+     - Resolved UTF-8 mojibake (`â‹®â‹®`, `â†‘`, `â†“`, `Ã—`, `Â·`) by adding `<cfprocessingdirective pageencoding="utf-8">` and replacing raw multi-byte symbols in JavaScript with Unicode escapes (`\u22EE\u22EE`, `\u2191`, `\u2193`, `\u00D7`, `\u00B7`).
+     - Replaced hardcoded placeholder `<select id="navigationPage">` options (`/index.cfm/pages/index`, etc.) with dynamic workspace pages queried from `dbo.pages` + `page_FolderExplorer` for the active workspace, plus the workspace home path (e.g., `/assessor`).
+     - Added automatic self-healing in `Navigation.cfc` (`index()`) to repair menu items whose `destination` was previously overwritten with `/index.cfm/pages/index` back to their proper workspace page URLs (e.g., `/assessor/maps`, `/assessor/appeal`, `/assessor/contact-us`).
+     - Added `protectsFromForgery(except="saveItem,deleteItem,reorder")`, `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;`, and SQL Server trigger-safe `OUTPUT INSERTED.id INTO @TableVar` in `Navigation.cfc`.
+  2. **Page Creation & Save SQL Server Trigger Compatibility (`Pages.cfc`):**
+     - Fixed `Unable to create page: Error Executing Database Query` caused by SQL Server error `The target table 'pages' of the DML statement cannot have any enabled triggers if the statement contains an OUTPUT clause without INTO clause`.
+     - Updated `INSERT INTO pages` in `Pages.cfc` (`save()` and `syncWorkspaceFiles()`) to use `DECLARE @InsertedPages TABLE (newId INT); ... OUTPUT INSERTED.ContentID INTO @InsertedPages(newId); SELECT newId FROM @InsertedPages;`.
+     - Fixed `FK_page_FolderExplorer_pages` foreign key constraint violation when syncing workspace files by inserting `ContentID = NULL` into `page_FolderExplorer` when no matching `dbo.pages` row exists.
+  3. **ADA Pre-Flight "Inspect Diagnostics" Drawer & Inline Scorecard (`app/views/pages/edit.cfm`, `app/views/articles/edit.cfm`):**
+     - Connected the `#adaTopTrigger` ("Inspect Diagnostics") button and added an inline expandable diagnostics scorecard directly below the top banner in both the Page Studio and Article Editor.
+
+---
+
 ### Session: October 16, 2026 — JBDEditor Table Insertion & Table Tools Restoration Across All Instances
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** Rich Text Editor (`javascripts/jbdeditor.js`, `stylesheets/jbdeditor.css`, `app/views/layout.cfm`, `javascripts/jbdeditor/*`, `vendor/jbdeditor/src/*`)
@@ -122,9 +140,9 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ---
 
-### Milestone 9: Adobe ColdFusion Compatibility, JBDEditor Table Overhaul & ADA Pre-Flight Inspect Diagnostics Fix
+### Milestone 9: Adobe ColdFusion Compatibility, JBDEditor Table Overhaul, ADA Pre-Flight Diagnostics & Page Creation SQL Fix
 - **Files Modified:**
-  - `app/controllers/Workspaces.cfc`, `app/controllers/Forms.cfc`, `app/helpers/functions.cfm`, `app/views/workspaces/index.cfm`, `config/routes.cfm`
+  - `app/controllers/Workspaces.cfc`, `app/controllers/Forms.cfc`, `app/controllers/Pages.cfc`, `app/helpers/functions.cfm`, `app/views/workspaces/index.cfm`, `config/routes.cfm`
   - `javascripts/jbdeditor.js`, `stylesheets/jbdeditor.css`, `app/views/layout.cfm`, `javascripts/admin.js`
   - `app/views/pages/edit.cfm`, `app/views/articles/edit.cfm`
 - **Root Causes & Engineering Solutions:**
@@ -133,5 +151,9 @@ This log maintains a chronological, permanent record of engineering milestones, 
   3. **ADA Pre-Flight "Inspect Diagnostics" Toggle & Inline Scorecard (`pages/edit.cfm` & `articles/edit.cfm`):**
      - Fixed `.pg-a11y-drawer { display: flex; }` overriding the HTML `[hidden]` attribute by adding `.pg-a11y-drawer[hidden] { display: none !important; }` and explicitly synchronizing `drawer.style.display` and `drawer.hidden` inside `syncDrawerState()`.
      - Added an expandable inline diagnostics list (`#pgA11yPublishInlineList` and `#articleA11yPublishInlineList`) directly inside the sidebar **ADA Pre-Flight** Publish widget with `Locate` and `Quick Fix` buttons, synchronized chevron rotation (`Inspect Diagnostics` / `Hide Diagnostics`), and replaced all remaining native `prompt()` calls in `PageA11yLinter.applyQuickFix` with a custom accessible modal (`askA11yInputModal`).
+  4. **Page Creation & Save SQL Server Trigger / Foreign Key Fixes (`Pages.cfc`):**
+     - Fixed `The target table 'pages' of the DML statement cannot have any enabled triggers if the statement contains an OUTPUT clause without INTO clause` in `createModal()`, `save()`, `saveFolderExplorer()`, `saveSubpage()`, `saveHowDoIItem()`, and `saveHowDoICategory()` by declaring a table variable `@InsertedPages` / `@InsertedRows` and using `OUTPUT INSERTED.ContentID INTO @InsertedPages(newId)`.
+     - Fixed `FK_page_FolderExplorer_pages` foreign key constraint conflict during `save()` by replacing `SET ContentID = 0` with `SET ContentID = NULL` inside a guarded `try/catch` block.
+
 
 

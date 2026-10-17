@@ -2,6 +2,7 @@ component extends="Controller" {
 
 	function config() {
 		super.config();
+		protectsFromForgery(except="saveItem,deleteItem,reorder");
 		filters(through="requireAdmin");
 	}
 
@@ -26,6 +27,7 @@ component extends="Controller" {
 		local.primarySiteHost = "";
 		local.currentWorkspaceType = "";
 		local.currentWorkspaceRedirectUrl = "";
+		local.homeSlug = ReReplaceNoCase(local.siteid, "^site-", "");
 		for (local.workspace in local.workspaces) {
 			if (CompareNoCase(local.workspace.id, "site-main") == 0) {
 				local.primarySiteHost = StructKeyExists(local.workspace, "alias") && Len(Trim(local.workspace.alias))
@@ -39,20 +41,24 @@ component extends="Controller" {
 					&& IsSimpleValue(local.workspace.redirect_url)
 					? Trim(local.workspace.redirect_url)
 					: "";
-			}
-		}
-		if (!REFindNoCase("^https?://", local.currentWorkspaceRedirectUrl) && local.siteid != "global" && Len(local.primarySiteHost)) {
-			// No redirect URL set: fall back to the workspace's virtual directory on the primary site.
-			local.homeSlug = local.siteid;
-			for (local.workspace in local.workspaces) {
-				if (CompareNoCase(local.workspace.id, local.siteid) == 0
-					&& StructKeyExists(local.workspace, "virtual_directory")
+				if (StructKeyExists(local.workspace, "virtual_directory")
 					&& IsSimpleValue(local.workspace.virtual_directory)
 					&& Len(Trim(local.workspace.virtual_directory))) {
 					local.homeSlug = Trim(local.workspace.virtual_directory);
+				} else if (StructKeyExists(local.workspace, "code")
+					&& IsSimpleValue(local.workspace.code)
+					&& Len(Trim(local.workspace.code))) {
+					local.homeSlug = Trim(local.workspace.code);
 				}
 			}
-			local.workspaceHomeUrl = "https://" & local.primarySiteHost & (local.siteid == "site-main" ? "" : "/" & local.homeSlug);
+		}
+		local.cleanHomeSlug = ReReplace(local.homeSlug, "^/+|/+$", "", "all");
+		local.wsBasePath = (local.siteid == "site-main" || local.siteid == "global" || !Len(local.cleanHomeSlug))
+			? "/"
+			: "/" & LCase(local.cleanHomeSlug);
+
+		if (!REFindNoCase("^https?://", local.currentWorkspaceRedirectUrl) && local.siteid != "global" && Len(local.primarySiteHost)) {
+			local.workspaceHomeUrl = "https://" & local.primarySiteHost & (local.siteid == "site-main" ? "" : local.wsBasePath);
 		} else if (REFindNoCase("^https?://", local.currentWorkspaceRedirectUrl)) {
 			if (local.siteid == "site-main" && Len(local.primarySiteHost)) {
 				local.workspaceHomeUrl = "https://" & local.primarySiteHost;
@@ -73,6 +79,9 @@ component extends="Controller" {
 			return;
 		}
 
+		variables.workspaceHomePath = local.wsBasePath;
+		variables.workspacePages = loadWorkspacePages(local.siteid, local.wsBasePath);
+
 		ensureIconColumn();
 		local.menuId = findNavigationMenuId(local.siteid);
 		variables.navigationItems = [];
@@ -87,10 +96,31 @@ component extends="Controller" {
 			", { menuId: intParam(local.menuId) });
 
 			for (local.row in local.rows) {
+				local.destUrl = Trim(local.row.destination ?: "");
+				local.healedUrl = local.destUrl;
+				// Auto-heal menu items whose destination was overwritten with admin placeholder /index.cfm/...
+				if (REFindNoCase("^/index\.cfm(/|$)", local.destUrl)) {
+					local.healedUrl = resolveMenuItemPageUrl(local.row.label ?: "", local.wsBasePath, variables.workspacePages);
+				} else if (local.row.destination_type != "url" || (Len(local.cleanHomeSlug) && REFindNoCase("^/?" & local.cleanHomeSlug & "/(?!page/)[^/]+/?$", local.destUrl))) {
+					local.healedUrl = normalizeWorkspacePageDestination(local.destUrl, local.wsBasePath);
+				}
+				if (Len(local.healedUrl) && local.healedUrl != local.destUrl) {
+					local.destUrl = local.healedUrl;
+					try {
+						navigationQuery("
+							UPDATE navigation_menu_items
+							SET destination = :dest, destination_type = 'page', updatedat = SYSUTCDATETIME()
+							WHERE id = :id
+						", {
+							dest: stringParam(local.destUrl, 1000),
+							id: intParam(Val(local.row.id))
+						});
+					} catch (any errHeal) {}
+				}
 				ArrayAppend(variables.navigationItems, {
 					id: local.row.id,
 					title: local.row.label,
-					url: local.row.destination,
+					url: local.destUrl,
 					destinationType: local.row.destination_type == "url" ? "custom" : "page",
 					parentId: IsNumeric(local.row.parent_item_id) ? Val(local.row.parent_item_id) : "",
 					sortOrder: local.row.sort_order,
@@ -103,9 +133,11 @@ component extends="Controller" {
 
 		variables.navigationConfigJson = safeJsonForScript({
 			"items": variables.navigationItems,
+			"pages": variables.workspacePages,
 			"workspaceId": local.siteid,
 			"workspaceName": local.workspaceName,
 			"homeUrl": local.workspaceHomeUrl,
+			"homePath": local.wsBasePath,
 			"saveUrl": urlFor(controller="navigation", action="saveItem"),
 			"deleteUrl": urlFor(controller="navigation", action="deleteItem"),
 			"reorderUrl": urlFor(controller="navigation", action="reorder")
@@ -132,9 +164,13 @@ component extends="Controller" {
 			renderJson({ success: false, message: "A label, valid link type, and destination are required." }, 422);
 			return;
 		}
+		if (local.destinationType == "page" && !REFindNoCase("^https?://", local.destination)) {
+			local.wsBasePath = resolveWorkspaceBasePath(local.siteid);
+			local.destination = Left(normalizeWorkspacePageDestination(local.destination, local.wsBasePath), 1000);
+		}
 		if (
 			(local.destinationType == "custom" && !REFindNoCase("^(https?://|/)", local.destination))
-			|| (local.destinationType == "page" && Left(local.destination, 1) != "/")
+			|| (local.destinationType == "page" && !REFindNoCase("^(https?://|/)", local.destination))
 			|| Left(local.destination, 2) == "//"
 		) {
 			renderJson({ success: false, message: "Destinations must use an HTTP(S) URL or a site-relative path." }, 422);
@@ -173,9 +209,12 @@ component extends="Controller" {
 				local.menuId = findNavigationMenuId(local.siteid);
 				if (local.menuId == 0) {
 					local.insertedMenu = navigationQuery("
+						SET NOCOUNT ON;
+						DECLARE @InsertedMenu TABLE (id INT);
 						INSERT INTO navigation_menus (siteid, menu_key, name)
-						OUTPUT INSERTED.id
-						VALUES (:siteid, :menuKey, :menuName)
+						OUTPUT INSERTED.id INTO @InsertedMenu(id)
+						VALUES (:siteid, :menuKey, :menuName);
+						SELECT id FROM @InsertedMenu;
 					", {
 						siteid: stringParam(local.siteid, 100),
 						menuKey: stringParam("side", 100),
@@ -217,6 +256,8 @@ component extends="Controller" {
 				if (local.itemId > 0) {
 					local.itemParams.id = intParam(local.itemId);
 					local.updated = navigationQuery("
+						SET NOCOUNT ON;
+						DECLARE @UpdatedItem TABLE (id INT);
 						UPDATE navigation_menu_items
 						SET parent_item_id = :parentId,
 						    label = :label,
@@ -227,8 +268,9 @@ component extends="Controller" {
 						    open_in_new_tab = :newWindow,
 						    icon = :icon,
 						    updatedat = SYSUTCDATETIME()
-						OUTPUT INSERTED.id
-						WHERE id = :id AND navigation_menu_id = :menuId AND deletedat IS NULL
+						OUTPUT INSERTED.id INTO @UpdatedItem(id)
+						WHERE id = :id AND navigation_menu_id = :menuId AND deletedat IS NULL;
+						SELECT id FROM @UpdatedItem;
 					", local.itemParams);
 					if (!local.updated.recordCount) {
 						transactionRollback();
@@ -238,11 +280,14 @@ component extends="Controller" {
 					local.itemId = local.updated.id;
 				} else {
 					local.insertedItem = navigationQuery("
+						SET NOCOUNT ON;
+						DECLARE @InsertedItem TABLE (id INT);
 						INSERT INTO navigation_menu_items
-							(navigation_menu_id, parent_item_id, label, destination_type, destination, 							sort_order, is_active, open_in_new_tab, icon)
-						OUTPUT INSERTED.id
+							(navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, icon)
+						OUTPUT INSERTED.id INTO @InsertedItem(id)
 						VALUES
-														(:menuId, :parentId, :label, :destinationType, :destination, :sortOrder, :isActive, :newWindow, :icon)
+							(:menuId, :parentId, :label, :destinationType, :destination, :sortOrder, :isActive, :newWindow, :icon);
+						SELECT id FROM @InsertedItem;
 					", local.itemParams);
 					local.itemId = local.insertedItem.id;
 				}
@@ -452,7 +497,259 @@ component extends="Controller" {
 			siteid: stringParam(arguments.siteid, 100),
 			menuKey: stringParam("side", 100)
 		});
-		return local.row.recordCount ? Val(local.row.id) : 0;
+		if (local.row.recordCount) return Val(local.row.id);
+
+		local.candidates = getCandidateSiteIds(arguments.siteid);
+		for (local.cand in local.candidates) {
+			local.row = navigationQuery("
+				SELECT id FROM navigation_menus
+				WHERE siteid = :siteid AND menu_key = :menuKey
+			", {
+				siteid: stringParam(local.cand, 100),
+				menuKey: stringParam("side", 100)
+			});
+			if (local.row.recordCount) return Val(local.row.id);
+		}
+		return 0;
+	}
+
+	private string function resolveWorkspaceBasePath(required string siteid) {
+		local.homeSlug = ReReplaceNoCase(arguments.siteid, "^site-", "");
+		for (local.workspace in getMasterWorkspaces()) {
+			if (CompareNoCase(local.workspace.id, arguments.siteid) == 0) {
+				if (StructKeyExists(local.workspace, "virtual_directory")
+					&& IsSimpleValue(local.workspace.virtual_directory)
+					&& Len(Trim(local.workspace.virtual_directory))) {
+					local.homeSlug = Trim(local.workspace.virtual_directory);
+				} else if (StructKeyExists(local.workspace, "code")
+					&& IsSimpleValue(local.workspace.code)
+					&& Len(Trim(local.workspace.code))) {
+					local.homeSlug = Trim(local.workspace.code);
+				}
+				break;
+			}
+		}
+		local.cleanHomeSlug = ReReplace(local.homeSlug, "^/+|/+$", "", "all");
+		return (arguments.siteid == "site-main" || arguments.siteid == "global" || !Len(local.cleanHomeSlug))
+			? "/"
+			: "/" & LCase(local.cleanHomeSlug);
+	}
+
+	private string function normalizeWorkspacePageDestination(required string destUrl, required string wsBasePath) {
+		local.urlVal = Trim(arguments.destUrl);
+		if (!Len(local.urlVal) || REFindNoCase("^https?://", local.urlVal)) {
+			return local.urlVal;
+		}
+		if (Left(local.urlVal, 1) != "/") {
+			local.urlVal = "/" & local.urlVal;
+		}
+		local.urlVal = REReplaceNoCase(local.urlVal, "\.cfm$", "", "one");
+		local.urlVal = ReReplace(local.urlVal, "/+$", "", "one");
+		if (!Len(local.urlVal)) {
+			local.urlVal = "/";
+		}
+
+		local.cleanBase = ReReplace(arguments.wsBasePath, "^/+|/+$", "", "all");
+		if (Len(local.cleanBase)) {
+			local.basePath = "/" & LCase(local.cleanBase);
+			if (
+				CompareNoCase(local.urlVal, local.basePath) == 0
+				|| CompareNoCase(local.urlVal, local.basePath & "/home") == 0
+				|| CompareNoCase(local.urlVal, local.basePath & "/index") == 0
+				|| CompareNoCase(local.urlVal, local.basePath & "/page/home") == 0
+				|| CompareNoCase(local.urlVal, local.basePath & "/page/index") == 0
+			) {
+				return local.basePath;
+			}
+			if (REFindNoCase("^" & local.basePath & "/page/[^/]+$", local.urlVal)) {
+				local.slugPart = ReReplaceNoCase(local.urlVal, "^" & local.basePath & "/page/+", "", "one");
+				return local.basePath & "/page/" & local.slugPart;
+			}
+			if (REFindNoCase("^" & local.basePath & "/[^/]+$", local.urlVal)) {
+				local.slugPart = ReReplaceNoCase(local.urlVal, "^" & local.basePath & "/+", "", "one");
+				return local.basePath & "/page/" & local.slugPart;
+			}
+			return local.urlVal;
+		} else {
+			if (
+				local.urlVal == "/"
+				|| CompareNoCase(local.urlVal, "/home") == 0
+				|| CompareNoCase(local.urlVal, "/index") == 0
+			) {
+				return "/";
+			}
+			if (!REFindNoCase("^/page/", local.urlVal)) {
+				local.slugPart = ReReplace(local.urlVal, "^/+", "", "one");
+				return "/page/" & local.slugPart;
+			}
+			return local.urlVal;
+		}
+	}
+
+	private array function getCandidateSiteIds(required string wsId) {
+		local.candidates = [arguments.wsId];
+		local.cleanId = LCase(Trim(arguments.wsId));
+		local.noSiteId = ReReplaceNoCase(local.cleanId, "^site-", "");
+		if (Len(local.noSiteId) && !ArrayFindNoCase(local.candidates, local.noSiteId)) {
+			ArrayAppend(local.candidates, local.noSiteId);
+		}
+		if (Right(local.noSiteId, 1) == "s" && Len(local.noSiteId) > 1) {
+			local.singular = Left(local.noSiteId, Len(local.noSiteId) - 1);
+			if (!ArrayFindNoCase(local.candidates, local.singular)) ArrayAppend(local.candidates, local.singular);
+		} else if (Len(local.noSiteId)) {
+			local.plural = local.noSiteId & "s";
+			if (!ArrayFindNoCase(local.candidates, local.plural)) ArrayAppend(local.candidates, local.plural);
+		}
+		local.aliasMap = {
+			"global": ["county-wide", "default", "chelan-county", "main"],
+			"assessor": ["assessors", "1"],
+			"auditor": ["2"],
+			"board-of-commissioners": ["commissioners", "3"],
+			"cashmere-dryden-airport": ["airport"],
+			"clerk": ["superior-court-clerk", "4"],
+			"community-development": ["5"],
+			"coroner": ["6"],
+			"county-fair": ["fair", "expo-center"],
+			"district-court": ["7"],
+			"economic-services": ["economic-development"],
+			"emergency-management": ["em"],
+			"facilities": ["maintenance", "facilities-maintenance"],
+			"farm-worker-housing": ["fwh"],
+			"flood-control-zone-district": ["flood-control"],
+			"horticultural-pest-and-disease": ["pest-board", "horticultural"],
+			"human-resources": ["hr", "8"],
+			"information-technology": ["it", "9"],
+			"jail": ["regional-justice-center", "ccrjc", "10"],
+			"juvenile": ["juvenile-center", "11"],
+			"natural-resources": ["nr", "12"],
+			"noxious-weed": ["weed-board"],
+			"ohme-gardens": ["ohme"],
+			"prosecuting-attorney": ["prosecutor", "13"],
+			"public-works": ["pw", "14"],
+			"rivercom": ["rivercom-911", "911"],
+			"sheriff": ["15"],
+			"solid-waste": ["waste"],
+			"superior-court": ["16"],
+			"treasurer": ["17"],
+			"veterans": ["veterans-program", "veterans-relief"],
+			"water-conservancy-board": ["water-board"],
+			"wenatchee-river-county-park": ["wenatchee-river-park", "park"]
+		};
+		if (StructKeyExists(local.aliasMap, local.noSiteId)) {
+			for (local.alias in local.aliasMap[local.noSiteId]) {
+				if (!ArrayFindNoCase(local.candidates, local.alias)) {
+					ArrayAppend(local.candidates, local.alias);
+				}
+			}
+		}
+		for (local.c in Duplicate(local.candidates)) {
+			if (Left(local.c, 5) != "site-") {
+				local.withSite = "site-" & local.c;
+				if (!ArrayFindNoCase(local.candidates, local.withSite)) {
+					ArrayAppend(local.candidates, local.withSite);
+				}
+			}
+		}
+		return local.candidates;
+	}
+
+	private array function loadWorkspacePages(required string siteid, required string wsBasePath) {
+		local.pages = [];
+		try {
+			local.candidates = getCandidateSiteIds(arguments.siteid);
+			local.params = {};
+			local.inList = [];
+			for (local.i = 1; local.i <= ArrayLen(local.candidates); local.i++) {
+				local.key = "ws" & local.i;
+				ArrayAppend(local.inList, ":" & local.key);
+				local.params[local.key] = { value: local.candidates[local.i], cfsqltype: "cf_sql_varchar" };
+			}
+			local.qPages = navigationQuery("
+				SELECT p.ContentID, p.Title AS title, p.Permalink AS permalink, p.Visibility AS status, fe.FullPath
+				FROM pages p
+				LEFT JOIN page_FolderExplorer fe
+					ON fe.ContentID = p.ContentID
+					AND fe.WorkspaceID = p.siteid
+				WHERE p.deletedat IS NULL
+				  AND p.siteid IN (#ArrayToList(local.inList, ',')#)
+				ORDER BY p.Title ASC
+			", local.params);
+
+			local.seenUrls = {};
+			for (local.row in local.qPages) {
+				local.rawTitle = Trim(local.row.title ?: "");
+				if (!Len(local.rawTitle)) continue;
+
+				local.rawSlug = Trim(local.row.permalink ?: "");
+				local.fullPath = Trim(local.row.FullPath ?: "");
+				local.publicUrl = "";
+
+				if (!Len(local.rawSlug) && Len(local.fullPath)) {
+					local.rawSlug = ListLast(REReplaceNoCase(local.fullPath, "\.cfm$", "", "one"), "/");
+				}
+				if (!Len(local.rawSlug)) {
+					local.rawSlug = REReplace(LCase(local.rawTitle), "[^a-z0-9]+", "-", "all");
+					local.rawSlug = REReplace(local.rawSlug, "^-+|-+$", "", "all");
+				}
+
+				local.cleanSlug = ReReplace(local.rawSlug, "^/+|/+$", "", "all");
+				local.cleanBase = ReReplace(arguments.wsBasePath, "^/+|/+$", "", "all");
+				if (Len(local.cleanBase)) {
+					local.cleanSlug = ReReplaceNoCase(local.cleanSlug, "^" & local.cleanBase & "/(page/)?", "", "one");
+				} else {
+					local.cleanSlug = ReReplaceNoCase(local.cleanSlug, "^page/", "", "one");
+				}
+
+				if (LCase(local.cleanSlug) == "index" || LCase(local.cleanSlug) == "home" || !Len(local.cleanSlug)) {
+					local.publicUrl = arguments.wsBasePath;
+				} else {
+					local.basePrefix = (arguments.wsBasePath == "/") ? "" : arguments.wsBasePath;
+					local.publicUrl = local.basePrefix & "/page/" & local.cleanSlug;
+				}
+
+				if (!StructKeyExists(local.seenUrls, LCase(local.publicUrl))) {
+					local.seenUrls[LCase(local.publicUrl)] = true;
+					ArrayAppend(local.pages, {
+						id: Val(local.row.ContentID),
+						title: local.rawTitle,
+						url: local.publicUrl,
+						status: Trim(local.row.status ?: "Published")
+					});
+				}
+			}
+		} catch (any e) {
+			writeLog(type="warning", file="navigation", text="Unable to load workspace pages for navigation: #e.message# #e.detail#");
+		}
+		return local.pages;
+	}
+
+	private string function resolveMenuItemPageUrl(
+		required string label,
+		required string wsBasePath,
+		required array workspacePages
+	) {
+		local.cleanLabel = LCase(Trim(arguments.label));
+		if (!Len(local.cleanLabel)) return "";
+		if (local.cleanLabel == "home" || local.cleanLabel == "overview") {
+			return arguments.wsBasePath;
+		}
+		for (local.pg in arguments.workspacePages) {
+			if (LCase(Trim(local.pg.title)) == local.cleanLabel) {
+				return local.pg.url;
+			}
+		}
+		local.slug = REReplace(local.cleanLabel, "&", "and", "all");
+		local.slug = REReplace(local.slug, "[^a-z0-9]+", "-", "all");
+		local.slug = REReplace(local.slug, "^-+|-+$", "", "all");
+		if (!Len(local.slug)) return "";
+
+		for (local.pg in arguments.workspacePages) {
+			if (Right(LCase(local.pg.url), Len(local.slug) + 1) == "/" & local.slug) {
+				return local.pg.url;
+			}
+		}
+		local.basePrefix = (arguments.wsBasePath == "/") ? "" : arguments.wsBasePath;
+		return local.basePrefix & "/page/" & local.slug;
 	}
 
 	private boolean function navigationItemExists(required numeric menuId, required numeric itemId) {
@@ -481,13 +778,15 @@ component extends="Controller" {
 
 	private void function ensureIconColumn() {
 		queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 			IF COL_LENGTH('navigation_menu_items', 'icon') IS NULL
 				ALTER TABLE navigation_menu_items ADD icon NVARCHAR(50) NULL
 		", {}, { datasource: "ChelanCountyWebsite" });
 	}
 
 	private any function navigationQuery(required string sql, struct params = {}) {
-		return queryExecute(arguments.sql, arguments.params, { datasource: "ChelanCountyWebsite" });
+		local.fullSql = "SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON; " & arguments.sql;
+		return queryExecute(local.fullSql, arguments.params, { datasource: "ChelanCountyWebsite" });
 	}
 
 	private struct function intParam(required numeric value) {
