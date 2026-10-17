@@ -221,3 +221,14 @@ This log maintains a chronological, permanent record of engineering milestones, 
   4. **Pluralization Grammar:** Corrected badge label grammar from `1 WARNINGS` to `1 WARNING` and `1 CRITICAL`.
   5. **Early Return Clearing Bug in `renderDrawerList()`:** Previously, when all issues were resolved (`filtered.length === 0`), `renderDrawerList()` returned early before calling `renderPublishInlineList()`. Consequently, `#pgA11yPublishInlineList` was never cleared, leaving stale diagnostic cards (e.g. `WARN: Top-Level Section Skips <h2>`) visible in the sidebar Publish card while the rest of the linter reported `Compliant` / `PASS`. Removed the early return blockage, called `renderPublishInlineList()` directly from `renderUI()`, and updated `lnkInspectA11yText` to dynamically reflect exact issue counts (`Inspect Diagnostics (X)` vs `View Audit Summary`).
 
+
+---
+
+### Milestone 11: RFP & Bids Module Workspace Streamlining & ColdFusion LSP Hardening
+- **Files Modified:**
+  - `app/controllers/Rfps.cfc`, `app/views/rfps/edit.cfm`, `app/views/rfps/index.cfm`, `app/views/rfps/publicList.cfm`, `app/views/layout.cfm`
+- **Key Deliverables & Engineering Solutions:**
+  1. **Redundant Workspace Control Elimination (`rfps/edit.cfm`):** Removed the redundant "Issuing Department" `<select id="site_id">` dropdown block from the RFP edit/create template to align with the global top-header workspace switcher (Alt+W).
+  2. **Seamless Data Binding & Media Picker Scoping:** Replaced the visible dropdown with a hidden `<input type="hidden" name="site_id" id="site_id">` at the form root. Enhanced `openMediaPickerForInput()` to read `site_id` with fallback to `cmsadmin_workspace` cookie, and added an event listener for `cmsadmin:workspaceChanged` to automatically synchronize new announcements with header workspace selection.
+  3. **Controller Workspace Resolution (`Rfps.cfc`):** Updated `new()` and `save()` to resolve active workspace via `resolveUserActiveWorkspace()` using request parameters, `cmsadmin_workspace` cookie, and user role scoping, guaranteeing data isolation across county departments.
+  4. **ColdFusion Template Parser Hardening:** Replaced embedded `<cfif>` conditionals inside HTML attributes with standard CFML ternary expressions `#(cond ? "val" : "")#` across all RFP templates and `layout.cfm`, resolving ColdFusion LSP diagnostic warnings.

@@ -37,6 +37,7 @@
 
 <form id="solicitationForm" method="post" action="#urlFor(controller='rfps', action='save')#" novalidate>
 	<input type="hidden" name="id" id="solicitationId" value="#variables.solicitation.id#">
+	<input type="hidden" name="site_id" id="site_id" value="#encodeForHTMLAttribute(variables.solicitation.siteId)#">
 	<input type="hidden" name="authenticityToken" value="#authenticityToken()#">
 
 	<div style="display:grid; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap:1.5rem; align-items:start;">
@@ -227,16 +228,6 @@
 					</select>
 				</div>
 
-				<div style="margin-bottom:1rem;">
-					<label for="site_id" class="form-label" style="font-weight:600;">Issuing Department</label>
-					<select id="site_id" name="site_id" class="form-control">
-						<cfloop array="#variables.departments#" index="dept">
-							<cfif dept.code neq "global">
-								<option value="#dept.code#" #(variables.solicitation.siteId eq dept.code ? "selected" : "")#>#dept.name#</option>
-							</cfif>
-						</cfloop>
-					</select>
-				</div>
 
 				<div style="margin-bottom:0;">
 					<label for="estimated_budget_range" class="form-label" style="font-weight:600;">Estimated Budget (Optional)</label>
@@ -559,7 +550,12 @@ let currentMediaTargetInputId = null;
 
 function openMediaPickerForInput(inputId, titleText) {
 	currentMediaTargetInputId = inputId;
-	const dept = document.getElementById('site_id').value || 'public-works';
+	const siteEl = document.getElementById('site_id');
+	let dept = siteEl ? siteEl.value : '';
+	if (!dept || dept === 'global') {
+		const m = document.cookie.match(/(?:^|;\s*)cmsadmin_workspace=([^;]+)/);
+		dept = (m && m[1] && m[1] !== 'global') ? decodeURIComponent(m[1]) : 'public-works';
+	}
 	const iframe = document.getElementById('mediaPickerIframe');
 	const modal = document.getElementById('mediaPickerModal');
 	const backdrop = document.getElementById('mediaPickerModalBackdrop');
@@ -590,6 +586,17 @@ window.addEventListener('message', function(e) {
 				window.showToast("Document linked: " + chosenUrl, "success");
 			}
 			closeMediaPickerModal();
+		}
+	}
+});
+
+// Sync active workspace from top-header switcher if creating new announcement
+window.addEventListener('cmsadmin:workspaceChanged', function(e) {
+	const solId = parseInt(document.getElementById('solicitationId').value, 10);
+	if (solId === 0 && e && e.detail && e.detail.id && e.detail.id !== 'global') {
+		const siteEl = document.getElementById('site_id');
+		if (siteEl) {
+			siteEl.value = e.detail.id;
 		}
 	}
 });

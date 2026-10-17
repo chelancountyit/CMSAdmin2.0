@@ -109,7 +109,11 @@ component extends="Controller" {
 		variables.pageTitle = "Create New Solicitation";
 		variables.departments = getDepartmentsList();
 
-		local.activeWs = structKeyExists(session, "activeWorkspace") && session.activeWorkspace != "global" ? session.activeWorkspace : "public-works";
+		local.role = getCurrentActiveRole();
+		local.requestedWs = (structKeyExists(params, "ws") && Len(Trim(params.ws))) ? Trim(params.ws)
+			: ((structKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace))) ? Trim(cookie.cmsadmin_workspace) : (structKeyExists(session, "activeWorkspace") ? session.activeWorkspace : "global"));
+		local.activeWsObj = resolveUserActiveWorkspace(requestedWs = local.requestedWs, role = local.role);
+		local.activeWs = (structKeyExists(local.activeWsObj, "id") && local.activeWsObj.id != "global" && Len(local.activeWsObj.id)) ? local.activeWsObj.id : "public-works";
 
 		variables.solicitation = {
 			id: 0,
@@ -268,7 +272,9 @@ component extends="Controller" {
 	function save() {
 		local.isAjax = isAjax();
 		local.id = structKeyExists(params, "id") ? Val(params.id) : 0;
-		local.siteId = structKeyExists(params, "site_id") && Len(Trim(params.site_id)) ? Trim(params.site_id) : "public-works";
+		local.siteId = structKeyExists(params, "site_id") && Len(Trim(params.site_id)) ? Trim(params.site_id) : (
+			(structKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace)) && LCase(Trim(cookie.cmsadmin_workspace)) != "global") ? Trim(cookie.cmsadmin_workspace) : "public-works"
+		);
 		local.solicitationNumber = structKeyExists(params, "solicitation_number") ? Trim(params.solicitation_number) : "";
 		local.title = structKeyExists(params, "title") ? Trim(params.title) : "";
 		local.slug = structKeyExists(params, "slug") && Len(Trim(params.slug)) ? slugify(params.slug) : slugify(local.title);
