@@ -460,9 +460,9 @@
 				return renderNode(c, depth + 1);
 			}).join('');
 
-			var isShared = (node.name.toLowerCase() === 'shared images');
+			var isShared = (node.name.toLowerCase() === 'shared images' || Boolean(node.isShared));
 			var displayName = isShared ? 'Shared Images' : node.name;
-			var countText = (node.count != null && !isNaN(node.count)) ? String(node.count) : '';
+			var countText = (node.count != null && !isNaN(node.count) && node.count !== '') ? String(node.count) : '';
 
 			return '<li>' +
 				'<button type="button" class="tree-row' + (isCur ? ' is-active' : '') + (depth === 0 ? ' is-root' : '') + (isShared ? ' is-shared' : '') + '"' +
@@ -495,10 +495,17 @@
 			treeHtml += renderNode(wsNode, 0);
 		}
 
-		if (d.sharedTree && d.sharedTree.name) {
-			treeHtml += '<li class="tree-divider" style="margin: 10px 0; border-top: 1px solid var(--admin-border, #e2e8f0); list-style: none;" aria-hidden="true"></li>';
-			treeHtml += renderNode(d.sharedTree, 0);
-		}
+		// Always render Shared Images as dedicated root library outside workspace folder
+		var sharedNode = d.sharedTree || {
+			name: 'Shared Images',
+			path: 'shared images',
+			count: '',
+			isShared: true,
+			isReadOnly: true,
+			children: []
+		};
+		treeHtml += '<li class="tree-divider" style="margin: 10px 0; border-top: 1px solid var(--fx-border, #cbd5e1); list-style: none;" aria-hidden="true"></li>';
+		treeHtml += renderNode(sharedNode, 0);
 
 		el.tree.innerHTML = treeHtml;
 	}

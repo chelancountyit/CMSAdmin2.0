@@ -3,7 +3,7 @@
 <cfparam name="variables.activeWsVirtualDir" default="#variables.activeWsFolder#">
 <cfparam name="variables.activeWsName" default="#variables.activeWsFolder#">
 <cfoutput>
-<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=2.6">
+<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=2.8">
 
 <div class="content-header" style="margin-bottom: 1.25rem;">
 	<div class="content-header-title">
@@ -108,5 +108,5 @@
 	<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=2.4"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=2.8"></script>
 </cfoutput>

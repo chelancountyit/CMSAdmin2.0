@@ -13,7 +13,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Select Media Asset - Chelan County CMS</title>
 	<link rel="stylesheet" href="/stylesheets/admin-theme.css?v=3.0">
-	<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=2.6">
+	<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=2.8">
 	<style>
 		body {
 			background: #f8fafc;
@@ -135,7 +135,7 @@
 	<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=2.4"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=2.8"></script>
 </cfoutput>
 </body>
 </html>
