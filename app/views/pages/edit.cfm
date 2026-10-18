@@ -394,6 +394,10 @@
 					<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; flex-wrap:wrap; gap:0.5rem;">
 						<label for="pgContent" class="form-label" style="margin-bottom:0;">Page Content</label>
 						<div style="display:flex; align-items:center; gap:0.35rem;">
+							<button type="button" class="btn btn-outline btn-xs" id="btnEditorInsertCTA" title="Embed Call to Action card or grid into content">
+								#svgIcon(name="cta", size=13)#
+								<span>Embed Call to Action</span>
+							</button>
 							<button type="button" class="btn btn-outline btn-xs" id="btnEditorInsertForm" title="Embed online form into content">
 								#svgIcon(name="form", size=13)#
 								<span>Embed Form</span>
@@ -2237,6 +2241,14 @@
 		});
 	}
 
+	// Call to Action Embed Integration
+	var btnCTA = document.getElementById("btnEditorInsertCTA");
+	if (btnCTA) {
+		btnCTA.addEventListener("click", function() {
+			openEmbedCtaModal();
+		});
+	}
+
 	// Search & Sharing Auto-Generation from Page Content
 	var metaTitleInput = document.getElementById("pgMetaTitle");
 	var metaDescInput = document.getElementById("pgMetaDesc");
@@ -2500,10 +2512,13 @@ window.closeEmbedFormModal = function() {
 		}
 	}
 
-	var searchInput = document.getElementById("embedFormSearchInput");
-	if (searchInput) {
-		searchInput.addEventListener("input", runFilter);
-	}
+	document.addEventListener("input", function(e) {
+		if (e.target && e.target.id === "embedFormSearchInput") {
+			runFilter();
+		} else if (e.target && e.target.id === "embedCtaSearchInput") {
+			filterEmbedCtaCards();
+		}
+	});
 
 	document.addEventListener("click", function(e) {
 		var btnIframe = e.target.closest(".btn-insert-embed-iframe");
@@ -2515,8 +2530,8 @@ window.closeEmbedFormModal = function() {
 			var snippet = '<div class="cms-form-embed" data-form-slug="' + formSlug + '" data-form-id="' + formId + '">\n' +
 				'  <iframe src="' + formSrc + '" width="100%" height="750" frameborder="0" scrolling="no" style="border:none; width:100%; min-height:500px; overflow:hidden; border-radius:8px;" title="' + formTitle.replace(/"/g, '&quot;') + '"></iframe>\n' +
 				'</div>\n';
-			insertSnippetAtCursor("pgContent", snippet);
 			closeEmbedFormModal();
+			insertSnippetAtCursor("pgContent", snippet);
 			if (typeof window.showToast === "function") window.showToast('Embedded form "' + formTitle + '" into document.', 'success');
 			return;
 		}
@@ -2525,8 +2540,8 @@ window.closeEmbedFormModal = function() {
 		if (btnShortcode) {
 			var formSlug = btnShortcode.getAttribute("data-slug");
 			var snippet = '[chelan_form slug="' + formSlug + '"]';
-			insertSnippetAtCursor("pgContent", snippet);
 			closeEmbedFormModal();
+			insertSnippetAtCursor("pgContent", snippet);
 			if (typeof window.showToast === "function") window.showToast('Inserted shortcode [' + formSlug + '].', 'success');
 			return;
 		}
@@ -2537,6 +2552,244 @@ window.closeEmbedFormModal = function() {
 			var modal = document.getElementById("embedFormModal");
 			if (modal && modal.style.display !== "none") {
 				closeEmbedFormModal();
+			}
+		}
+	});
+
+	// Call to Action Embed Integration for JBDEditor
+	function syncCtaCardSelectionState() {
+		document.querySelectorAll(".embed-cta-card-item").forEach(function(card) {
+			var cb = card.querySelector(".embed-cta-checkbox");
+			if (cb && cb.checked) {
+				card.style.borderColor = "var(--admin-primary)";
+				card.style.boxShadow = "0 0 0 2px rgba(37, 99, 235, 0.15)";
+			} else {
+				card.style.borderColor = "var(--admin-border)";
+				card.style.boxShadow = "none";
+			}
+		});
+	}
+
+	window.openEmbedCtaModal = function() {
+		var modal = document.getElementById("embedCtaModal");
+		var backdrop = document.getElementById("embedCtaModalBackdrop");
+		if (backdrop && backdrop.parentElement !== document.body) document.body.appendChild(backdrop);
+		if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+
+		if (modal) {
+			modal.style.display = "flex";
+			modal.classList.add("open");
+		}
+		if (backdrop) {
+			backdrop.style.display = "block";
+			backdrop.style.opacity = "1";
+			backdrop.style.visibility = "visible";
+			backdrop.classList.add("open");
+		}
+		document.body.style.overflow = "hidden";
+
+		var searchInput = document.getElementById("embedCtaSearchInput");
+		if (searchInput) {
+			searchInput.value = "";
+			filterEmbedCtaCards();
+			setTimeout(function() { searchInput.focus(); }, 50);
+		}
+		syncCtaCardSelectionState();
+	};
+
+	window.closeEmbedCtaModal = function() {
+		var modal = document.getElementById("embedCtaModal");
+		var backdrop = document.getElementById("embedCtaModalBackdrop");
+		if (modal) {
+			modal.style.display = "none";
+			modal.classList.remove("open");
+		}
+		if (backdrop) {
+			backdrop.style.opacity = "0";
+			backdrop.style.visibility = "hidden";
+			backdrop.style.display = "none";
+			backdrop.classList.remove("open");
+		}
+		document.body.style.overflow = "";
+	};
+
+	function filterEmbedCtaCards() {
+		var term = (document.getElementById("embedCtaSearchInput") ? document.getElementById("embedCtaSearchInput").value : "").toLowerCase().trim();
+		var cards = document.querySelectorAll(".embed-cta-card-item");
+		var visibleCount = 0;
+		cards.forEach(function(card) {
+			var title = (card.getAttribute("data-title") || "").toLowerCase();
+			var slug = (card.getAttribute("data-slug") || "").toLowerCase();
+			var cat = (card.getAttribute("data-category") || "").toLowerCase();
+			var matches = !term || title.includes(term) || slug.includes(term) || cat.includes(term);
+
+			if (matches) {
+				card.style.display = "flex";
+				visibleCount++;
+			} else {
+				card.style.display = "none";
+			}
+		});
+
+		var countEl = document.getElementById("embedCtaAvailableCount");
+		if (countEl) countEl.textContent = visibleCount + " card" + (visibleCount !== 1 ? "s" : "") + " available";
+	}
+
+	function getCtaLinkIconSvg(linkIcon) {
+		var icon = (linkIcon || "arrow").toLowerCase();
+		if (icon === "external") {
+			return ' <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>';
+		} else if (icon === "pdf") {
+			return ' <span class="jbd-cta-pdf-badge" aria-hidden="true">PDF</span>';
+		} else if (icon === "none") {
+			return '';
+		}
+		return ' <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
+	}
+
+	function generateCtaCardHtml(cardEl) {
+		var title = cardEl.getAttribute("data-title") || "";
+		var slug = cardEl.getAttribute("data-slug") || "";
+		var linkUrl = cardEl.getAttribute("data-link-url") || ("#" + slug);
+		var linkIcon = (cardEl.getAttribute("data-link-icon") || "arrow").toLowerCase();
+		var targetBlank = cardEl.getAttribute("data-target-blank") === "1";
+		var imgEl = cardEl.querySelector("img");
+		var imgUrl = imgEl ? imgEl.getAttribute("src") : "";
+		var imgAlt = imgEl ? (imgEl.getAttribute("alt") || title) : title;
+		var badgeEl = cardEl.querySelector(".jbd-cta-badge");
+		var badgeText = badgeEl ? badgeEl.textContent.trim() : "";
+		var descEl = cardEl.querySelector("p");
+		var desc = descEl ? descEl.textContent.trim() : "";
+		var linkEl = cardEl.querySelector(".embed-cta-link-preview span") || cardEl.querySelector("div[style*='font-weight:700'] span");
+		var linkText = linkEl ? linkEl.textContent.trim() : "Learn More";
+		var targetAttr = targetBlank ? ' target="_blank" rel="noopener noreferrer"' : '';
+		var extClass = (targetBlank || linkIcon === "external") ? ' has-external-icon' : '';
+		var iconSuffix = getCtaLinkIconSvg(linkIcon);
+
+		var html = '  <aside class="jbd-template jbd-cta-card' + (imgUrl ? ' has-image' : '') + '" aria-label="Action: ' + escapeHtml(title) + '">\n';
+		if (imgUrl) {
+			html += '    <div class="jbd-cta-card-img-wrap"><img src="' + escapeHtml(imgUrl) + '" alt="' + escapeHtml(imgAlt) + '" loading="lazy"></div>\n';
+			html += '    <div class="jbd-cta-card-content">\n';
+		}
+		if (badgeText) {
+			html += '      <div class="jbd-cta-card-header"><span class="jbd-cta-badge">' + escapeHtml(badgeText) + '</span></div>\n';
+		}
+		html += '      <p class="jbd-cta-title h4">' + escapeHtml(title) + '</p>\n';
+		if (desc) {
+			html += '      <p class="jbd-cta-desc">' + escapeHtml(desc) + '</p>\n';
+		}
+		html += '      <div class="jbd-cta-card-footer">\n';
+		html += '        <a href="' + escapeHtml(linkUrl) + '" class="jbd-cta-link' + extClass + '"' + targetAttr + '><span>' + escapeHtml(linkText) + '</span>' + iconSuffix + '</a>\n';
+		html += '      </div>\n';
+		if (imgUrl) {
+			html += '    </div>\n';
+		}
+		html += '  </aside>\n';
+		return html;
+	}
+
+	document.addEventListener("change", function(e) {
+		if (e.target && e.target.classList && e.target.classList.contains("embed-cta-checkbox")) {
+			syncCtaCardSelectionState();
+		}
+	});
+
+	// Delegated click handler for all CTA Modal interactions
+	document.addEventListener("click", function(e) {
+		var btnSelAll = e.target.closest("#btnSelectAllCtaModal");
+		if (btnSelAll) {
+			e.preventDefault();
+			document.querySelectorAll(".embed-cta-card-item").forEach(function(card) {
+				if (card.style.display !== "none") {
+					var cb = card.querySelector(".embed-cta-checkbox");
+					if (cb) cb.checked = true;
+				}
+			});
+			syncCtaCardSelectionState();
+			return;
+		}
+
+		var btnClrAll = e.target.closest("#btnClearAllCtaModal");
+		if (btnClrAll) {
+			e.preventDefault();
+			document.querySelectorAll(".embed-cta-checkbox").forEach(function(cb) { cb.checked = false; });
+			syncCtaCardSelectionState();
+			return;
+		}
+
+		var btnEmbedGrid = e.target.closest("#btnEmbedSelectedCtaGrid");
+		if (btnEmbedGrid) {
+			e.preventDefault();
+			var checked = document.querySelectorAll(".embed-cta-checkbox:checked");
+			if (checked.length === 0) {
+				if (typeof window.adminAlert === "function") {
+					window.adminAlert({ title: "No Cards Selected", message: "Please check at least one card to assemble a grid.", type: "warning" });
+				}
+				return;
+			}
+
+			var layoutSel = document.getElementById("embedCtaLayoutSelect");
+			var layoutVal = layoutSel ? layoutSel.value : "3";
+			var gridClass = "cta-grid-3";
+			if (layoutVal === "4") {
+				gridClass = "cta-grid-4";
+			} else if (layoutVal === "2") {
+				gridClass = "cta-grid-2 cta-grid-50-50";
+			}
+
+			var gridHtml = '<section class="jbd-template jbd-cta-grid ' + gridClass + '" aria-label="Featured Actions">\n';
+			checked.forEach(function(cb) {
+				var cardEl = cb.closest(".embed-cta-card-item");
+				if (cardEl) {
+					gridHtml += generateCtaCardHtml(cardEl);
+				}
+			});
+			gridHtml += '</section>\n';
+
+			closeEmbedCtaModal();
+			insertSnippetAtCursor("pgContent", gridHtml);
+			if (typeof window.showToast === "function") window.showToast('Embedded ' + checked.length + '-card grid (' + layoutVal + '-column) into document.', 'success');
+			return;
+		}
+
+		var btnInsertGridSc = e.target.closest("#btnInsertSelectedCtaShortcodes");
+		if (btnInsertGridSc) {
+			e.preventDefault();
+			var checked = document.querySelectorAll(".embed-cta-checkbox:checked");
+			if (checked.length === 0) {
+				if (typeof window.adminAlert === "function") {
+					window.adminAlert({ title: "No Cards Selected", message: "Please check at least one card to generate a grid shortcode.", type: "warning" });
+				}
+				return;
+			}
+			var layoutSel = document.getElementById("embedCtaLayoutSelect");
+			var layoutVal = layoutSel ? layoutSel.value : "3";
+			var slugs = [];
+			checked.forEach(function(cb) { slugs.push(cb.value); });
+			var snippet = '[cta_grid slugs="' + slugs.join(',') + '" cols="' + layoutVal + '"]';
+			closeEmbedCtaModal();
+			insertSnippetAtCursor("pgContent", snippet);
+			if (typeof window.showToast === "function") window.showToast('Inserted grid shortcode (' + slugs.length + ' cards, ' + layoutVal + ' cols).', 'success');
+			return;
+		}
+
+		// Clicking anywhere on a CTA card in the modal toggles its selection checkbox
+		var clickedCard = e.target.closest(".embed-cta-card-item");
+		if (clickedCard && !e.target.closest("input[type='checkbox']") && !e.target.closest("button") && !e.target.closest("a")) {
+			var cb = clickedCard.querySelector(".embed-cta-checkbox");
+			if (cb) {
+				cb.checked = !cb.checked;
+				syncCtaCardSelectionState();
+			}
+			return;
+		}
+	});
+
+	document.addEventListener("keydown", function(e) {
+		if (e.key === "Escape") {
+			var modal = document.getElementById("embedCtaModal");
+			if (modal && modal.style.display !== "none") {
+				closeEmbedCtaModal();
 			}
 		}
 	});
@@ -2645,9 +2898,38 @@ window.addEventListener('message', function(e) {
 
 function insertSnippetAtCursor(textareaId, text) {
 	var editor = (typeof JBDEditor !== "undefined") ? JBDEditor.get("#" + textareaId) : null;
-	if (editor && typeof editor.insertHTML === "function") {
-		editor.insertHTML(text);
-		return;
+	if (editor) {
+		if (editor.isSourceMode && editor.sourceArea) {
+			var sa = editor.sourceArea;
+			var sStart = sa.selectionStart || sa.value.length;
+			var sEnd = sa.selectionEnd || sa.value.length;
+			var sVal = sa.value || "";
+			sa.value = sVal.substring(0, sStart) + "\n" + text + "\n" + sVal.substring(sEnd);
+			if (editor.contentArea) editor.contentArea.innerHTML = sa.value;
+			if (typeof editor._handleInput === "function") editor._handleInput();
+			else if (typeof editor.syncToTarget === "function") editor.syncToTarget();
+			sa.focus();
+			return;
+		}
+		var trimmed = (text || "").trim();
+		var isBlockHtml = /^<(section|aside|div|article|table|figure|blockquote)\b/i.test(trimmed);
+		if (isBlockHtml && typeof editor.insertTemplate === "function") {
+			editor.insertTemplate(trimmed);
+			return;
+		}
+		if (typeof editor.insertHTML === "function") {
+			if (!editor.savedSelectionRange && editor.contentArea) {
+				var p = document.createElement("p");
+				p.innerHTML = trimmed;
+				editor.contentArea.appendChild(p);
+				if (typeof editor._handleInput === "function") editor._handleInput();
+				else if (typeof editor.syncToTarget === "function") editor.syncToTarget();
+				editor.contentArea.focus();
+				return;
+			}
+			editor.insertHTML(text);
+			return;
+		}
 	}
 	var ta = document.getElementById(textareaId);
 	if (!ta) return;
@@ -5153,6 +5435,97 @@ if (typeof window.finishTopProgress === "function") window.finishTopProgress();
 			<span>Open Form Builder in new tab</span>
 		</a>
 		<button type="button" class="btn btn-outline btn-sm" onclick="closeEmbedFormModal()">Close</button>
+	</div>
+</div>
+
+<!--- Embed Call to Action Modal Overlay for Page Editor --->
+<div class="admin-modal-backdrop" id="embedCtaModalBackdrop" style="display:none; position:fixed; inset:0; z-index:99998; background:rgba(15,23,42,0.72) !important; backdrop-filter:blur(6px) !important; -webkit-backdrop-filter:blur(6px) !important; opacity:0; visibility:hidden; transition:opacity 0.2s ease, visibility 0.2s ease;" onclick="closeEmbedCtaModal()"></div>
+<div class="admin-modal" id="embedCtaModal" role="dialog" aria-modal="true" aria-labelledby="embedCtaModalTitle" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:99999; width:94%; max-width:880px; max-height:88vh; background:var(--admin-surface); border-radius:var(--radius-lg); box-shadow:0 25px 65px rgba(15,23,42,0.35); border:1px solid var(--admin-border); overflow:hidden; flex-direction:column;">
+	<div class="modal-header" style="padding:1rem 1.25rem; border-bottom:1px solid var(--admin-border-subtle); display:flex; justify-content:space-between; align-items:flex-start; background:var(--admin-bg);">
+		<div>
+			<h2 class="modal-title" id="embedCtaModalTitle" style="margin:0; font-size:1.1rem; font-weight:700; display:flex; align-items:center; gap:0.5rem; color:var(--admin-text-main);">
+				<cfoutput>#svgIcon(name="cta", size=18)#</cfoutput>
+				<span>Embed Call to Action Component</span>
+			</h2>
+			<div style="font-size:0.8rem; color:var(--admin-text-muted); margin-top:0.25rem;">
+				Embed responsive Call to Action cards or multi-card service grids into your page content.
+			</div>
+		</div>
+		<button type="button" class="btn btn-ghost btn-sm" onclick="closeEmbedCtaModal()" aria-label="Close CTA Modal" style="font-size:1.25rem; line-height:1; padding:0.25rem 0.5rem;">
+			<cfoutput>#svgIcon(name="x", size=16)#</cfoutput>
+		</button>
+	</div>
+
+	<div style="padding:0.85rem 1.25rem; border-bottom:1px solid var(--admin-border-subtle); background:var(--admin-surface); display:flex; gap:0.65rem; align-items:center; flex-wrap:wrap;">
+		<div style="position:relative; flex:1; min-width:240px;">
+			<input type="text" id="embedCtaSearchInput" class="form-control form-control-sm" placeholder="Search CTAs by title, description, or slug..." style="width:100%; padding-left:1.85rem; font-size:0.85rem;">
+			<span style="position:absolute; left:0.6rem; top:50%; transform:translateY(-50%); color:var(--admin-text-muted); pointer-events:none;">
+				<cfoutput>#svgIcon(name="search", size=13)#</cfoutput>
+			</span>
+		</div>
+		<div style="display:flex; align-items:center; gap:0.4rem;">
+			<button type="button" class="btn btn-outline btn-xs" id="btnSelectAllCtaModal">Select All</button>
+			<button type="button" class="btn btn-outline btn-xs" id="btnClearAllCtaModal">Clear All</button>
+			<span id="embedCtaAvailableCount" style="font-size:0.78rem; color:var(--admin-text-muted); white-space:nowrap; margin-left:0.5rem;">
+				<cfoutput>#ArrayLen(availableCtas)# card<cfif ArrayLen(availableCtas) neq 1>s</cfif> available</cfoutput>
+			</span>
+		</div>
+	</div>
+
+	<div id="embedCtaListContainer" style="flex:1; overflow-y:auto; padding:1.25rem; max-height:calc(88vh - 200px); display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1rem;">
+		<cfoutput>
+		<cfloop array="#availableCtas#" index="local.cta">
+			<div class="embed-cta-card-item" data-id="#local.cta.id#" data-slug="#EncodeForHTMLAttribute(local.cta.slug)#" data-title="#EncodeForHTMLAttribute(local.cta.title)#" data-category="#EncodeForHTMLAttribute(local.cta.category)#" data-link-url="#EncodeForHTMLAttribute(local.cta.linkUrl ?: '')#" data-link-icon="#EncodeForHTMLAttribute(local.cta.linkIcon ?: 'arrow')#" data-target-blank="#(StructKeyExists(local.cta, 'targetBlank') && local.cta.targetBlank ? '1' : '0')#" style="border:1.5px solid var(--admin-border); border-radius:8px; background:var(--admin-surface); display:flex; flex-direction:column; overflow:hidden; position:relative; cursor:pointer; transition:border-color 0.15s ease, box-shadow 0.15s ease;">
+				<div style="position:absolute; top:0.5rem; left:0.5rem; z-index:3; background:rgba(255,255,255,0.92); border-radius:4px; padding:0.2rem 0.35rem; display:flex; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
+					<input type="checkbox" class="embed-cta-checkbox" value="#local.cta.slug#" style="accent-color:var(--admin-primary); width:15px; height:15px; cursor:pointer;" title="Select for Multi-Card Grid">
+				</div>
+				<cfif Len(local.cta.imageUrl)>
+					<div style="width:100%; height:130px; overflow:hidden; background:##f1f5f9; position:relative;">
+						<img src="#local.cta.imageUrl#" alt="#EncodeForHTMLAttribute(local.cta.imageAlt)#" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">
+					</div>
+				</cfif>
+				<div style="padding:0.85rem; display:flex; flex-direction:column; flex:1;">
+					<cfif Len(local.cta.badgeText)>
+						<span class="jbd-cta-badge" style="font-size:0.65rem; padding:0.1rem 0.4rem; align-self:flex-start; margin-bottom:0.35rem;">#EncodeForHTML(local.cta.badgeText)#</span>
+					</cfif>
+					<strong style="font-size:0.95rem; color:var(--admin-text-main); margin-bottom:0.25rem; line-height:1.3;">#EncodeForHTML(local.cta.title)#</strong>
+					<p style="font-size:0.78rem; color:var(--admin-text-muted); line-height:1.45; margin:0 0 0.75rem; flex:1; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">#EncodeForHTML(local.cta.description)#</p>
+					<div class="embed-cta-link-preview" style="font-size:0.75rem; color:var(--admin-primary); font-weight:700; display:flex; align-items:center; gap:0.35rem;">
+						<span>#EncodeForHTML(local.cta.linkText)#</span>
+						<cfif local.cta.linkIcon eq "external"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg><cfelseif local.cta.linkIcon eq "pdf"><span class="jbd-cta-pdf-badge">PDF</span><cfelseif local.cta.linkIcon neq "none"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></cfif>
+					</div>
+				</div>
+			</div>
+		</cfloop>
+		</cfoutput>
+	</div>
+
+	<div class="modal-footer" style="padding:0.75rem 1.25rem; border-top:1px solid var(--admin-border-subtle); display:flex; justify-content:space-between; align-items:center; background:var(--admin-bg); flex-wrap:wrap; gap:0.5rem;">
+		<div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+			<div style="display:flex; align-items:center; gap:0.35rem; margin-right:0.35rem;">
+				<label for="embedCtaLayoutSelect" style="font-size:0.78rem; font-weight:600; color:var(--admin-text-muted); margin:0;">Layout:</label>
+				<select id="embedCtaLayoutSelect" class="form-select form-select-sm" style="font-size:0.8rem; padding:0.25rem 0.5rem; height:auto; width:auto; min-width:180px;">
+					<option value="3" selected>3 Columns (3 Col / 3x1 Grid)</option>
+					<option value="4">4 Columns (4 Col Grid)</option>
+					<option value="2">2 Columns (2x2 / 50-50 Split)</option>
+				</select>
+			</div>
+			<button type="button" class="btn btn-primary btn-sm" id="btnEmbedSelectedCtaGrid">
+				<cfoutput>#svgIcon(name="grid", size=14)#</cfoutput>
+				<span>Embed Selected Cards as Grid</span>
+			</button>
+			<button type="button" class="btn btn-outline btn-sm" id="btnInsertSelectedCtaShortcodes">
+				<cfoutput>#svgIcon(name="link", size=14)#</cfoutput>
+				<span>Insert Grid Shortcode</span>
+			</button>
+		</div>
+		<div style="display:flex; align-items:center; gap:0.5rem;">
+			<a href="/pages/call-to-action" target="_blank" rel="noopener" class="btn btn-ghost btn-xs" style="color:var(--admin-primary); text-decoration:none;">
+				<cfoutput>#svgIcon(name="external-link", size=13)#</cfoutput>
+				<span>Open CTA Studio</span>
+			</a>
+			<button type="button" class="btn btn-outline btn-sm" onclick="closeEmbedCtaModal()">Close</button>
+		</div>
 	</div>
 </div>
 

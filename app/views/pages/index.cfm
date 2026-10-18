@@ -227,6 +227,10 @@ form.admin-modal-dialog {
 		</nav>
 	</div>
 	<div class="page-actions" style="display:flex; gap:0.5rem; align-items:center;">
+		<a href="#urlFor(controller='pages', action='callToAction')#" class="btn btn-outline btn-sm">
+			#svgIcon(name="cta", size=15)#
+			<span>Call to Action Studio</span>
+		</a>
 		<a href="#urlFor(controller='pages', action='howDoI')#" class="btn btn-outline btn-sm">
 			#svgIcon(name="help-circle", size=15)#
 			<span>How Do I</span>

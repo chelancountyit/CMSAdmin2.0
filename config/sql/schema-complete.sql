@@ -1349,6 +1349,53 @@ GO
 
 
 -- =============================================================================
+-- MODULE 12: CALL TO ACTION STUDIO (page_call_to_actions)
+-- =============================================================================
+
+PRINT 'Checking Module 12: page_call_to_actions...';
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[page_call_to_actions]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[page_call_to_actions] (
+        [id]            INT IDENTITY(1,1) NOT NULL,
+        [siteid]        NVARCHAR(100) NOT NULL CONSTRAINT [DF_cta_siteid] DEFAULT (N'global'),
+        [title]         NVARCHAR(255) NOT NULL,
+        [slug]          NVARCHAR(150) NOT NULL,
+        [description]   NVARCHAR(MAX) NULL,
+        [image_url]     NVARCHAR(500) NULL,
+        [image_alt]     NVARCHAR(255) NULL,
+        [badge_text]    NVARCHAR(100) NULL,
+        [badge_color]   NVARCHAR(50) NULL CONSTRAINT [DF_cta_bcolor] DEFAULT (N'blue'),
+        [layout_type]   NVARCHAR(50) NOT NULL CONSTRAINT [DF_cta_layout] DEFAULT (N'card'),
+        [link_text]     NVARCHAR(150) NOT NULL CONSTRAINT [DF_cta_ltext] DEFAULT (N'Learn More'),
+        [link_url]      NVARCHAR(1000) NOT NULL,
+        [link_icon]     NVARCHAR(50) NOT NULL CONSTRAINT [DF_cta_licon] DEFAULT (N'arrow'),
+        [link_style]    NVARCHAR(50) NOT NULL CONSTRAINT [DF_cta_lstyle] DEFAULT (N'link'),
+        [target_blank]  BIT NOT NULL CONSTRAINT [DF_cta_tblank] DEFAULT (0),
+        [category]      NVARCHAR(100) NOT NULL CONSTRAINT [DF_cta_cat] DEFAULT (N'General'),
+        [sort_order]    INT NOT NULL CONSTRAINT [DF_cta_sort] DEFAULT (0),
+        [is_published]  BIT NOT NULL CONSTRAINT [DF_cta_pub] DEFAULT (1),
+        [created_by]    NVARCHAR(255) NULL,
+        [modified_by]   NVARCHAR(255) NULL,
+        [createdat]     DATETIME2(7) NOT NULL CONSTRAINT [DF_cta_createdat] DEFAULT (SYSUTCDATETIME()),
+        [updatedat]     DATETIME2(7) NOT NULL CONSTRAINT [DF_cta_updatedat] DEFAULT (SYSUTCDATETIME()),
+        [deletedat]     DATETIME2(7) NULL,
+        CONSTRAINT [PK_page_call_to_actions] PRIMARY KEY CLUSTERED ([id] ASC)
+    );
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_page_call_to_actions_site_slug' AND object_id = OBJECT_ID(N'[dbo].[page_call_to_actions]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_page_call_to_actions_site_slug]
+    ON [dbo].[page_call_to_actions] ([siteid], [slug])
+    WHERE [deletedat] IS NULL;
+END;
+GO
+
+
+-- =============================================================================
 -- FINAL VERIFICATION: TABLE AUDIT REPORT
 -- =============================================================================
 
@@ -1372,6 +1419,7 @@ WHERE t.[schema_id] = SCHEMA_ID(N'dbo')
       N'pages',
       N'page_FolderExplorer',
       N'page_SubPage',
+      N'page_call_to_actions',
       N'navigation_menus',
       N'navigation_menu_items',
       N'form_departments',

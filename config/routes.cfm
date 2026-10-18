@@ -64,6 +64,26 @@
 		.get(name="documentationFormBuilder", pattern="documentation/form-builder", to="documentation##formBuilder")
 		.get(name="documentation", pattern="documentation", to="documentation##index")
 
+		// Call to Action (CTA) Studio Routes
+		.get(name="pagesCallToAction", pattern="pages/call-to-action", to="pages##callToAction")
+		.get(name="pagesCallToActionAlt", pattern="pages/calltoaction", to="pages##callToAction")
+		.get(name="pagesCallToActionStudio", pattern="pages/call-to-action-studio", to="pages##callToAction")
+		.get(name="pagesCallToActionStudioAlt", pattern="pages/calltoactionstudio", to="pages##callToAction")
+		.get(name="pagesCallToActionManager", pattern="pages/call-to-action-manager", to="pages##callToAction")
+		.get(name="pagesCallToActionCamel", pattern="pages/callToAction", to="pages##callToAction")
+		.get(name="pagesCallToActionList", pattern="pages/call-to-action/list", to="pages##getCallToActions")
+		.get(name="pagesCallToActionListCamel", pattern="pages/getCallToActions", to="pages##getCallToActions")
+		.get(name="pagesCallToActionListHyphen", pattern="pages/get-call-to-actions", to="pages##getCallToActions")
+		.post(name="saveCallToAction", pattern="pages/call-to-action/save", to="pages##saveCallToAction")
+		.post(name="saveCallToActionCamel", pattern="pages/saveCallToAction", to="pages##saveCallToAction")
+		.post(name="saveCallToActionHyphen", pattern="pages/save-call-to-action", to="pages##saveCallToAction")
+		.post(name="deleteCallToAction", pattern="pages/call-to-action/delete", to="pages##deleteCallToAction")
+		.post(name="deleteCallToActionCamel", pattern="pages/deleteCallToAction", to="pages##deleteCallToAction")
+		.post(name="deleteCallToActionHyphen", pattern="pages/delete-call-to-action", to="pages##deleteCallToAction")
+		.post(name="reorderCallToActions", pattern="pages/call-to-action/reorder", to="pages##reorderCallToActions")
+		.post(name="reorderCallToActionsCamel", pattern="pages/reorderCallToActions", to="pages##reorderCallToActions")
+		.post(name="reorderCallToActionsHyphen", pattern="pages/reorder-call-to-actions", to="pages##reorderCallToActions")
+
 		// Pages, How Do I, and Folder Explorer Routes
 		.get(name="pagesHowDoI", pattern="pages/how-do-i", to="pages##howDoI")
 		.get(name="pagesHowDoIAlt", pattern="pages/howdoi", to="pages##howDoI")

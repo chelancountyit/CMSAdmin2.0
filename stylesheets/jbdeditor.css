@@ -454,6 +454,26 @@ body.jbd-noscroll {
   text-underline-offset: 2px;
 }
 
+.jbd-editor-content a.jbd-cta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--admin-primary, #0b2545);
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.jbd-editor-content a.jbd-cta-link svg {
+  width: 15px;
+  height: 15px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+}
+
 .jbd-editor-content hr {
   border: none;
   border-top: 1px solid var(--jbd-color-base-border);

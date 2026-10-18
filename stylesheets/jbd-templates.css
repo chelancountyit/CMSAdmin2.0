@@ -1166,19 +1166,51 @@ table.jbd-table th {
   margin: 18px 0;
   padding: 22px 24px;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-top: 4px solid #0b2545;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .jbd-cta-card:hover {
-  border-color: #94a3b8;
+  border-color: #cbd5e1;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.jbd-cta-card.has-image {
+  padding: 0;
+}
+
+.jbd-cta-card-img-wrap {
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+  background-color: #f1f5f9;
+  position: relative;
+}
+
+.jbd-cta-card-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.jbd-cta-card:hover .jbd-cta-card-img-wrap img {
+  transform: scale(1.03);
+}
+
+.jbd-cta-card-content {
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .jbd-cta-card-header {
@@ -1219,9 +1251,9 @@ table.jbd-table th {
 
 .jbd-cta-title {
   margin: 0 0 6px 0;
-  font-size: 18px;
+  font-size: 18.5px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--admin-primary, #0b2545);
   line-height: 1.35;
 }
 
@@ -1240,6 +1272,65 @@ table.jbd-table th {
   gap: 12px;
 }
 
+/* Reference Inline Action Link Style (e.g. "Search Parcels ->") */
+.jbd-cta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--admin-primary, #0b2545);
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+  transition: color 0.15s ease, gap 0.15s ease;
+  line-height: 1.4;
+}
+
+.jbd-cta-link:hover {
+  color: var(--admin-primary-hover, #1d4ed8);
+  text-decoration: underline;
+  gap: 8px;
+}
+
+.jbd-cta-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.jbd-cta-link svg {
+  width: 15px;
+  height: 15px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  transition: transform 0.15s ease;
+}
+
+.jbd-cta-link:hover svg {
+  transform: translateX(3px);
+}
+
+.jbd-cta-link.has-external-icon:hover svg {
+  transform: translate(2px, -2px);
+}
+
+.jbd-cta-pdf-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 4px;
+  line-height: 1.2;
+  margin-left: 4px;
+}
+
 .jbd-cta-btn {
   display: inline-flex;
   align-items: center;
@@ -1251,9 +1342,9 @@ table.jbd-table th {
   font-weight: 600;
   text-decoration: none;
   border-radius: 6px;
-  background-color: #0b2545;
+  background-color: var(--admin-primary, #0b2545);
   color: #ffffff !important;
-  border: 1px solid #0b2545;
+  border: 1px solid var(--admin-primary, #0b2545);
   transition: all 0.15s ease-in-out;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -1286,8 +1377,61 @@ table.jbd-table th {
 .jbd-cta-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin: 20px 0;
+  gap: 20px;
+  margin: 22px 0;
+}
+
+/* 4-Column Layout (4 Col Desktop, 2 Tablet, 1 Mobile) */
+.jbd-cta-grid.cta-grid-4,
+.jbd-cta-grid.cta-layout-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* 3-Column Layout (3x1 Reference Style, 2 Tablet, 1 Mobile) */
+.jbd-cta-grid.cta-grid-3,
+.jbd-cta-grid.cta-layout-3,
+.jbd-cta-grid.cta-layout-3x1 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* 2-Column / 50-50 / 2x2 Layout (2 Col Desktop 50/50, 1 Mobile) */
+.jbd-cta-grid.cta-grid-2,
+.jbd-cta-grid.cta-grid-50-50,
+.jbd-cta-grid.cta-layout-2,
+.jbd-cta-grid.cta-layout-2x2,
+.jbd-cta-grid.cta-layout-50-50 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 1100px) {
+  .jbd-cta-grid.cta-grid-4,
+  .jbd-cta-grid.cta-layout-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 991px) {
+  .jbd-cta-grid.cta-grid-3,
+  .jbd-cta-grid.cta-layout-3,
+  .jbd-cta-grid.cta-layout-3x1 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .jbd-cta-grid.cta-grid-4,
+  .jbd-cta-grid.cta-layout-4,
+  .jbd-cta-grid.cta-grid-3,
+  .jbd-cta-grid.cta-layout-3,
+  .jbd-cta-grid.cta-layout-3x1,
+  .jbd-cta-grid.cta-grid-2,
+  .jbd-cta-grid.cta-grid-50-50,
+  .jbd-cta-grid.cta-layout-2,
+  .jbd-cta-grid.cta-layout-2x2,
+  .jbd-cta-grid.cta-layout-50-50,
+  .jbd-cta-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .jbd-cta-grid .jbd-cta-card {

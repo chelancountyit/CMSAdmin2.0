@@ -2748,6 +2748,130 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
 </section>`
   },
   {
+    id: 'cta-photo-card',
+    title: 'Call to Action Card (with Photo)',
+    category: 'Call to Action',
+    icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2563eb" stroke-width="2" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
+    description: 'Reference citizen service card with top photo banner, headline, description, and action link.',
+    html: `<aside class="jbd-template jbd-cta-card has-image" aria-label="Action: Parcel &amp; Sale Search">
+  <div class="jbd-cta-card-img-wrap">
+    <img src="/images/cta/parcel-search.jpg" alt="Chelan County parcel and property lookup" loading="lazy">
+  </div>
+  <div class="jbd-cta-card-content">
+    <p class="jbd-cta-title h4">Parcel &amp; Sale Search</p>
+    <p class="jbd-cta-desc">Look up property details, assessed valuations, tax history, and verified market sales.</p>
+    <div class="jbd-cta-card-footer">
+      <a href="#parcels" class="jbd-cta-link" aria-label="Search Chelan County Parcels">
+        <span>Search Parcels</span>
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
+  </div>
+</aside>`
+  },
+  {
+    id: 'cta-reference-grid',
+    title: 'Call to Action 3-Card Grid (Reference Design)',
+    category: 'Call to Action',
+    icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0b2545" stroke-width="2" aria-hidden="true" focusable="false"><rect x="2" y="3" width="6" height="18" rx="2"/><rect x="9" y="3" width="6" height="18" rx="2"/><rect x="16" y="3" width="6" height="18" rx="2"/></svg>',
+    description: '3-Column responsive card grid matching the Chelan County Assessor service cards layout.',
+    html: `<section class="jbd-template jbd-cta-grid cta-grid-3" aria-label="County Online Services">
+  <aside class="jbd-template jbd-cta-card has-image" aria-label="Action: Parcel &amp; Sale Search">
+    <div class="jbd-cta-card-img-wrap">
+      <img src="/images/cta/parcel-search.jpg" alt="Parcel and sale search" loading="lazy">
+    </div>
+    <div class="jbd-cta-card-content">
+      <p class="jbd-cta-title h4">Parcel &amp; Sale Search</p>
+      <p class="jbd-cta-desc">Look up property details, assessed valuations, tax history, and verified market sales.</p>
+      <div class="jbd-cta-card-footer">
+        <a href="#parcels" class="jbd-cta-link"><span>Search Parcels</span> <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+    </div>
+  </aside>
+  <aside class="jbd-template jbd-cta-card has-image" aria-label="Action: Interactive GIS Map">
+    <div class="jbd-cta-card-img-wrap">
+      <img src="/images/cta/gis-map.jpg" alt="Interactive GIS mapping" loading="lazy">
+    </div>
+    <div class="jbd-cta-card-content">
+      <p class="jbd-cta-title h4">Interactive GIS Map</p>
+      <p class="jbd-cta-desc">Explore county parcel boundaries, aerial photography, tax code areas, and zoning layers.</p>
+      <div class="jbd-cta-card-footer">
+        <a href="#gis" class="jbd-cta-link has-external-icon"><span>Open Map</span> <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>
+      </div>
+    </div>
+  </aside>
+  <aside class="jbd-template jbd-cta-card has-image" aria-label="Action: Property Owner's Guide">
+    <div class="jbd-cta-card-img-wrap">
+      <img src="/images/cta/property-guide.jpg" alt="Property Owner's Guide" loading="lazy">
+    </div>
+    <div class="jbd-cta-card-content">
+      <p class="jbd-cta-title h4">Property Owner's Guide</p>
+      <p class="jbd-cta-desc">Comprehensive reference covering assessments, market valuation cycles, and rights.</p>
+      <div class="jbd-cta-card-footer">
+        <a href="#guide" class="jbd-cta-link"><span>Download PDF</span> <span class="jbd-cta-pdf-badge">PDF</span></a>
+      </div>
+    </div>
+  </aside>
+</section>`
+  },
+  {
+    id: 'cta-4col-grid',
+    title: 'Call to Action 4-Card Grid (4-Column)',
+    category: 'Call to Action',
+    icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0b2545" stroke-width="2" aria-hidden="true" focusable="false"><rect x="1.5" y="3" width="4.5" height="18" rx="1.5"/><rect x="7.5" y="3" width="4.5" height="18" rx="1.5"/><rect x="13.5" y="3" width="4.5" height="18" rx="1.5"/><rect x="19.5" y="3" width="4.5" height="18" rx="1.5"/></svg>',
+    description: '4-Column responsive card grid (4 desktop, 2 tablet, 1 mobile) for multi-service department landings.',
+    html: `<section class="jbd-template jbd-cta-grid cta-grid-4" aria-label="County Online Services">
+  <aside class="jbd-template jbd-cta-card has-image" aria-label="Action: Parcel &amp; Sale Search">
+    <div class="jbd-cta-card-img-wrap">
+      <img src="/images/cta/parcel-search.jpg" alt="Parcel and sale search" loading="lazy">
+    </div>
+    <div class="jbd-cta-card-content">
+      <p class="jbd-cta-title h4">Parcel Search</p>
+      <p class="jbd-cta-desc">Look up property details, assessed valuations, tax history, and verified sales.</p>
+      <div class="jbd-cta-card-footer">
+        <a href="#parcels" class="jbd-cta-link"><span>Search Parcels</span> <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+    </div>
+  </aside>
+  <aside class="jbd-template jbd-cta-card has-image" aria-label="Action: Interactive GIS Map">
+    <div class="jbd-cta-card-img-wrap">
+      <img src="/images/cta/gis-map.jpg" alt="Interactive GIS mapping" loading="lazy">
+    </div>
+    <div class="jbd-cta-card-content">
+      <p class="jbd-cta-title h4">GIS Mapping</p>
+      <p class="jbd-cta-desc">Explore county parcel boundaries, aerial photography, and zoning layers.</p>
+      <div class="jbd-cta-card-footer">
+        <a href="#gis" class="jbd-cta-link has-external-icon"><span>Open Map</span> <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>
+      </div>
+    </div>
+  </aside>
+  <aside class="jbd-template jbd-cta-card has-image" aria-label="Action: Property Records">
+    <div class="jbd-cta-card-img-wrap">
+      <img src="/images/cta/property-guide.jpg" alt="Property Records" loading="lazy">
+    </div>
+    <div class="jbd-cta-card-content">
+      <p class="jbd-cta-title h4">Property Records</p>
+      <p class="jbd-cta-desc">Official deeds, mortgages, surveys, and recorded public documents.</p>
+      <div class="jbd-cta-card-footer">
+        <a href="#records" class="jbd-cta-link"><span>Search Records</span> <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+    </div>
+  </aside>
+  <aside class="jbd-template jbd-cta-card has-image" aria-label="Action: Tax Payments">
+    <div class="jbd-cta-card-img-wrap">
+      <img src="/images/cta/property-guide.jpg" alt="Tax Payments" loading="lazy">
+    </div>
+    <div class="jbd-cta-card-content">
+      <p class="jbd-cta-title h4">Tax Payments</p>
+      <p class="jbd-cta-desc">Pay real property taxes online securely via electronic check or card.</p>
+      <div class="jbd-cta-card-footer">
+        <a href="#taxes" class="jbd-cta-link"><span>Pay Taxes</span> <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+    </div>
+  </aside>
+</section>`
+  },
+  {
     id: 'cta-card',
     title: 'Call to Action (CTA) Card',
     category: 'Call to Action',

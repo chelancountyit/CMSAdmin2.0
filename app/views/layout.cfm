@@ -207,6 +207,9 @@
 				activeWsVirtualDir = (structKeyExists(activeWsObj, "virtual_directory") && len(trim(activeWsObj.virtual_directory)))
 					? trim(activeWsObj.virtual_directory)
 					: (activeWsObj.id eq 'global' ? 'shared' : activeWsObj.id);
+				activeWsPrimaryColor = (len(trim(activeWsObj.id ?: "")) && structKeyExists(activeWsObj, "color") && REFindNoCase("^##[0-9a-fA-F]{3,6}$", trim(activeWsObj.color)))
+					? trim(activeWsObj.color)
+					: "##0073aa";
 
 				// Dynamic System Notifications for header bell
 				headerNotifications = getSystemNotifications(activeRole, 5);
@@ -222,6 +225,17 @@
 					activeEmergencyAlertsCount = Val(local.qEmerg.cnt);
 				} catch (any e) {}
 			</cfscript>
+
+			<cfoutput>
+			<style id="workspacePrimaryThemeStyle">
+				:root, body {
+					--admin-primary: #EncodeForHTMLAttribute(activeWsPrimaryColor)#;
+					--admin-primary-hover: color-mix(in srgb, #EncodeForHTMLAttribute(activeWsPrimaryColor)# 80%, ##000000);
+					--admin-primary-light: color-mix(in srgb, #EncodeForHTMLAttribute(activeWsPrimaryColor)# 10%, ##ffffff);
+					--admin-primary-focus: color-mix(in srgb, #EncodeForHTMLAttribute(activeWsPrimaryColor)# 25%, transparent);
+				}
+			</style>
+			</cfoutput>
 
 			<!--- WCAG 2.4.1 Accessible Skip to Main Content Link --->
 			<a href="#mainContent" class="skip-link">Skip to main content</a>
@@ -271,9 +285,9 @@
 						</button>
 
 						<!--- Workspace Dropdown (Department or Site Selector) --->
-						<div class="dropdown header-workspace-dropdown" id="workspaceDropdownContainer" data-user-role="<cfoutput>#activeRole#</cfoutput>" data-is-admin="<cfoutput>#(isAdmin ? 'true' : 'false')#</cfoutput>" data-active-ws-id="<cfoutput>#activeWsObj.id#</cfoutput>" data-active-ws-virtual-dir="<cfoutput>#activeWsVirtualDir#</cfoutput>" data-dashboard-url="<cfoutput>#urlFor(controller='main', action='index')#</cfoutput>">
+						<div class="dropdown header-workspace-dropdown" id="workspaceDropdownContainer" data-user-role="<cfoutput>#activeRole#</cfoutput>" data-is-admin="<cfoutput>#(isAdmin ? 'true' : 'false')#</cfoutput>" data-active-ws-id="<cfoutput>#activeWsObj.id#</cfoutput>" data-active-ws-color="<cfoutput>#EncodeForHTMLAttribute(activeWsPrimaryColor)#</cfoutput>" data-active-ws-virtual-dir="<cfoutput>#activeWsVirtualDir#</cfoutput>" data-dashboard-url="<cfoutput>#urlFor(controller='main', action='index')#</cfoutput>">
 							<button type="button" class="workspace-btn" id="workspaceDropdownBtn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Switch Workspace">
-								<span class="workspace-btn-icon" id="activeWsIcon">
+								<span class="workspace-btn-icon" id="activeWsIcon" style="background:var(--admin-primary-light); color:var(--admin-primary);">
 									<cfoutput>#svgIcon(name=activeWsObj.icon, size=16)#</cfoutput>
 								</span>
 								<div class="workspace-btn-content">
@@ -295,7 +309,7 @@
 								<div class="workspace-menu-scrollable" id="workspaceList">
 									<cfif !isAdmin>
 										<!--- Non-Admin Scoping Banner --->
-										<div style="padding:0.45rem 0.75rem; margin-bottom:0.35rem; background:rgba(0, 115, 170, 0.06); border-radius:var(--radius-sm); border:1px solid rgba(0, 115, 170, 0.15); display:flex; align-items:center; justify-content:space-between; font-size:0.75rem;">
+										<div style="padding:0.45rem 0.75rem; margin-bottom:0.35rem; background:var(--admin-primary-light); border-radius:var(--radius-sm); border:1px solid var(--admin-primary-focus); display:flex; align-items:center; justify-content:space-between; font-size:0.75rem;">
 											<span style="color:var(--admin-text-main); font-weight:600; display:flex; align-items:center; gap:0.35rem;">
 												<cfoutput>#svgIcon(name="lock", size=12)#</cfoutput>
 												<span>Assigned Workspaces</span>
@@ -317,8 +331,9 @@
 										<div class="workspace-menu-section-title"><cfoutput>#(isAdmin ? 'Departments' : 'Assigned Departments')#</cfoutput></div>
 										<cfloop array="#deptWorkspaces#" index="local.w">
 											<cfset local.wVirtDir = (StructKeyExists(local.w, "virtual_directory") && Len(Trim(local.w.virtual_directory))) ? Trim(local.w.virtual_directory) : local.w.id>
-											<button type="button" class="workspace-item <cfif activeWsObj.id eq local.w.id>is-active</cfif>" data-ws-id="<cfoutput>#local.w.id#</cfoutput>" data-ws-name="<cfoutput>#local.w.name#</cfoutput>" data-ws-type="dept" data-ws-badge="<cfoutput>#local.w.badge#</cfoutput>" data-ws-badge-cls="<cfoutput>#local.w.badgeClass#</cfoutput>" data-ws-icon="<cfoutput>#local.w.icon#</cfoutput>" data-ws-virtual-dir="<cfoutput>#local.wVirtDir#</cfoutput>">
-												<span class="workspace-item-icon icon-<cfoutput>#local.w.id#</cfoutput>">
+											<cfset local.wColor = (StructKeyExists(local.w, "color") && Len(Trim(local.w.color))) ? Trim(local.w.color) : "##7e22ce">
+											<button type="button" class="workspace-item <cfif activeWsObj.id eq local.w.id>is-active</cfif>" data-ws-id="<cfoutput>#local.w.id#</cfoutput>" data-ws-name="<cfoutput>#local.w.name#</cfoutput>" data-ws-type="dept" data-ws-color="<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>" data-ws-badge="<cfoutput>#local.w.badge#</cfoutput>" data-ws-badge-cls="<cfoutput>#local.w.badgeClass#</cfoutput>" data-ws-icon="<cfoutput>#local.w.icon#</cfoutput>" data-ws-virtual-dir="<cfoutput>#local.wVirtDir#</cfoutput>">
+												<span class="workspace-item-icon icon-<cfoutput>#local.w.id#</cfoutput>" style="background:color-mix(in srgb, <cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput> 12%, ##ffffff); color:<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>;">
 													<cfoutput>#svgIcon(name=local.w.icon, size=16)#</cfoutput>
 												</span>
 												<div class="workspace-item-details">
@@ -344,8 +359,9 @@
 										<div class="workspace-menu-section-title"><cfoutput>#(isAdmin ? 'Sites & Portals' : 'Assigned Sites & Portals')#</cfoutput></div>
 										<cfloop array="#siteWorkspaces#" index="local.w">
 											<cfset local.wVirtDir = (StructKeyExists(local.w, "virtual_directory") && Len(Trim(local.w.virtual_directory))) ? Trim(local.w.virtual_directory) : local.w.id>
-											<button type="button" class="workspace-item <cfif activeWsObj.id eq local.w.id>is-active</cfif>" data-ws-id="<cfoutput>#local.w.id#</cfoutput>" data-ws-name="<cfoutput>#local.w.name#</cfoutput>" data-ws-type="site" data-ws-badge="<cfoutput>#local.w.badge#</cfoutput>" data-ws-badge-cls="<cfoutput>#local.w.badgeClass#</cfoutput>" data-ws-icon="<cfoutput>#local.w.icon#</cfoutput>" data-ws-virtual-dir="<cfoutput>#local.wVirtDir#</cfoutput>">
-												<span class="workspace-item-icon icon-site">
+											<cfset local.wColor = (StructKeyExists(local.w, "color") && Len(Trim(local.w.color))) ? Trim(local.w.color) : "##10b981">
+											<button type="button" class="workspace-item <cfif activeWsObj.id eq local.w.id>is-active</cfif>" data-ws-id="<cfoutput>#local.w.id#</cfoutput>" data-ws-name="<cfoutput>#local.w.name#</cfoutput>" data-ws-type="site" data-ws-color="<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>" data-ws-badge="<cfoutput>#local.w.badge#</cfoutput>" data-ws-badge-cls="<cfoutput>#local.w.badgeClass#</cfoutput>" data-ws-icon="<cfoutput>#local.w.icon#</cfoutput>" data-ws-virtual-dir="<cfoutput>#local.wVirtDir#</cfoutput>">
+												<span class="workspace-item-icon icon-site" style="background:color-mix(in srgb, <cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput> 12%, ##ffffff); color:<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>;">
 													<cfoutput>#svgIcon(name=local.w.icon, size=16)#</cfoutput>
 												</span>
 												<div class="workspace-item-details">
@@ -557,6 +573,7 @@
 									</a>
 									<ul class="nav-submenu">
 										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'pages' and structKeyExists(params, 'action') and (params.action eq 'index' or params.action eq 'edit') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='pages', action='index')#</cfoutput>" class="submenu-link">All Pages</a></li>
+										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'pages' and structKeyExists(params, 'action') and (lCase(params.action) eq 'calltoaction' or lCase(params.action) eq 'calltoactionmanager' or lCase(params.action) eq 'calltoactionstudio') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='pages', action='callToAction')#</cfoutput>" class="submenu-link">Call to Action Studio</a></li>
 										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'pages' and structKeyExists(params, 'action') and lCase(params.action) eq 'howdoi' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='pages', action='howDoI')#</cfoutput>" class="submenu-link">How Do I</a></li>
 									</ul>
 								</li>

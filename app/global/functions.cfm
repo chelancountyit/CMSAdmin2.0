@@ -328,6 +328,7 @@ public struct function resolveUserActiveWorkspace(string requestedWs = "", strin
 		code: "",
 		name: "Please select a workspace",
 		type: "none",
+		color: "##0073aa",
 		badge: "Select",
 		badgeClass: "badge-neutral",
 		icon: "grid",
@@ -897,6 +898,228 @@ public struct function getScheduledPublishingSummary() {
 		+ summary.jobs_scheduled + summary.jobs_expiring;
 
 	return summary;
+}
+
+/**
+ * Renders HTML markup for a single Call to Action card matching the reference design.
+ */
+public string function renderCallToActionCardHtml(required struct item) {
+	var title = Len(item.title ?: "") ? Trim(item.title) : "Call to Action";
+	var desc = Len(item.description ?: "") ? Trim(item.description) : "";
+	var imgUrl = Len(item.imageUrl ?: (item.image_url ?: "")) ? Trim(item.imageUrl ?: item.image_url) : "";
+	var imgAlt = Len(item.imageAlt ?: (item.image_alt ?: "")) ? Trim(item.imageAlt ?: item.image_alt) : title;
+	var linkText = Len(item.linkText ?: (item.link_text ?: "")) ? Trim(item.linkText ?: item.link_text) : "Learn More";
+	var linkUrl = Len(item.linkUrl ?: (item.link_url ?: "")) ? Trim(item.linkUrl ?: item.link_url) : "##";
+	var linkIcon = Len(item.linkIcon ?: (item.link_icon ?: "")) ? LCase(Trim(item.linkIcon ?: item.link_icon)) : "arrow";
+	var linkStyle = Len(item.linkStyle ?: (item.link_style ?: "")) ? LCase(Trim(item.linkStyle ?: item.link_style)) : "link";
+	var isBlank = (StructKeyExists(item, "targetBlank") && (item.targetBlank == 1 || item.targetBlank == "1" || item.targetBlank == true))
+		|| (StructKeyExists(item, "target_blank") && (item.target_blank == 1 || item.target_blank == "1" || item.target_blank == true));
+	var badgeText = Len(item.badgeText ?: (item.badge_text ?: "")) ? Trim(item.badgeText ?: item.badge_text) : "";
+	var badgeColor = Len(item.badgeColor ?: (item.badge_color ?: "")) ? LCase(Trim(item.badgeColor ?: item.badge_color)) : "blue";
+	var hasImage = Len(imgUrl) > 0;
+
+	var sb = CreateObject("java", "java.lang.StringBuilder").init();
+	sb.append('<aside class="jbd-template jbd-cta-card');
+	if (hasImage) sb.append(' has-image');
+	sb.append('" aria-label="Action: ' & Replace(title, '"', '&quot;', 'all') & '">');
+
+	if (hasImage) {
+		sb.append('<div class="jbd-cta-card-img-wrap">');
+		sb.append('<img src="' & Replace(imgUrl, '"', '&quot;', 'all') & '" alt="' & Replace(imgAlt, '"', '&quot;', 'all') & '" loading="lazy">');
+		sb.append('</div>');
+		sb.append('<div class="jbd-cta-card-content">');
+	}
+
+	if (Len(badgeText)) {
+		var badgeClass = "jbd-cta-badge";
+		if (badgeColor == "teal") badgeClass &= " jbd-cta-badge-teal";
+		else if (badgeColor == "blue") badgeClass &= " jbd-cta-badge-blue";
+		else if (badgeColor == "amber" || badgeColor == "red") badgeClass &= " jbd-cta-badge-amber";
+		sb.append('<div class="jbd-cta-card-header"><span class="' & badgeClass & '" aria-hidden="true">' & Replace(badgeText, "<", "&lt;", "all") & '</span></div>');
+	}
+
+	sb.append('<p class="jbd-cta-title h4">' & Replace(title, "<", "&lt;", "all") & '</p>');
+	if (Len(desc)) {
+		sb.append('<p class="jbd-cta-desc">' & Replace(desc, "<", "&lt;", "all") & '</p>');
+	}
+
+	sb.append('<div class="jbd-cta-card-footer">');
+	var targetAttr = isBlank ? ' target="_blank" rel="noopener noreferrer"' : '';
+	var extClass = (isBlank || linkIcon == "external") ? ' has-external-icon' : '';
+
+	if (linkStyle == "button") {
+		sb.append('<a href="' & Replace(linkUrl, '"', '&quot;', 'all') & '" class="jbd-btn jbd-btn-primary jbd-cta-btn"' & targetAttr & ' aria-label="' & Replace(linkText & ' for ' & title, '"', '&quot;', 'all') & '">');
+		sb.append('<span>' & Replace(linkText, "<", "&lt;", "all") & '</span>');
+		if (linkIcon == "external") {
+			sb.append(' <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>');
+		} else if (linkIcon == "pdf") {
+			sb.append(' <span class="jbd-cta-pdf-badge" aria-hidden="true">PDF</span>');
+		} else if (linkIcon != "none") {
+			sb.append(' <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>');
+		}
+		sb.append('</a>');
+	} else {
+		sb.append('<a href="' & Replace(linkUrl, '"', '&quot;', 'all') & '" class="jbd-cta-link' & extClass & '"' & targetAttr & ' aria-label="' & Replace(linkText & ' for ' & title, '"', '&quot;', 'all') & '">');
+		sb.append('<span>' & Replace(linkText, "<", "&lt;", "all") & '</span>');
+		if (linkIcon == "external") {
+			sb.append(' <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>');
+		} else if (linkIcon == "pdf") {
+			sb.append(' <span class="jbd-cta-pdf-badge" aria-hidden="true">PDF</span>');
+		} else if (linkIcon != "none") {
+			sb.append(' <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>');
+		}
+		sb.append('</a>');
+	}
+
+	sb.append('</div>'); // footer
+
+	if (hasImage) {
+		sb.append('</div>'); // content
+	}
+
+	sb.append('</aside>');
+	return sb.toString();
+}
+
+/**
+ * Repairs any .jbd-cta-link anchors whose arrow/external icon was saved as '?', '&rarr;', or '&nearr;' instead of inline SVG.
+ */
+public string function normalizeCtaLinkIcons(required string content) {
+	if (!Len(arguments.content) || FindNoCase("jbd-cta-link", arguments.content) == 0) {
+		return arguments.content;
+	}
+	var result = arguments.content;
+	var arrowSvg = ' <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+	var extSvg = ' <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
+	var matches = REMatchNoCase('<a\b[^>]*class="[^"]*\bjbd-cta-link\b[^"]*"[^>]*>[\s\S]*?</a>', result);
+	for (var aTag in matches) {
+		if (FindNoCase("<svg", aTag) == 0 && FindNoCase("jbd-cta-pdf-badge", aTag) == 0) {
+			var isExt = (FindNoCase('target="_blank"', aTag) > 0 || FindNoCase("has-external-icon", aTag) > 0 || FindNoCase("&nearr;", aTag) > 0 || Find(Chr(8599), aTag) > 0);
+			var cleaned = REReplaceNoCase(aTag, '\s*(\?|&rarr;|&nearr;|##8594;|##8599;|' & Chr(8594) & '|' & Chr(8599) & ')?\s*</a>$', (isExt ? extSvg : arrowSvg) & '</a>');
+			if (isExt && FindNoCase("has-external-icon", cleaned) == 0) {
+				cleaned = REReplaceNoCase(cleaned, 'class="([^"]*\bjbd-cta-link\b)', 'class="\1 has-external-icon');
+			}
+			result = Replace(result, aTag, cleaned, "all");
+		}
+	}
+	return result;
+}
+
+/**
+ * Parses and replaces [call_to_action ...], [cta ...], and [cta_grid ...] shortcodes in content.
+ */
+public string function renderCallToActionShortcodes(required string content) {
+	if (!Len(arguments.content) || (FindNoCase("[call_to_action", arguments.content) == 0 && FindNoCase("[cta", arguments.content) == 0)) {
+		return arguments.content;
+	}
+
+	var parsed = arguments.content;
+
+	// 1. Process Grid Shortcodes: [cta_grid slugs="s1,s2,s3" cols="3"] or [cta_grid category="..." layout="2x2"]
+	var gridMatches = REMatchNoCase("\[cta_grid\s+[^\]]+\]", parsed);
+	for (var gTag in gridMatches) {
+		var slugsMatch = REFindNoCase('slugs?="([^"]+)"', gTag, 1, true);
+		var catMatch = REFindNoCase('categor(y|ies)="([^"]+)"', gTag, 1, true);
+		var colsMatch = REFindNoCase('(?:cols?|columns?|layout)="([^"]+)"', gTag, 1, true);
+		var itemsHtml = "";
+		var itemCount = 0;
+
+		try {
+			if (ArrayLen(slugsMatch.len) >= 2 && slugsMatch.len[2] > 0) {
+				var slugList = Mid(gTag, slugsMatch.pos[2], slugsMatch.len[2]);
+				var slugArr = ListToArray(slugList);
+				for (var s in slugArr) {
+					var qS = queryExecute("
+						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+						SELECT TOP 1 * FROM page_call_to_actions
+						WHERE slug = :slug AND is_published = 1 AND deletedat IS NULL
+					", { slug: { value: Trim(s), cfsqltype: "cf_sql_nvarchar" } }, { datasource: "ChelanCountyWebsite" });
+					if (qS.recordCount) {
+						itemsHtml &= renderCallToActionCardHtml(qS.getRow(1));
+						itemCount++;
+					}
+				}
+			} else if (ArrayLen(catMatch.len) >= 3 && catMatch.len[3] > 0) {
+				var catName = Mid(gTag, catMatch.pos[3], catMatch.len[3]);
+				var qC = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					SELECT * FROM page_call_to_actions
+					WHERE category = :cat AND is_published = 1 AND deletedat IS NULL
+					ORDER BY sort_order ASC, id ASC
+				", { cat: { value: Trim(catName), cfsqltype: "cf_sql_nvarchar" } }, { datasource: "ChelanCountyWebsite" });
+				itemCount = qC.recordCount;
+				for (var row in qC) {
+					itemsHtml &= renderCallToActionCardHtml(row);
+				}
+			}
+		} catch (any e) {}
+
+		if (Len(itemsHtml)) {
+			var gridCls = "jbd-template jbd-cta-grid";
+			var specifiedLayout = "";
+			if (ArrayLen(colsMatch.len) >= 2 && colsMatch.len[2] > 0) {
+				specifiedLayout = LCase(Trim(Mid(gTag, colsMatch.pos[2], colsMatch.len[2])));
+			}
+
+			if (specifiedLayout == "4" || specifiedLayout == "4col" || specifiedLayout == "4-col" || specifiedLayout == "4cols") {
+				gridCls &= " cta-grid-4";
+			} else if (specifiedLayout == "2" || specifiedLayout == "2col" || specifiedLayout == "2-col" || specifiedLayout == "2x2" || specifiedLayout == "50/50" || specifiedLayout == "50-50" || specifiedLayout == "5050") {
+				gridCls &= " cta-grid-2 cta-grid-50-50";
+			} else if (specifiedLayout == "3" || specifiedLayout == "3col" || specifiedLayout == "3-col" || specifiedLayout == "3x1" || specifiedLayout == "3-1") {
+				gridCls &= " cta-grid-3";
+			} else {
+				// Intelligent auto-inference if not explicitly stated
+				if (itemCount == 2) {
+					gridCls &= " cta-grid-2 cta-grid-50-50";
+				} else if (itemCount == 4) {
+					gridCls &= " cta-grid-4";
+				} else {
+					gridCls &= " cta-grid-3";
+				}
+			}
+
+			var gridReplacement = '<section class="' & gridCls & '" aria-label="Featured Actions">' & itemsHtml & '</section>';
+			parsed = Replace(parsed, gTag, gridReplacement, "one");
+		}
+	}
+
+	// 2. Process Individual Shortcodes: [call_to_action slug="..."] or [cta slug="..."]
+	var singleMatches = REMatchNoCase("\[(?:call_to_action|cta)\s+[^\]]+\]", parsed);
+	for (var sTag in singleMatches) {
+		var slugM = REFindNoCase('slug="([^"]+)"', sTag, 1, true);
+		var idM = REFindNoCase('id="?([0-9]+)"?', sTag, 1, true);
+		var cardHtml = "";
+
+		try {
+			if (ArrayLen(slugM.len) >= 2 && slugM.len[2] > 0) {
+				var targetSlug = Mid(sTag, slugM.pos[2], slugM.len[2]);
+				var qOne = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					SELECT TOP 1 * FROM page_call_to_actions
+					WHERE slug = :slug AND is_published = 1 AND deletedat IS NULL
+				", { slug: { value: Trim(targetSlug), cfsqltype: "cf_sql_nvarchar" } }, { datasource: "ChelanCountyWebsite" });
+				if (qOne.recordCount) {
+					cardHtml = renderCallToActionCardHtml(qOne.getRow(1));
+				}
+			} else if (ArrayLen(idM.len) >= 2 && idM.len[2] > 0) {
+				var targetId = Val(Mid(sTag, idM.pos[2], idM.len[2]));
+				var qId = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					SELECT TOP 1 * FROM page_call_to_actions
+					WHERE id = :id AND is_published = 1 AND deletedat IS NULL
+				", { id: { value: targetId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+				if (qId.recordCount) {
+					cardHtml = renderCallToActionCardHtml(qId.getRow(1));
+				}
+			}
+		} catch (any e) {}
+
+		if (Len(cardHtml)) {
+			parsed = Replace(parsed, sTag, cardHtml, "one");
+		}
+	}
+
+	return parsed;
 }
 </cfscript>
 

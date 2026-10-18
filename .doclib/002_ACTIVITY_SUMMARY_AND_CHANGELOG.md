@@ -12,6 +12,73 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 17, 2026 — Workspace Primary Color Theming, CTA Grid Embed Modal Fixes & `.jbd-cta-link` SVG Icon Rendering
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/views/pages/edit.cfm`, `app/views/layout.cfm`, `app/controllers/Pages.cfc`, `app/global/functions.cfm`, `javascripts/admin.js`, `javascripts/jbdeditor.js`, `stylesheets/jbdeditor.css`, `stylesheets/jbd-templates.css`, `config/sql/schema-pages.sql`, `config/sql/schema-complete.sql`) & ChelanCounty.gov (`app/views/layout.cfm`, `app/views/helpers.cfm`, `app/views/assessor/page.cfm`, `app/views/shared/_dept-nav.cfm`, `stylesheets/styles.css`, `stylesheets/jbd-templates.css`, `README.md`).
+- **Key Deliverables:**
+  1. **Workspace Guard & UI Refinements (`CMSAdmin2.0/app/views/layout.cfm`, `javascripts/admin.js`):**
+     - Restricted **How Do I**, **Events / Calendar**, and **Emergency Alerts** in the left navigation to require an active workspace selection (`data-requires-workspace="true"`).
+     - Removed redundant header workspace pill and dynamically synced the selected workspace color directly to `--admin-primary`, `--admin-primary-hover`, `--admin-primary-light`, and `--ws-accent-color`.
+  2. **Public Frontend Workspace Primary Color & 404 Not Found Card (`ChelanCounty.gov/app/views/layout.cfm`, `app/views/assessor/page.cfm`, `stylesheets/styles.css`):**
+     - Mapped active department workspace color (`currentWorkspace.color`) to `--bs-primary`, `--bs-primary-rgb`, `--brand-900`, `--brand-800`, `--link-700`, `--dept-color`, and `--dept-theme-color`.
+     - Styled the 404 "Page Not Found" card (`app/views/assessor/page.cfm`) with workspace-themed gradient accents, icon badge, and action buttons.
+  3. **CTA Embed Modal & Shortcode Resolver (`CMSAdmin2.0/app/views/pages/edit.cfm`, `ChelanCounty.gov/app/views/helpers.cfm`):**
+     - Removed individual card action footer buttons inside `#embedCtaModal` and made clicking anywhere on a card toggle its multi-select checkbox.
+     - Replaced early `getElementById` bindings with delegated `document` click/input listeners so **Embed Selected Cards as Grid**, **Insert Grid Shortcode**, **Select All**, **Clear All**, and live search work reliably.
+     - Updated `insertSnippetAtCursor()` to use `editor.insertTemplate()` for block HTML (`<section>`, `<aside>`, `<div>`) and integrated `[cta_grid]` / `[call_to_action]` / `[cta]` shortcode resolution into `renderCmsContent()` on `ChelanCounty.gov`.
+  4. **`.jbd-cta-link` Inline SVG Icon Rendering & Unicode Persistence:**
+     - Updated `generateCtaCardHtml()` and `#embedCtaModal` previews in `edit.cfm` and CTA grid templates in `jbdeditor.js` to emit inline `<svg>` arrow and external-link icons instead of `&rarr;` / `&nearr;` HTML entities.
+     - Changed `Pages.cfc` `save()` and `recordPageRevision()` bindings from `cf_sql_longvarchar` to `cf_sql_nvarchar` to prevent SQL Server single-byte VARCHAR conversion of Unicode characters into `?`.
+     - Added `normalizeCtaLinkIcons()` in both `CMSAdmin2.0/app/global/functions.cfm` and `ChelanCounty.gov/app/views/helpers.cfm` to automatically repair any existing `.jbd-cta-link` anchors with trailing `?`, `&rarr;`, or `&nearr;` into inline `<svg>` icons.
+     - Added explicit `.jbd-cta-link svg` sizing, alignment, `stroke: currentColor`, and hover transitions across `styles.css`, `jbd-templates.css`, and `jbdeditor.css`.
+
+---
+
+### Session: October 17, 2026 — Call to Action Studio, Photo-Card Grid Templates & JBDEditor Shortcode Integration
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Pages Module (`app/controllers/Pages.cfc`, `app/views/pages/callToAction.cfm`, `app/views/pages/edit.cfm`, `app/views/pages/index.cfm`), Routing (`config/routes.cfm`), Navigation & UI (`app/views/layout.cfm`, `app/views/helpers.cfm`), Global Functions (`app/global/functions.cfm`), Rich Text Editor (`javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `vendor/jbdeditor/src/dialog.js`), Stylesheets (`stylesheets/jbd-templates.css`), Image Assets (`images/cta/*`), Database Schema (`page_call_to_actions`).
+- **Key Deliverables:**
+  1. **Call to Action Studio (`app/views/pages/callToAction.cfm`):**
+     - Authored a full-featured management interface under "Pages" (`/pages/call-to-action`).
+     - Includes KPI statistics bar (Total CTAs, Published, With Images, Workspaces).
+     - Live search filter and interactive category filter pills ("All", "General", "Assessor Services", "Online Portals", "Public Records", "Citizen Services").
+     - 3-column responsive visual card grid reproducing the Chelan County Assessor service card design from the reference screenshot.
+     - Quick-copy shortcode chips for 1-click clipboard copying (`[call_to_action slug="..."]`, `[cta_grid slugs="..."]`).
+     - Accessible Add / Edit Call to Action modal with real-time visual preview card that live-updates image, badge, text, link, and layout type as the user types.
+     - Multi-Card Grid Builder modal enabling editors to select multiple cards via checkboxes and insert or copy composite 3-column responsive shortcode grids.
+     - Reordering via drag-and-drop / sort order sequence with automatic API persistence.
+  2. **Database Schema & Filtered Indexing (`page_call_to_actions`):**
+     - Implemented `ensureCallToActionTable()` with soft delete support (`deletedat`).
+     - Nonclustered filtered index `IX_page_call_to_actions_site_slug` on `([siteid], [slug]) WHERE [deletedat] IS NULL` executed with mandatory `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;`.
+     - Seeded all 6 Chelan County Assessor reference services:
+       1. *Parcel & Sale Search* (`/images/cta/parcel-search.jpg`) &rarr; `Search Parcels`
+       2. *Interactive GIS Map* (`/images/cta/gis-map.jpg`) &rarr; `Open Map ↗`
+       3. *Property Owner's Guide* (`/images/cta/property-guide.jpg`) &rarr; `Download PDF [PDF]`
+       4. *Destroyed Property* (`/images/cta/destroyed-property.jpg`) &rarr; `View Relief Forms`
+       5. *Assessment Appeals* (`/images/cta/assessment-appeals.jpg`) &rarr; `Appeal Instructions`
+       6. *Document Search* (`/images/cta/document-search.jpg`) &rarr; `Search Records ↗`
+  3. **Shortcode & Front-End Card Rendering Engine (`app/global/functions.cfm`):**
+     - Implemented `renderCallToActionCardHtml(item)`: renders semantic `<aside class="jbd-template jbd-cta-card has-image">`, responsive image with lazy-loading, badge, title, description, and action link with local SVG arrow, external icon `↗`, or `[PDF]` badge.
+     - Implemented `renderCallToActionShortcodes(content)`: parses and resolves `[call_to_action slug="..."]`, `[cta slug="..."]`, `[cta_grid slugs="s1,s2,s3"]`, and `[cta_grid category="..."]` into clean `<section class="jbd-template jbd-cta-grid cta-grid-3">` containers.
+  4. **JBDEditor Embed Integration (`app/views/pages/edit.cfm`, `vendor/jbdeditor/`):**
+     - Added "Embed Call to Action" toolbar button (`btnEditorInsertCTA`) next to "Embed Form" in the page editor.
+     - Created interactive modal dialog allowing page authors to choose any saved CTA card or generate multi-card grids with 1-click insertion into the JBDEditor content area.
+     - Added `cta-photo-card` and `cta-reference-grid` block templates to `DEFAULT_BLOCK_TEMPLATES` in `dialog.js` and `jbdeditor.js`.
+  5. **Navigation & UI Invariants Compliance:**
+     - Added "Call to Action Manager" under "Pages" in the primary sidebar navigation (`app/views/layout.cfm`).
+     - Added "Call to Action" quick-launch action button in the Pages index header (`app/views/pages/index.cfm`).
+     - Non-negotiable Invariant #1: Zero external CDNs — all SVG icons, cropped JPG images, and styles are local.
+     - Non-negotiable Invariant #2: Zero native browser dialogs — all confirmations and notices utilize `window.adminConfirm()`, `window.showToast()`, and accessible accessible dialog modals.
+     - Non-negotiable Invariant #3: All SQL queries on `page_call_to_actions` explicitly execute `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;`.
+  6. **Bugfixes & Template Compilation:**
+     - Escaped unescaped JS fallback URL string `"#"` to `"##"` on line 766 in `app/views/pages/callToAction.cfm` to eliminate `[coldfusion.util.RuntimeWrapper] Invalid CFML construct found on line 767 at column 57`.
+     - Restored missing `<ul class="nav-submenu">` wrapper under the Pages nav item in `app/views/layout.cfm` ensuring submenu items ("All Pages", "Call to Action Manager", "How Do I") render with proper indentation, hover states, and accordion animation.
+     - Removed redundant "Workspace / Department" dropdown from the Add/Edit CTA modal in `app/views/pages/callToAction.cfm`, replacing it with automatic active workspace inheritance via hidden input adhering to the County Header Workspace Switcher pattern.
+     - Implemented full interactive Media Library File Explorer Picker modal (`mediaPickerModal`) in `app/views/pages/callToAction.cfm`, wiring `openMediaPicker("image", ...)` directly to the "Browse Media Library" button (`btnBrowseCtaImage`) with automatic URL/alt population and real-time live preview synchronization.
+- **Verification:** Verified `page_call_to_actions` SQL Server schema and filtered index using `sqlcmd`, confirmed all 6 seed rows populated, verified `renderCallToActionShortcodes` output via live CF execution, tested route routing returning HTTP 302/200, and confirmed zero ColdFusion syntax/compilation errors.
+
+---
+
 ### Session: October 17, 2026 — Call to Action (CTA / CTR) Cards & High-Conversion Civic Block Templates
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** Stylesheets (`stylesheets/jbd-templates.css`), Rich Text Editor (`javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `vendor/jbdeditor/src/dialog.js`), Pages Studio (`app/views/pages/edit.cfm`), Documentation & Demo (`app/views/documentation/editor.cfm`, `app/views/layout.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`)
@@ -394,3 +461,94 @@ This log maintains a chronological, permanent record of engineering milestones, 
      - In `javascripts/filexplorer/explorer.js`, enhanced `selectForPicker()` to detect assets originating from `shared images` or `picjumbo` and resolve clean, public web paths `/images/picjumbo/<filename>`.
   5. **Git Repository Isolation:**
      - Configured `.gitignore` to ignore `/files/` and `/images/picjumbo/` while retaining `/files/.gitkeep`, ensuring local NTFS junction points and external image assets are not committed into version control.
+
+---
+
+### Milestone 13: Call to Action Studio, Flexible Column Layouts (4-Col, 3x1, 50/50 Split) & Media Library Integration
+- **Files Modified:**
+  - `app/views/pages/callToAction.cfm`, `app/views/pages/edit.cfm`, `app/global/functions.cfm`, `stylesheets/jbd-templates.css`
+  - `javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `vendor/jbdeditor/src/dialog.js`
+  - `app/controllers/Pages.cfc`, `config/routes.cfm`, `app/views/layout.cfm`, `app/views/pages/index.cfm`
+- **Key Deliverables & Engineering Solutions:**
+  1. **Call to Action Studio Modernization:**
+     - Established "Call to Action Studio" as a core component of the Pages section for managing cards, multi-action grids, and shortcodes.
+     - Streamlined creation and edit modals by removing redundant Department/Workspace dropdowns, binding new cards directly to the active workspace resolved from the global header switcher.
+  2. **Flexible Multi-Column Responsive Grid Layouts:**
+     - **CSS Grid Architecture (`stylesheets/jbd-templates.css`):**
+       - `4 Columns (4 Col Grid)`: `.cta-grid-4` (4 columns desktop `1fr 1fr 1fr 1fr`, 2 tablet at 1100px, 1 mobile at 640px).
+       - `3 Columns (3x1 Reference)`: `.cta-grid-3` (3 columns desktop `1fr 1fr 1fr`, 2 tablet at 991px, 1 mobile at 640px).
+       - `2 Columns (2x2 / 50-50 Split)`: `.cta-grid-2`, `.cta-grid-50-50` (2 columns 50/50 desktop `1fr 1fr`, 1 mobile at 640px).
+     - **Shortcode Parser Enhancement (`app/global/functions.cfm`):**
+       - Updated `renderCallToActionShortcodes()` to parse `cols`, `columns`, and `layout` shortcode attributes (e.g. `cols="4"`, `layout="4col"`, `cols="3"`, `layout="3x1"`, `cols="2"`, `layout="2x2"`, `layout="50/50"`).
+       - Implemented automatic intelligent inference when column count is omitted: 2 items render as 50/50 split (`cta-grid-2 cta-grid-50-50`), 4 items render as 4-column (`cta-grid-4`), and others default to 3-column (`cta-grid-3`).
+  3. **Studio Grid Builder Modal (`callToAction.cfm`):**
+     - Added column layout selector with radio controls for `3 Columns (3x1 Reference)`, `4 Columns (4 Col Grid)`, and `2 Columns (2x2 / 50-50 Split)`.
+     - Wired real-time synchronization in `updateGridBuilderOutput()` to update shortcode output and semantic HTML preview dynamically upon layout change.
+  4. **Page Editor Embed Modal Integration (`pages/edit.cfm`):**
+     - Added layout select dropdown (`3 Columns (3x1 Grid)`, `4 Columns (4 Col Grid)`, `2 Columns (2x2 / 50-50 Split)`) in `#embedCtaModal` footer.
+     - Enhanced `btnEmbedGrid` and `btnInsertGridSc` handlers to embed selected HTML classes and append `cols="..."` to inserted shortcodes.
+  5. **Interactive Media Library Picker Integration:**
+     - Integrated County File Explorer modal with `postMessage` protocol into Call to Action Studio (`#btnBrowseCtaImage`), allowing direct asset selection and automatic population of image URLs and accessible alt text.
+  6. **JBDEditor Block Templates:**
+     - Added `cta-4col-grid` alongside `cta-reference-grid` and `cta-grid` in `javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, and `vendor/jbdeditor/src/dialog.js`.
+
+---
+
+### Milestone 13: Call to Action Studio, Flexible Column Layouts (4-Col, 3x1, 50/50 Split) & Media Library Integration
+- **Files Modified:**
+  - `app/views/pages/callToAction.cfm`, `app/views/pages/edit.cfm`, `app/global/functions.cfm`, `stylesheets/jbd-templates.css`
+  - `javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `vendor/jbdeditor/src/dialog.js`
+  - `app/controllers/Pages.cfc`, `config/routes.cfm`, `app/views/layout.cfm`, `app/views/pages/index.cfm`
+- **Key Deliverables & Engineering Solutions:**
+  1. **Call to Action Studio Modernization:**
+     - Established "Call to Action Studio" as a core component of the Pages section for managing cards, multi-action grids, and shortcodes.
+     - Streamlined creation and edit modals by removing redundant Department/Workspace dropdowns, binding new cards directly to the active workspace resolved from the global header switcher.
+  2. **Flexible Multi-Column Responsive Grid Layouts:**
+     - **CSS Grid Architecture (`stylesheets/jbd-templates.css`):**
+       - `4 Columns (4 Col Grid)`: `.cta-grid-4` (4 columns desktop `1fr 1fr 1fr 1fr`, 2 tablet at 1100px, 1 mobile at 640px).
+       - `3 Columns (3x1 Reference)`: `.cta-grid-3` (3 columns desktop `1fr 1fr 1fr`, 2 tablet at 991px, 1 mobile at 640px).
+       - `2 Columns (2x2 / 50-50 Split)`: `.cta-grid-2`, `.cta-grid-50-50` (2 columns 50/50 desktop `1fr 1fr`, 1 mobile at 640px).
+     - **Shortcode Parser Enhancement (`app/global/functions.cfm`):**
+       - Updated `renderCallToActionShortcodes()` to parse `cols`, `columns`, and `layout` shortcode attributes (e.g. `cols="4"`, `layout="4col"`, `cols="3"`, `layout="3x1"`, `cols="2"`, `layout="2x2"`, `layout="50/50"`).
+       - Implemented automatic intelligent inference when column count is omitted: 2 items render as 50/50 split (`cta-grid-2 cta-grid-50-50`), 4 items render as 4-column (`cta-grid-4`), and others default to 3-column (`cta-grid-3`).
+  3. **Studio Grid Builder Modal (`callToAction.cfm`):**
+     - Added column layout selector with radio controls for `3 Columns (3x1 Reference)`, `4 Columns (4 Col Grid)`, and `2 Columns (2x2 / 50-50 Split)`.
+     - Wired real-time synchronization in `updateGridBuilderOutput()` to update shortcode output and semantic HTML preview dynamically upon layout change.
+  4. **Page Editor Embed Modal Integration (`pages/edit.cfm`):**
+     - Added layout select dropdown (`3 Columns (3x1 Grid)`, `4 Columns (4 Col Grid)`, `2 Columns (2x2 / 50-50 Split)`) in `#embedCtaModal` footer.
+     - Enhanced `btnEmbedGrid` and `btnInsertGridSc` handlers to embed selected HTML classes and append `cols="..."` to inserted shortcodes.
+  5. **Interactive Media Library Picker Integration:**
+     - Integrated County File Explorer modal with `postMessage` protocol into Call to Action Studio (`#btnBrowseCtaImage`), allowing direct asset selection and automatic population of image URLs and accessible alt text.
+  6. **JBDEditor Block Templates:**
+     - Added `cta-4col-grid` alongside `cta-reference-grid` and `cta-grid` in `javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, and `vendor/jbdeditor/src/dialog.js`.
+
+  7. **Strict Workspace Isolation:**
+     - Enforced strict workspace partitioning across `loadCallToActions()`, `loadCallToActionCategories()`, `getCallToActions()`, and `callToAction()` in `Pages.cfc`.
+     - Filtered queries strictly by `cta.siteid = :ws` (unless global/all is explicitly requested).
+     - Connected global header switcher listener (`cmsadmin:workspaceChanged`) in `callToAction.cfm` to immediately refresh and view the active workspace's CTAs.
+  8. **JSON Body Parsing & Save Endpoint Hardening:**
+     - Resolved save error `SyntaxError: Unexpected token '<'` by implementing `fxReadJsonBody()` in `saveCallToAction()`, `deleteCallToAction()`, and `reorderCallToActions()` in `app/controllers/Pages.cfc`.
+     - Added hyphenated route patterns (`pages/save-call-to-action`, `pages/delete-call-to-action`, `pages/reorder-call-to-actions`) in `config/routes.cfm`.
+     - Added safe response handling in `callToAction.cfm` to detect expired sessions or non-JSON payloads cleanly without throwing unhandled exceptions.
+---
+
+### Milestone 14: Clipboard Copy Hardening & Plain HTTP Compatibility (`callToAction.cfm` & `admin.js`)
+- **Files Modified:**
+  - `app/views/pages/callToAction.cfm`
+  - `javascripts/admin.js`
+- **Issue:**
+  - "Copy to clipboard is not working": Clicking shortcode chips on CTA cards or clicking "Copy Shortcode" / "Copy HTML" in the Grid Builder modal failed silently or threw an uncaught error.
+- **Root Cause & Engineering Solutions:**
+  1. **Plain HTTP Incompatibility:** The application origin (`http://cmsadmin.chelancounty.gov`) operates over plain HTTP (`window.isSecureContext === false`). In modern Chromium browsers (Chrome & Edge), `navigator.clipboard` is restricted to secure contexts (`https://` or `localhost`) and evaluates to `undefined`, causing `navigator.clipboard.writeText(...)` to throw `TypeError: Cannot read properties of undefined (reading 'writeText')`.
+  2. **Universal Dual-Mode Clipboard Helper (`copyTextToClipboard`):**
+     - Implemented `copyTextToClipboard(text, successToastMsg, triggerBtn)` with dual fallback mechanisms in `callToAction.cfm`.
+     - First attempts `window.copyToClipboard()` (from `admin.js`), which detects secure context availability and falls back to `document.execCommand('copy')`.
+     - Directly implements an isolated `legacyExecCopy` textarea selection fallback so copying succeeds 100% reliably regardless of protocol or script load order.
+  3. **Visual Feedback & Micro-Interactions:**
+     - Added `.cta-shortcode-chip.btn-copied` green success animation and temporary state switch on clicked buttons.
+     - Preserved accessible toast notifications using `window.showToast(..., "success")`.
+  4. **Strict Invariant #2 Enforcement in `admin.js`:**
+     - Removed legacy `window.prompt(...)` fallback from `javascripts/admin.js` in compliance with Chelan County Non-Negotiable Invariants.
+  5. **CFML Output Hash Escaping (`callToAction.cfm`):**
+     - Resolved `[coldfusion.util.RuntimeWrapper] 10b981 is not a valid identifier name` by escaping hex color hashes (`#10b981`, `#065f46`, `#d1fae5`) as double pound signs (`##10b981`, `##065f46`, `##d1fae5`) within the `<cfoutput>` block.
+

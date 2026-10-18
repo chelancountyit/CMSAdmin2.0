@@ -526,13 +526,8 @@ window.copyToClipboard = async function (text) {
     if (successful) return true;
   } catch (err) {}
 
-  // 3. Fallback prompt if both programmatic APIs are blocked by browser policy
-  try {
-    window.prompt("Copy to clipboard (Ctrl+C / Cmd+C):", str);
-    return true;
-  } catch (err) {
-    return false;
-  }
+  // 3. If both modern and execCommand fail, return false (never use native window.prompt per CMSAdmin invariants)
+  return false;
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -713,6 +708,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const wsNoResults = document.getElementById("workspaceNoResults");
   const WS_STORAGE_KEY = "cmsadmin_active_workspace";
 
+  function applyWorkspacePrimaryColor(hexColor) {
+    const cleanColor = (hexColor && /^#[0-9a-fA-F]{3,6}$/.test(hexColor.trim())) ? hexColor.trim() : "#0073aa";
+    const targets = [document.documentElement, document.body].filter(Boolean);
+    targets.forEach((el) => {
+      el.style.setProperty("--admin-primary", cleanColor);
+      el.style.setProperty("--admin-primary-hover", "color-mix(in srgb, " + cleanColor + " 80%, #000000)");
+      el.style.setProperty("--admin-primary-light", "color-mix(in srgb, " + cleanColor + " 10%, #ffffff)");
+      el.style.setProperty("--admin-primary-focus", "color-mix(in srgb, " + cleanColor + " 25%, transparent)");
+    });
+  }
+
   function setActiveWorkspace(wsData, save = true) {
     if (!wsData) return;
 
@@ -722,6 +728,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // If an unselected/prompt workspace is passed
     if (!wsData.id) {
+      applyWorkspacePrimaryColor("#0073aa");
       if (wsTitleEl) wsTitleEl.textContent = "Please select a workspace";
       if (wsPillEl) {
         wsPillEl.textContent = "Select";
@@ -732,6 +739,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (wsContainer) {
         wsContainer.setAttribute("data-active-ws-id", "");
+        wsContainer.setAttribute("data-active-ws-color", "#0073aa");
         wsContainer.setAttribute("data-active-ws-virtual-dir", "shared");
       }
       wsItems.forEach((item) => item.classList.remove("is-active"));
@@ -753,6 +761,7 @@ document.addEventListener("DOMContentLoaded", () => {
           id: fallback.getAttribute("data-ws-id"),
           name: fallback.getAttribute("data-ws-name"),
           type: fallback.getAttribute("data-ws-type"),
+          color: fallback.getAttribute("data-ws-color") || "#0073aa",
           badge: fallback.getAttribute("data-ws-badge"),
           badgeCls: fallback.getAttribute("data-ws-badge-cls"),
           icon: fallback.getAttribute("data-ws-icon"),
@@ -762,6 +771,12 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
     }
+
+    if (!wsData.color) {
+      const matchedItem = allowedItems.find((item) => (item.getAttribute("data-ws-id") || "").toLowerCase() === (wsData.id || "").toLowerCase());
+      wsData.color = (matchedItem && matchedItem.getAttribute("data-ws-color")) || (wsContainer && wsContainer.getAttribute("data-active-ws-color")) || "#0073aa";
+    }
+    applyWorkspacePrimaryColor(wsData.color);
 
     if (wsTitleEl) wsTitleEl.textContent = wsData.name || "Please select a workspace";
     if (wsPillEl) {
@@ -773,6 +788,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (wsContainer) {
       wsContainer.setAttribute("data-active-ws-id", wsData.id);
+      wsContainer.setAttribute("data-active-ws-color", wsData.color);
       wsContainer.setAttribute("data-active-ws-virtual-dir", wsData.virtualDir || wsData.id);
     }
 
@@ -842,6 +858,7 @@ document.addEventListener("DOMContentLoaded", () => {
         id: targetItem.getAttribute("data-ws-id"),
         name: targetItem.getAttribute("data-ws-name"),
         type: targetItem.getAttribute("data-ws-type"),
+        color: targetItem.getAttribute("data-ws-color") || (wsContainer && wsContainer.getAttribute("data-active-ws-color")) || "#0073aa",
         badge: targetItem.getAttribute("data-ws-badge"),
         badgeCls: targetItem.getAttribute("data-ws-badge-cls"),
         icon: targetItem.getAttribute("data-ws-icon"),
@@ -870,6 +887,7 @@ document.addEventListener("DOMContentLoaded", () => {
         id: newWsId,
         name: item.getAttribute("data-ws-name") || newWsId,
         type: item.getAttribute("data-ws-type") || "dept",
+        color: item.getAttribute("data-ws-color") || "#0073aa",
         badge: item.getAttribute("data-ws-badge") || "",
         badgeCls: item.getAttribute("data-ws-badge-cls") || "",
         icon: item.getAttribute("data-ws-icon") || "grid",

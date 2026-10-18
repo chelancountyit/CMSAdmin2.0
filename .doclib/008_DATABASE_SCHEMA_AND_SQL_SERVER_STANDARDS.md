@@ -38,6 +38,7 @@ INSERT INTO articles (
 |---|---|---|
 | `dbo.pages` | `ContentID` (INT) | Primary hierarchical site pages, templates, subpages |
 | `dbo.page_revisions` | `id` (INT) | RCW 42.56 historical snapshots, visual diffs, and rollback backups |
+| `dbo.page_call_to_actions` | `id` (INT) | Call to Action (CTA) cards, grid shortcodes, and service links |
 | `dbo.articles` | `id` (INT) | News stories, press updates, ADA cover photos, taxonomies |
 | `dbo.article_categories` | `id` (INT) | Department categories with badge colors and slug routing |
 | `dbo.article_tags` | `id` (INT) | Searchable keyword tags indexed by workspace |
@@ -54,8 +55,7 @@ INSERT INTO articles (
 All queries must strictly pass typed parameters to prevent SQL injection and truncation errors:
 
 - Integer IDs: `cf_sql_integer`
-- Single-line Strings: `cf_sql_varchar` with length limit
-- Multi-line Content / HTML: `cf_sql_longvarchar`
+- Unicode Strings & HTML Content (`NVARCHAR` / `NVARCHAR(MAX)`): `cf_sql_nvarchar` (avoid `cf_sql_longvarchar` on `NVARCHAR(MAX)` columns as single-byte `VARCHAR` binding corrupts non-ASCII Unicode symbols into `?`)
 - Timestamps: `cf_sql_timestamp`
 - Bit Flags / Booleans: `cf_sql_bit`
 

@@ -227,6 +227,18 @@ public string function svgIcon(required string name, string class = "", numeric 
 		case "file-signature":
 		case "contract":
 			return '<svg #baseAttrs#><path d="M20 19.5v.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8.5L20 7.5V11"/><path d="M14 2v6h6"/><path d="M18.42 15.61a2.1 2.1 0 1 1 2.97 2.97L16.95 23 13 24l1-3.95 4.42-4.44Z"/></svg>';
+		case "cta":
+		case "call-to-action":
+		case "zap":
+			return '<svg #baseAttrs#><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+		case "cursor-click":
+		case "pointer":
+			return '<svg #baseAttrs#><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></svg>';
+		case "pdf":
+		case "file-pdf":
+			return '<svg #baseAttrs#><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-4h2a1.5 1.5 0 0 1 0 3H9"/></svg>';
+		case "arrow-up-right":
+			return '<svg #baseAttrs#><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>';
 		default:
 			return '<svg #baseAttrs#><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
 	}
