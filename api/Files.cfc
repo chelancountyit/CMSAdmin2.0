@@ -91,6 +91,47 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				}
 			}
 
+			// Enrich files with persistent metadata from dbo.media_assets
+			try {
+				local.wsTarget = local.target.depth >= 1 ? local.target.segments[1] : local.cleanWs;
+				local.folderTarget = local.target.depth >= 2 ? local.target.segments[2] : "";
+				if (len(local.wsTarget) && arrayLen(local.files) > 0) {
+					local.qMeta = queryExecute("
+						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+						SELECT id, filename, title, alt_text, caption, credit, file_hash, is_wcag_compliant, tags, width, height
+						FROM dbo.media_assets
+						WHERE deletedat IS NULL
+						  AND site_id = :site_id
+						  AND (:folder = '' OR folder = :folder)
+					", {
+						site_id: { value: local.wsTarget, cfsqltype: "cf_sql_nvarchar" },
+						folder: { value: local.folderTarget, cfsqltype: "cf_sql_nvarchar" }
+					}, { datasource: "ChelanCountyWebsite" });
+
+					local.metaMap = {};
+					for (local.mRow in local.qMeta) {
+						local.metaMap[lCase(local.mRow.filename)] = local.mRow;
+					}
+
+					for (local.fItem in local.files) {
+						local.fKey = lCase(local.fItem.name);
+						if (structKeyExists(local.metaMap, local.fKey)) {
+							local.m = local.metaMap[local.fKey];
+							local.fItem["id"] = val(local.m.id);
+							local.fItem["title"] = local.m.title ?: "";
+							local.fItem["altText"] = local.m.alt_text ?: "";
+							local.fItem["caption"] = local.m.caption ?: "";
+							local.fItem["credit"] = local.m.credit ?: "";
+							local.fItem["hash"] = local.m.file_hash ?: "";
+							local.fItem["isWcagCompliant"] = (isBoolean(local.m.is_wcag_compliant) && local.m.is_wcag_compliant);
+							local.fItem["tags"] = local.m.tags ?: "";
+							if (val(local.m.width) > 0) local.fItem["width"] = val(local.m.width);
+							if (val(local.m.height) > 0) local.fItem["height"] = val(local.m.height);
+						}
+					}
+				}
+			} catch (any metaErr) {}
+
 			// Sort directories: images, documents, shared images, then alphabetical
 			arraySort(local.dirs, function(a, b) {
 				local.orderA = (compareNoCase(a.name, "images") == 0 || compareNoCase(a.name, "media") == 0 ? 1 : (compareNoCase(a.name, "documents") == 0 ? 2 : (compareNoCase(a.name, "shared images") == 0 ? 3 : 99)));
@@ -535,6 +576,96 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			application.fx = local.cfg;
 		}
 		return application.fx;
+	}
+
+	remote struct function updateMeta(
+		string path = "",
+		string id = "",
+		string title = "",
+		string altText = "",
+		string caption = "",
+		string credit = "",
+		string tags = ""
+	) returnformat="json" {
+		noCache();
+		try {
+			if (findNoCase("shared images", arguments.path) > 0) {
+				return fail("Shared stock images are read-only.");
+			}
+
+			local.assetId = val(arguments.id);
+			local.altText = trim(arguments.altText);
+			local.title = trim(arguments.title);
+			local.caption = trim(arguments.caption);
+			local.credit = trim(arguments.credit);
+			local.tags = trim(arguments.tags);
+
+			local.existing = queryNew("");
+			if (local.assetId > 0) {
+				local.existing = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					SELECT TOP 1 id, site_id, folder, filename, file_path, web_url, is_image, file_hash
+					FROM dbo.media_assets
+					WHERE id = :id AND deletedat IS NULL
+				", { id: { value: local.assetId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+			} else if (len(trim(arguments.path))) {
+				local.normPath = replace(trim(arguments.path), "\", "/", "all");
+				if (left(local.normPath, 1) == "/") local.normPath = mid(local.normPath, 2, len(local.normPath));
+				local.webUrl = "/" & local.normPath;
+
+				local.existing = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					SELECT TOP 1 id, site_id, folder, filename, file_path, web_url, is_image, file_hash
+					FROM dbo.media_assets
+					WHERE (web_url = :web_url OR file_path = :file_path OR filename = :fname) AND deletedat IS NULL
+				", {
+					web_url: { value: local.webUrl, cfsqltype: "cf_sql_nvarchar" },
+					file_path: { value: local.normPath, cfsqltype: "cf_sql_nvarchar" },
+					fname: { value: listLast(local.normPath, "/"), cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+			}
+
+			if (!local.existing.recordCount) {
+				return fail("Asset record not found in database.");
+			}
+
+			local.isImg = isBoolean(local.existing.is_image) && local.existing.is_image;
+			local.isWcag = (!local.isImg) || (len(local.altText) > 0);
+
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				UPDATE dbo.media_assets
+				SET title = :title,
+				    alt_text = :alt_text,
+				    caption = :caption,
+				    credit = :credit,
+				    tags = :tags,
+				    is_wcag_compliant = :is_wcag,
+				    updated_at = SYSDATETIME()
+				WHERE id = :id
+			", {
+				id: { value: local.existing.id, cfsqltype: "cf_sql_integer" },
+				title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
+				alt_text: { value: local.altText, cfsqltype: "cf_sql_nvarchar" },
+				caption: { value: local.caption, cfsqltype: "cf_sql_nvarchar" },
+				credit: { value: local.credit, cfsqltype: "cf_sql_nvarchar" },
+				tags: { value: local.tags, cfsqltype: "cf_sql_nvarchar" },
+				is_wcag: { value: local.isWcag ? 1 : 0, cfsqltype: "cf_sql_bit" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			return {
+				"ok": true,
+				"message": "Metadata saved successfully.",
+				"id": local.existing.id,
+				"title": local.title,
+				"altText": local.altText,
+				"caption": local.caption,
+				"credit": local.credit,
+				"isWcagCompliant": local.isWcag
+			};
+		} catch (any e) {
+			return handleError(e);
+		}
 	}
 
 	private struct function handleError(required any e) {

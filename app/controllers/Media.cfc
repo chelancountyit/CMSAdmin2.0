@@ -9,6 +9,8 @@ component extends="Controller" {
 	 * Media Library directory, browsing, search & asset inspector (Standalone File Explorer format)
 	 */
 	function index() {
+		ensureMediaAssetsSchema();
+		syncDiskAssetsToDatabase();
 		variables.pageTitle = "Media Library";
 
 		local.role = getCurrentActiveRole();
@@ -102,12 +104,39 @@ component extends="Controller" {
 	 * Dedicated Add / Upload File view
 	 */
 	function upload() {
+		ensureMediaAssetsSchema();
+		syncDiskAssetsToDatabase();
 		variables.pageTitle = "Upload Media & Documents";
 		local.role = getCurrentActiveRole();
 		local.isAdmin = (local.role eq "admin");
 		variables.workspaces = getWorkspacesList();
 		variables.defaultWs = activeWorkspaceId();
-		variables.defaultFolder = StructKeyExists(params, "folder") && Len(Trim(params.folder)) ? LCase(Trim(params.folder)) : "media";
+		if (!Len(variables.defaultWs) || variables.defaultWs eq "global" || variables.defaultWs eq "all") {
+			variables.defaultWs = ArrayLen(variables.workspaces) > 0 ? variables.workspaces[1].id : "assessors";
+		}
+		variables.defaultFolder = StructKeyExists(params, "folder") && Len(Trim(params.folder)) ? LCase(Trim(params.folder)) : "images";
+
+		// Recent uploads for display
+		variables.recentUploads = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			SELECT TOP 12 id, site_id, folder, filename, file_path, web_url, file_size, file_ext, file_hash,
+			       title, alt_text, caption, credit, is_image, is_wcag_compliant, width, height, created_at
+			FROM dbo.media_assets
+			WHERE deletedat IS NULL
+			ORDER BY created_at DESC
+		", {}, { datasource: "ChelanCountyWebsite" });
+
+		// Media Statistics
+		variables.mediaStats = queryExecute("
+			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			SELECT COUNT(*) AS total_assets,
+			       SUM(CASE WHEN is_image = 1 THEN 1 ELSE 0 END) AS total_images,
+			       SUM(CASE WHEN is_image = 0 THEN 1 ELSE 0 END) AS total_documents,
+			       SUM(CASE WHEN is_image = 1 AND (alt_text IS NOT NULL AND LEN(LTRIM(RTRIM(alt_text))) > 0) THEN 1 ELSE 0 END) AS wcag_compliant_images,
+			       SUM(CASE WHEN is_image = 1 AND (alt_text IS NULL OR LEN(LTRIM(RTRIM(alt_text))) = 0) THEN 1 ELSE 0 END) AS needs_alt_images
+			FROM dbo.media_assets
+			WHERE deletedat IS NULL
+		", {}, { datasource: "ChelanCountyWebsite" });
 	}
 
 	/**
@@ -212,9 +241,11 @@ component extends="Controller" {
 	}
 
 	/**
-	 * Process file uploads to files/[workspace]/[folder] with ADA WCAG AA validation
+	 * Process file uploads to files/[workspace]/[folder] with ADA WCAG AA validation and SQL Server persistence
 	 */
 	function processUpload() {
+		ensureMediaAssetsSchema();
+
 		local.result = {
 			"success": false,
 			"message": "",
@@ -224,7 +255,27 @@ component extends="Controller" {
 		local.role = getCurrentActiveRole();
 		local.isAdmin = (local.role eq "admin");
 
-		local.ws = StructKeyExists(params, "workspace") && Len(Trim(params.workspace)) ? LCase(Trim(params.workspace)) : activeWorkspaceId();
+		local.ws = StructKeyExists(params, "workspace") && Len(Trim(params.workspace)) ? LCase(Trim(params.workspace)) : "";
+		local.subfolder = StructKeyExists(params, "subfolder") && Len(Trim(params.subfolder)) ? LCase(Trim(params.subfolder)) : "";
+
+		// If full path like 'assessor/images' or 'community-development/documents' was passed
+		if (StructKeyExists(params, "path") && Len(Trim(params.path))) {
+			local.cleanP = Replace(Trim(params.path), "\", "/", "all");
+			local.pathParts = ListToArray(local.cleanP, "/");
+			if (ArrayLen(local.pathParts) >= 1 && !Len(local.ws)) {
+				local.ws = LCase(local.pathParts[1]);
+			}
+			if (ArrayLen(local.pathParts) >= 2 && !Len(local.subfolder)) {
+				local.subfolder = LCase(local.pathParts[2]);
+			}
+		}
+
+		if (!Len(local.ws)) {
+			local.ws = activeWorkspaceId();
+		}
+		if (!Len(local.subfolder)) {
+			local.subfolder = "images";
+		}
 		if (!Len(local.ws) || local.ws == "global" || local.ws == "all") {
 			local.result.message = "Workspace Required: Please select a workspace before uploading files.";
 			renderText(text=SerializeJSON(local.result), contentType="application/json");
@@ -235,8 +286,6 @@ component extends="Controller" {
 			renderText(text=SerializeJSON(local.result), contentType="application/json");
 			return;
 		}
-
-		local.subfolder = StructKeyExists(params, "subfolder") && Len(Trim(params.subfolder)) ? LCase(Trim(params.subfolder)) : "media";
 		if (local.subfolder eq "shared images" || FindNoCase("shared images", local.subfolder) > 0) {
 			local.result.message = "The shared images folder is read-only. Uploading or modifying files in this folder is disabled for all users.";
 			local.isJson = StructKeyExists(params, "format") && params.format eq "json";
@@ -249,9 +298,11 @@ component extends="Controller" {
 			return;
 		}
 
-		local.altText = StructKeyExists(params, "altText") ? Trim(params.altText) : "";
+		local.altText = StructKeyExists(params, "altText") ? Trim(params.altText) : (StructKeyExists(params, "alt_text") ? Trim(params.alt_text) : "");
 		local.caption = StructKeyExists(params, "caption") ? Trim(params.caption) : "";
 		local.title = StructKeyExists(params, "title") ? Trim(params.title) : "";
+		local.credit = StructKeyExists(params, "credit") ? Trim(params.credit) : "";
+		local.tags = StructKeyExists(params, "tags") ? Trim(params.tags) : "";
 
 		// Ensure target directory exists on disk
 		local.targetDir = "C:\inetpub\chelan-county\files\" & local.ws & "\" & local.subfolder;
@@ -271,24 +322,125 @@ component extends="Controller" {
 				);
 
 				local.ext = LCase(local.uploaded.serverFileExt);
-				local.isImg = ListFindNoCase("jpg,jpeg,png,gif,webp,svg,ico", local.ext) > 0;
+				local.disallowed = "cfm,cfc,exe,bat,cmd,vbs,ps1,sh,jsp,asp,aspx,dll,com,scr,pif";
+				if (ListFindNoCase(local.disallowed, local.ext) > 0) {
+					try {
+						FileDelete(local.targetDir & "\" & local.uploaded.serverFile);
+					} catch (any delErr) {}
+					local.result.message = "Security Violation: Executable file types (." & local.ext & ") are strictly forbidden from upload.";
+					if (StructKeyExists(params, "format") && params.format eq "json") {
+						renderText(text=SerializeJSON(local.result), contentType="application/json");
+						return;
+					}
+					flashInsert(error=local.result.message);
+					redirectTo(controller="media", action="upload", params="ws=" & local.ws);
+					return;
+				}
 
-				// Verify ADA WCAG Compliance for images
+				local.uploadedPath = local.targetDir & "\" & local.uploaded.serverFile;
+				local.bytes = FileReadBinary(local.uploadedPath);
+				local.fileHash = LCase(Hash(local.bytes, "SHA-256"));
+				local.isImg = ListFindNoCase("jpg,jpeg,png,gif,webp,svg,ico,bmp", local.ext) > 0;
+
+				// SHA-256 Deduplication check
+				local.dupAsset = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					SELECT TOP 1 id, site_id, folder, filename, file_path, web_url, title
+					FROM dbo.media_assets
+					WHERE file_hash = :hash AND deletedat IS NULL
+				", {
+					hash: { value: local.fileHash, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+
+				local.dupWarning = "";
+				if (local.dupAsset.recordCount > 0) {
+					local.dupWarning = " (Note: Identical file already exists at '" & local.dupAsset.file_path & "' [SHA-256: " & Left(local.fileHash, 12) & "...])";
+				}
+
+				// Compute image dimensions
+				local.width = javaCast("null", "");
+				local.height = javaCast("null", "");
+				if (local.isImg && ListFindNoCase("jpg,jpeg,png,gif,bmp", local.ext) > 0) {
+					try {
+						local.cfImg = ImageRead(local.uploadedPath);
+						local.imgInfo = ImageInfo(local.cfImg);
+						local.width = local.imgInfo.width;
+						local.height = local.imgInfo.height;
+					} catch (any imgErr) {}
+				}
+
+				// Auto-format title if empty
+				if (!Len(local.title)) {
+					local.title = formatTitleFromName(local.uploaded.serverFile);
+				}
+
+				// Verify ADA WCAG Compliance for images (WCAG 1.1.1)
+				local.isWcagCompliant = (!local.isImg) || (Len(Trim(local.altText)) > 0);
 				local.wcagNotice = "";
-				if (local.isImg && Len(local.altText) == 0) {
+				if (local.isImg && !local.isWcagCompliant) {
 					local.wcagNotice = " Note: This image is marked as needing Alt Text for ADA WCAG AA compliance.";
 				}
 
+				local.mime = StructKeyExists(local.uploaded, "contentType") && StructKeyExists(local.uploaded, "contentSubType")
+					? (local.uploaded.contentType & "/" & local.uploaded.contentSubType) : "";
+				local.relPath = "files/" & local.ws & "/" & local.subfolder & "/" & local.uploaded.serverFile;
+				local.webUrl = "/files/" & local.ws & "/" & local.subfolder & "/" & local.uploaded.serverFile;
+				local.userEmail = StructKeyExists(session, "user") && StructKeyExists(session.user, "email")
+					? session.user.email : (StructKeyExists(session, "username") ? session.username : "admin");
+
+				// Persist into dbo.media_assets
+				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					INSERT INTO dbo.media_assets (
+						site_id, folder, filename, file_path, web_url,
+						file_size, file_ext, mime_type, file_hash,
+						title, alt_text, caption, credit,
+						is_image, width, height, is_wcag_compliant, tags,
+						created_by, created_at, updated_at
+					) VALUES (
+						:site_id, :folder, :filename, :file_path, :web_url,
+						:file_size, :file_ext, :mime_type, :file_hash,
+						:title, :alt_text, :caption, :credit,
+						:is_image, :width, :height, :is_wcag_compliant, :tags,
+						:created_by, SYSDATETIME(), SYSDATETIME()
+					)
+				", {
+					site_id: { value: local.ws, cfsqltype: "cf_sql_nvarchar" },
+					folder: { value: local.subfolder, cfsqltype: "cf_sql_nvarchar" },
+					filename: { value: local.uploaded.serverFile, cfsqltype: "cf_sql_nvarchar" },
+					file_path: { value: local.relPath, cfsqltype: "cf_sql_nvarchar" },
+					web_url: { value: local.webUrl, cfsqltype: "cf_sql_nvarchar" },
+					file_size: { value: local.uploaded.fileSize, cfsqltype: "cf_sql_bigint" },
+					file_ext: { value: local.ext, cfsqltype: "cf_sql_nvarchar" },
+					mime_type: { value: local.mime, cfsqltype: "cf_sql_nvarchar" },
+					file_hash: { value: local.fileHash, cfsqltype: "cf_sql_nvarchar" },
+					title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
+					alt_text: { value: local.altText, cfsqltype: "cf_sql_nvarchar" },
+					caption: { value: local.caption, cfsqltype: "cf_sql_nvarchar" },
+					credit: { value: local.credit, cfsqltype: "cf_sql_nvarchar" },
+					is_image: { value: local.isImg ? 1 : 0, cfsqltype: "cf_sql_bit" },
+					width: { value: local.width, cfsqltype: "cf_sql_integer", null: IsNull(local.width) },
+					height: { value: local.height, cfsqltype: "cf_sql_integer", null: IsNull(local.height) },
+					is_wcag_compliant: { value: local.isWcagCompliant ? 1 : 0, cfsqltype: "cf_sql_bit" },
+					tags: { value: local.tags, cfsqltype: "cf_sql_nvarchar" },
+					created_by: { value: local.userEmail, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+
 				local.result.success = true;
-				local.result.message = "File '" & local.uploaded.serverFile & "' successfully uploaded to " & local.ws & "/" & local.subfolder & "." & local.wcagNotice;
+				local.result.message = "File '" & local.uploaded.serverFile & "' successfully uploaded and registered in media database for " & local.ws & "/" & local.subfolder & "." & local.wcagNotice & local.dupWarning;
 				local.result.file = {
 					"name": local.uploaded.serverFile,
 					"size": local.uploaded.fileSize,
-					"relativePath": "files/" & local.ws & "/" & local.subfolder & "/" & local.uploaded.serverFile,
-					"webUrl": "/files/" & local.ws & "/" & local.subfolder & "/" & local.uploaded.serverFile,
+					"relativePath": local.relPath,
+					"webUrl": local.webUrl,
 					"extension": local.ext,
+					"fileHash": local.fileHash,
+					"title": local.title,
 					"altText": local.altText,
-					"isImage": local.isImg
+					"caption": local.caption,
+					"credit": local.credit,
+					"isImage": local.isImg,
+					"isWcagCompliant": local.isWcagCompliant
 				};
 			} else {
 				local.result.message = "No file was selected for upload.";
@@ -314,12 +466,12 @@ component extends="Controller" {
 			} else {
 				flashInsert(error=local.result.message);
 			}
-			redirectTo(controller="media", action="index", params="ws=" & local.ws & "&folder=" & local.subfolder);
+			redirectTo(controller="media", action="upload", params="ws=" & local.ws & "&folder=" & local.subfolder);
 		}
 	}
 
 	/**
-	 * Update media asset metadata (Alt text, title, caption) with live feedback
+	 * Update media asset metadata (Alt text, title, caption, credit, tags) with SQL Server database persistence
 	 */
 	function updateMeta() {
 		if ((StructKeyExists(params, "path") && FindNoCase("shared images", params.path) > 0)
@@ -328,15 +480,247 @@ component extends="Controller" {
 			return;
 		}
 
-		local.response = {
-			"success": true,
-			"message": "Asset metadata updated successfully.",
-			"altText": StructKeyExists(params, "altText") ? Trim(params.altText) : "",
-			"title": StructKeyExists(params, "title") ? Trim(params.title) : "",
-			"caption": StructKeyExists(params, "caption") ? Trim(params.caption) : ""
-		};
+		ensureMediaAssetsSchema();
 
-		renderText(text=SerializeJSON(local.response), contentType="application/json");
+		local.assetId = StructKeyExists(params, "id") ? Val(params.id) : 0;
+		local.path = StructKeyExists(params, "path") ? Trim(params.path) : (StructKeyExists(params, "webUrl") ? Trim(params.webUrl) : "");
+		local.altText = StructKeyExists(params, "altText") ? Trim(params.altText) : (StructKeyExists(params, "alt_text") ? Trim(params.alt_text) : "");
+		local.title = StructKeyExists(params, "title") ? Trim(params.title) : "";
+		local.caption = StructKeyExists(params, "caption") ? Trim(params.caption) : "";
+		local.credit = StructKeyExists(params, "credit") ? Trim(params.credit) : "";
+		local.tags = StructKeyExists(params, "tags") ? Trim(params.tags) : "";
+
+		local.existing = queryNew("");
+		if (local.assetId > 0) {
+			local.existing = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT TOP 1 id, site_id, folder, filename, file_path, web_url, is_image, file_hash
+				FROM dbo.media_assets
+				WHERE id = :id AND deletedat IS NULL
+			", { id: { value: local.assetId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+		} else if (Len(local.path)) {
+			local.normPath = Replace(local.path, "\", "/", "all");
+			if (Left(local.normPath, 1) == "/") local.normPath = Mid(local.normPath, 2, Len(local.normPath));
+			local.webUrl = "/" & local.normPath;
+
+			local.existing = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT TOP 1 id, site_id, folder, filename, file_path, web_url, is_image, file_hash
+				FROM dbo.media_assets
+				WHERE (web_url = :web_url OR file_path = :file_path OR filename = :fname) AND deletedat IS NULL
+			", {
+				web_url: { value: local.webUrl, cfsqltype: "cf_sql_nvarchar" },
+				file_path: { value: local.normPath, cfsqltype: "cf_sql_nvarchar" },
+				fname: { value: ListLast(local.normPath, "/"), cfsqltype: "cf_sql_nvarchar" }
+			}, { datasource: "ChelanCountyWebsite" });
+		}
+
+		local.currentUser = StructKeyExists(session, "user") && StructKeyExists(session.user, "email")
+			? session.user.email : (StructKeyExists(session, "username") ? session.username : "admin");
+
+		if (local.existing.recordCount > 0) {
+			local.isImg = isBoolean(local.existing.is_image) && local.existing.is_image;
+			local.isWcag = (!local.isImg) || (Len(local.altText) > 0);
+
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				UPDATE dbo.media_assets
+				SET title = :title,
+				    alt_text = :alt_text,
+				    caption = :caption,
+				    credit = :credit,
+				    tags = :tags,
+				    is_wcag_compliant = :is_wcag,
+				    updated_at = SYSDATETIME(),
+				    updated_by = :user
+				WHERE id = :id
+			", {
+				id: { value: local.existing.id, cfsqltype: "cf_sql_integer" },
+				title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
+				alt_text: { value: local.altText, cfsqltype: "cf_sql_nvarchar" },
+				caption: { value: local.caption, cfsqltype: "cf_sql_nvarchar" },
+				credit: { value: local.credit, cfsqltype: "cf_sql_nvarchar" },
+				tags: { value: local.tags, cfsqltype: "cf_sql_nvarchar" },
+				is_wcag: { value: local.isWcag ? 1 : 0, cfsqltype: "cf_sql_bit" },
+				user: { value: local.currentUser, cfsqltype: "cf_sql_nvarchar" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			renderText(text=SerializeJSON({
+				"success": true,
+				"message": "Asset metadata updated successfully in SQL Server database.",
+				"id": local.existing.id,
+				"title": local.title,
+				"altText": local.altText,
+				"caption": local.caption,
+				"credit": local.credit,
+				"isWcagCompliant": local.isWcag
+			}), contentType="application/json");
+			return;
+		}
+
+		renderText(text=SerializeJSON({
+			"success": false,
+			"message": "Asset record not found in database to update."
+		}), contentType="application/json");
+	}
+
+	/**
+	 * Ensures dbo.media_assets table and indexes exist in ChelanCountyWebsite
+	 */
+	public void function ensureMediaAssetsSchema() {
+		try {
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'media_assets')
+				BEGIN
+					CREATE TABLE dbo.media_assets (
+						id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+						site_id NVARCHAR(50) NOT NULL,
+						folder NVARCHAR(100) NOT NULL,
+						filename NVARCHAR(255) NOT NULL,
+						file_path NVARCHAR(500) NOT NULL,
+						web_url NVARCHAR(500) NOT NULL,
+						file_size BIGINT NOT NULL DEFAULT 0,
+						file_ext NVARCHAR(50) NOT NULL,
+						mime_type NVARCHAR(100) NULL,
+						file_hash NVARCHAR(64) NULL,
+						title NVARCHAR(255) NULL,
+						alt_text NVARCHAR(1000) NULL,
+						caption NVARCHAR(1000) NULL,
+						credit NVARCHAR(255) NULL,
+						is_image BIT NOT NULL DEFAULT 0,
+						width INT NULL,
+						height INT NULL,
+						is_wcag_compliant BIT NOT NULL DEFAULT 1,
+						tags NVARCHAR(500) NULL,
+						created_at DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),
+						created_by NVARCHAR(100) NULL,
+						updated_at DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),
+						updated_by NVARCHAR(100) NULL,
+						deletedat DATETIME2(0) NULL
+					);
+				END;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_media_assets_site_folder_file' AND object_id = OBJECT_ID('dbo.media_assets'))
+				BEGIN
+					CREATE UNIQUE NONCLUSTERED INDEX IX_media_assets_site_folder_file
+					ON dbo.media_assets (site_id, folder, filename)
+					WHERE deletedat IS NULL;
+				END;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_media_assets_file_hash' AND object_id = OBJECT_ID('dbo.media_assets'))
+				BEGIN
+					CREATE NONCLUSTERED INDEX IX_media_assets_file_hash
+					ON dbo.media_assets (file_hash)
+					WHERE deletedat IS NULL AND file_hash IS NOT NULL;
+				END;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_media_assets_wcag' AND object_id = OBJECT_ID('dbo.media_assets'))
+				BEGIN
+					CREATE NONCLUSTERED INDEX IX_media_assets_wcag
+					ON dbo.media_assets (site_id, is_image, is_wcag_compliant)
+					WHERE deletedat IS NULL;
+				END;
+			", {}, { datasource: "ChelanCountyWebsite" });
+		} catch (any e) {}
+	}
+
+	/**
+	 * Synchronize physical on-disk files under files/ into dbo.media_assets
+	 */
+	public void function syncDiskAssetsToDatabase() {
+		local.rootDir = "C:\inetpub\chelan-county\files\";
+		if (!DirectoryExists(local.rootDir)) return;
+
+		local.existingPaths = {};
+		try {
+			local.qExists = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT file_path, file_hash
+				FROM dbo.media_assets
+				WHERE deletedat IS NULL
+			", {}, { datasource: "ChelanCountyWebsite" });
+			for (local.row in local.qExists) {
+				local.existingPaths[LCase(Replace(local.row.file_path, "\", "/", "all"))] = local.row.file_hash;
+			}
+		} catch (any e) {
+			return;
+		}
+
+		local.wsDirs = DirectoryList(local.rootDir, false, "query");
+		for (local.wRow in local.wsDirs) {
+			if (local.wRow.type eq "Dir") {
+				local.wsName = local.wRow.name;
+				local.subFolders = DirectoryList(local.wRow.directory & "\" & local.wsName, false, "query");
+				for (local.fRow in local.subFolders) {
+					if (local.fRow.type eq "Dir") {
+						local.folderName = local.fRow.name;
+						local.filesInFolder = DirectoryList(local.fRow.directory & "\" & local.folderName, false, "query");
+						for (local.fileRow in local.filesInFolder) {
+							if (local.fileRow.type eq "File" && local.fileRow.name neq "README.txt" && local.fileRow.name neq ".gitkeep") {
+								local.relPath = "files/" & local.wsName & "/" & local.folderName & "/" & local.fileRow.name;
+								local.key = LCase(local.relPath);
+								if (!StructKeyExists(local.existingPaths, local.key)) {
+									local.fullPath = local.fileRow.directory & "\" & local.fileRow.name;
+									try {
+										local.fileBytes = FileReadBinary(local.fullPath);
+										local.fileHash = LCase(Hash(local.fileBytes, "SHA-256"));
+										local.ext = LCase(ListLast(local.fileRow.name, "."));
+										local.isImg = ListFindNoCase("jpg,jpeg,png,gif,webp,svg,ico,bmp", local.ext) > 0;
+										local.title = formatTitleFromName(local.fileRow.name);
+										local.width = javaCast("null", "");
+										local.height = javaCast("null", "");
+										if (local.isImg && ListFindNoCase("jpg,jpeg,png,gif,bmp", local.ext) > 0) {
+											try {
+												local.imgObj = ImageRead(local.fullPath);
+												local.iInfo = ImageInfo(local.imgObj);
+												local.width = local.iInfo.width;
+												local.height = local.iInfo.height;
+											} catch (any imgErr) {}
+										}
+										local.isWcag = (!local.isImg);
+
+										queryExecute("
+											SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+											INSERT INTO dbo.media_assets (
+												site_id, folder, filename, file_path, web_url,
+												file_size, file_ext, file_hash,
+												title, alt_text, caption, credit,
+												is_image, width, height, is_wcag_compliant, tags,
+												created_by, created_at, updated_at
+											) VALUES (
+												:site_id, :folder, :filename, :file_path, :web_url,
+												:file_size, :file_ext, :file_hash,
+												:title, '', '', '',
+												:is_image, :width, :height, :is_wcag, :tags,
+												'System Auto-Sync', SYSDATETIME(), SYSDATETIME()
+											)
+										", {
+											site_id: { value: local.wsName, cfsqltype: "cf_sql_nvarchar" },
+											folder: { value: local.folderName, cfsqltype: "cf_sql_nvarchar" },
+											filename: { value: local.fileRow.name, cfsqltype: "cf_sql_nvarchar" },
+											file_path: { value: local.relPath, cfsqltype: "cf_sql_nvarchar" },
+											web_url: { value: "/" & local.relPath, cfsqltype: "cf_sql_nvarchar" },
+											file_size: { value: local.fileRow.size, cfsqltype: "cf_sql_bigint" },
+											file_ext: { value: local.ext, cfsqltype: "cf_sql_nvarchar" },
+											file_hash: { value: local.fileHash, cfsqltype: "cf_sql_nvarchar" },
+											title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
+											is_image: { value: local.isImg ? 1 : 0, cfsqltype: "cf_sql_bit" },
+											width: { value: local.width, cfsqltype: "cf_sql_integer", null: IsNull(local.width) },
+											height: { value: local.height, cfsqltype: "cf_sql_integer", null: IsNull(local.height) },
+											is_wcag: { value: local.isWcag ? 1 : 0, cfsqltype: "cf_sql_bit" },
+											tags: { value: local.wsName & ", " & local.folderName, cfsqltype: "cf_sql_nvarchar" }
+										}, { datasource: "ChelanCountyWebsite" });
+
+										local.existingPaths[local.key] = local.fileHash;
+									} catch (any syncErr) {}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	/**
@@ -596,6 +980,22 @@ component extends="Controller" {
 			}
 		};
 
+		// Query database for persistent media metadata from dbo.media_assets
+		local.dbMap = {};
+		try {
+			local.qAssets = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT id, site_id, folder, filename, file_path, web_url, file_size, file_ext, file_hash,
+				       title, alt_text, caption, credit, is_image, width, height, is_wcag_compliant, tags
+				FROM dbo.media_assets
+				WHERE deletedat IS NULL
+			", {}, { datasource: "ChelanCountyWebsite" });
+			for (local.a in local.qAssets) {
+				local.dbMap[LCase(local.a.filename)] = local.a;
+				local.dbMap[LCase(local.a.file_path)] = local.a;
+			}
+		} catch (any dbErr) {}
+
 		// Scan filesystem recursively under files/
 		if (DirectoryExists(local.rootDir)) {
 			local.wsDirs = DirectoryList(local.rootDir, false, "query");
@@ -628,14 +1028,27 @@ component extends="Controller" {
 									local.category = getCategoryFromExt(local.ext);
 									local.isImage = (local.category eq "image");
 
-									// Look up enriched metadata or generate defaults
+									// Look up enriched metadata from dbo.media_assets, fallback to catalog or defaults
+									local.dbRow = StructKeyExists(local.dbMap, LCase(local.fileRow.name))
+										? local.dbMap[LCase(local.fileRow.name)]
+										: (StructKeyExists(local.dbMap, LCase("files/" & local.wsName & "/" & local.folderName & "/" & local.fileRow.name))
+											? local.dbMap[LCase("files/" & local.wsName & "/" & local.folderName & "/" & local.fileRow.name)]
+											: {});
 									local.meta = StructKeyExists(local.catalog, local.fileRow.name) ? local.catalog[local.fileRow.name] : {};
-									local.title = StructKeyExists(local.meta, "title") ? local.meta.title : formatTitleFromName(local.fileRow.name);
-									local.altText = StructKeyExists(local.meta, "altText") ? local.meta.altText : "";
-									local.caption = StructKeyExists(local.meta, "caption") ? local.meta.caption : "";
-									local.dim = StructKeyExists(local.meta, "dimensions") ? local.meta.dimensions : (local.isImage ? "600 x 600" : "");
-									local.author = StructKeyExists(local.meta, "author") ? local.meta.author : "Staff Editor";
-									local.tags = StructKeyExists(local.meta, "tags") ? local.meta.tags : local.wsName & ", " & local.folderName;
+									local.title = (StructKeyExists(local.dbRow, "title") && Len(Trim(local.dbRow.title))) ? local.dbRow.title
+										: (StructKeyExists(local.meta, "title") ? local.meta.title : formatTitleFromName(local.fileRow.name));
+									local.altText = StructKeyExists(local.dbRow, "alt_text") ? local.dbRow.alt_text
+										: (StructKeyExists(local.meta, "altText") ? local.meta.altText : "");
+									local.caption = StructKeyExists(local.dbRow, "caption") ? local.dbRow.caption
+										: (StructKeyExists(local.meta, "caption") ? local.meta.caption : "");
+									local.author = (StructKeyExists(local.dbRow, "credit") && Len(Trim(local.dbRow.credit))) ? local.dbRow.credit
+										: (StructKeyExists(local.meta, "author") ? local.meta.author : "Staff Editor");
+									local.tags = (StructKeyExists(local.dbRow, "tags") && Len(Trim(local.dbRow.tags))) ? local.dbRow.tags
+										: (StructKeyExists(local.meta, "tags") ? local.meta.tags : (local.wsName & ", " & local.folderName));
+									local.fileHash = StructKeyExists(local.dbRow, "file_hash") ? local.dbRow.file_hash : "";
+									local.dim = (StructKeyExists(local.dbRow, "width") && Val(local.dbRow.width) > 0 && StructKeyExists(local.dbRow, "height") && Val(local.dbRow.height) > 0)
+										? (local.dbRow.width & " x " & local.dbRow.height)
+										: (StructKeyExists(local.meta, "dimensions") ? local.meta.dimensions : (local.isImage ? "600 x 600" : ""));
 
 									// ADA WCAG status: images need non-empty alt text
 									local.isWcagCompliant = (!local.isImage) || (Len(Trim(local.altText)) > 0);
@@ -652,6 +1065,7 @@ component extends="Controller" {
 										"category": local.category,
 										"isImage": local.isImage,
 										"isWcagCompliant": local.isWcagCompliant,
+										"fileHash": local.fileHash,
 										"sizeBytes": local.fileRow.size,
 										"sizeFormatted": formatFileSize(local.fileRow.size),
 										"dimensions": local.dim,

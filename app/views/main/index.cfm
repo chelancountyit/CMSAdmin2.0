@@ -227,7 +227,11 @@
 					</div>
 				</div>
 			</div>
-			<div class="card-footer" style="display:flex; justify-content:flex-end;">
+			<div class="card-footer" style="display:flex; justify-content:space-between; align-items:center;">
+				<a href="#urlFor(controller='media', action='upload', params=variables.hasWorkspace ? ('ws=' & variables.activeWorkspaceId) : '')#" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:0.35rem;">
+					#svgIcon(name="upload", size=14)#
+					<span>Upload Media</span>
+				</a>
 				<a href="#urlFor(controller='media', action='index', params=variables.hasWorkspace ? ('ws=' & variables.activeWorkspaceId) : '')#" class="btn btn-outline btn-sm">
 					<span>Browse Media Library</span>
 					#svgIcon(name="arrow-right", size=12)#

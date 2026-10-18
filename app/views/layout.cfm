@@ -587,13 +587,22 @@
 									</a>
 								</li>
 
-								<li class="nav-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'media' ? 'active' : '')#</cfoutput>">
-									<a href="<cfoutput>#urlFor(controller='media', action='index')#</cfoutput>" class="nav-link">
+								<li class="nav-item has-submenu <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'media' ? 'open active' : '')#</cfoutput>">
+									<a href="javascript:void(0)" class="nav-link">
 										<span class="nav-link-main">
 											<span class="nav-icon"><cfoutput>#svgIcon(name="media", size=18)#</cfoutput></span>
 											<span class="nav-text">Media Library</span>
 										</span>
+										<cfoutput>#svgIcon(name="chevron-right", size=14, class="nav-caret")#</cfoutput>
 									</a>
+									<ul class="nav-submenu">
+										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'media' and structKeyExists(params, 'action') and params.action eq 'index' ? 'active' : '')#</cfoutput>">
+											<a href="<cfoutput>#urlFor(controller='media', action='index')#</cfoutput>" class="submenu-link">Browse Explorer</a>
+										</li>
+										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'media' and structKeyExists(params, 'action') and params.action eq 'upload' ? 'active' : '')#</cfoutput>">
+											<a href="<cfoutput>#urlFor(controller='media', action='upload')#</cfoutput>" class="submenu-link">+ Upload Files</a>
+										</li>
+									</ul>
 								</li>
 
 								<!--- Form Builder Menu Item with Submenu --->

@@ -2,7 +2,7 @@ component extends="Controller" {
 
 	function config() {
 		super.config();
-		protectsFromForgery(except="save,createModal,saveSubpage,deleteSubpage,saveFolderExplorer,deleteFolderExplorer,saveHowDoIItem,deleteHowDoIItem,reorderHowDoIItems,saveHowDoICategory,deleteHowDoICategory,restoreRevision,snapshotRevision,saveCallToAction,deleteCallToAction,reorderCallToActions");
+		protectsFromForgery(except="save,createModal,saveSubpage,deleteSubpage,saveFolderExplorer,deleteFolderExplorer,saveHowDoIItem,deleteHowDoIItem,reorderHowDoIItems,saveHowDoICategory,deleteHowDoICategory,prefillHowDoICategories,restoreRevision,snapshotRevision,saveCallToAction,deleteCallToAction,reorderCallToActions");
 	}
 
 	/**
@@ -2455,11 +2455,83 @@ component extends="Controller" {
 	}
 
 	/**
-	 * Ensures dbo.how_do_i_categories and dbo.how_do_i_items exist and are seeded with the 12 standard Chelan County categories and initial county links.
+	 * POST JSON (Admin Only): Prefill or restore the 12 standard Chelan County "How Do I" categories
+	 */
+	function prefillHowDoICategories() {
+		ensureHowDoITables();
+		if (getCurrentActiveRole() != "admin") {
+			fxRenderJson({
+				"success": false,
+				"SUCCESS": false,
+				"message": "Only Administrators can prefill How Do I categories.",
+				"MESSAGE": "Only Administrators can prefill How Do I categories."
+			}, 403);
+			return;
+		}
+
+		try {
+			queryExecute("
+				SET ANSI_NULLS ON;
+				SET QUOTED_IDENTIFIER ON;
+
+				MERGE INTO [dbo].[how_do_i_categories] AS Target
+				USING (VALUES
+					(N'Apply For',   N'apply-for',   N'clipboard-list', N'Permits, licenses, employment, and county program applications.', 10, 1, 1),
+					(N'Contact',     N'contact',     N'phone',          N'Department directories, elected officials, and office contact desks.', 20, 1, 1),
+					(N'Find',        N'find',        N'search',         N'Locate county resources, election results, court statuses, and districts.', 30, 1, 1),
+					(N'File A',      N'file-a',      N'file-text',      N'Submit official claims, petitions, and formal filings.', 40, 1, 1),
+					(N'Join',        N'join',        N'users',          N'Volunteer boards, advisory committees, and community programs.', 50, 1, 1),
+					(N'Pay For',     N'pay-for',     N'hard-drive',     N'Online payments for property taxes, court costs, probation, and accounts.', 60, 1, 1),
+					(N'Learn About', N'learn-about', N'book',           N'Educational guides, court protection orders, and county initiatives.', 70, 1, 1),
+					(N'Register To', N'register-to', N'check-square',   N'Voter registration, jury duty check-in, and court classes.', 80, 1, 1),
+					(N'Report',      N'report',      N'megaphone',      N'Report road hazards, code violations, pest infestations, or tips.', 90, 1, 1),
+					(N'Request',     N'request',     N'mail',           N'Public records requests, court case records, and vital certificates.', 100, 1, 1),
+					(N'Search For',  N'search-for',  N'globe',          N'Public document archives, parcel lookups, and jail registries.', 110, 1, 1),
+					(N'View',        N'view',        N'eye',            N'Court calendars, dockets, schedules, and public hearings.', 120, 1, 1)
+				) AS Source ([name], [slug], [icon], [description], [sort_order], [is_active], [is_system])
+				ON Target.[slug] = Source.[slug] AND Target.[deletedat] IS NULL
+				WHEN MATCHED THEN
+					UPDATE SET
+						Target.[name] = Source.[name],
+						Target.[icon] = Source.[icon],
+						Target.[description] = Source.[description],
+						Target.[sort_order] = Source.[sort_order],
+						Target.[is_active] = 1,
+						Target.[is_system] = 1,
+						Target.[updatedat] = SYSUTCDATETIME()
+				WHEN NOT MATCHED BY TARGET THEN
+					INSERT ([name], [slug], [icon], [description], [sort_order], [is_active], [is_system], [createdat], [updatedat])
+					VALUES (Source.[name], Source.[slug], Source.[icon], Source.[description], Source.[sort_order], Source.[is_active], Source.[is_system], SYSUTCDATETIME(), SYSUTCDATETIME());
+			", {}, { datasource: "ChelanCountyWebsite" });
+
+			local.cats = loadHowDoICategories(includeInactive = true);
+
+			fxRenderJson({
+				"success": true,
+				"SUCCESS": true,
+				"message": "12 standard Chelan County categories prefilled successfully.",
+				"MESSAGE": "12 standard Chelan County categories prefilled successfully.",
+				"categories": local.cats
+			});
+		} catch (any e) {
+			fxRenderJson({
+				"success": false,
+				"SUCCESS": false,
+				"message": "Unable to prefill categories: #e.message#",
+				"MESSAGE": "Unable to prefill categories: #e.message#"
+			}, 500);
+		}
+	}
+
+	/**
+	 * Ensures dbo.how_do_i_categories and dbo.how_do_i_items exist and are seeded with the 12 standard Chelan County categories.
 	 */
 	private void function ensureHowDoITables() {
 		try {
 			queryExecute("
+				SET ANSI_NULLS ON;
+				SET QUOTED_IDENTIFIER ON;
+
 				IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[how_do_i_categories]') AND type in (N'U'))
 				BEGIN
 					CREATE TABLE [dbo].[how_do_i_categories] (
@@ -2476,6 +2548,13 @@ component extends="Controller" {
 						[deletedat]   DATETIME2(7) NULL,
 						CONSTRAINT [PK_how_do_i_categories] PRIMARY KEY CLUSTERED ([id] ASC)
 					);
+				END;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UQ_how_do_i_categories_slug' AND object_id = OBJECT_ID(N'[dbo].[how_do_i_categories]'))
+				BEGIN
+					CREATE UNIQUE NONCLUSTERED INDEX [UQ_how_do_i_categories_slug]
+						ON [dbo].[how_do_i_categories] ([slug] ASC)
+						WHERE [deletedat] IS NULL;
 				END;
 
 				IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[how_do_i_items]') AND type in (N'U'))
@@ -2502,6 +2581,34 @@ component extends="Controller" {
 						CONSTRAINT [FK_how_do_i_items_categories] FOREIGN KEY ([category_id]) REFERENCES [dbo].[how_do_i_categories] ([id])
 					);
 				END;
+
+				IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_how_do_i_items_site_cat' AND object_id = OBJECT_ID(N'[dbo].[how_do_i_items]'))
+				BEGIN
+					CREATE NONCLUSTERED INDEX [IX_how_do_i_items_site_cat]
+						ON [dbo].[how_do_i_items] ([siteid] ASC, [category_id] ASC, [sort_order] ASC)
+						WHERE [deletedat] IS NULL;
+				END;
+
+				-- Ensure 12 Standard Chelan County Categories are seeded
+				MERGE INTO [dbo].[how_do_i_categories] AS Target
+				USING (VALUES
+					(N'Apply For',   N'apply-for',   N'clipboard-list', N'Permits, licenses, employment, and county program applications.', 10, 1, 1),
+					(N'Contact',     N'contact',     N'phone',          N'Department directories, elected officials, and office contact desks.', 20, 1, 1),
+					(N'Find',        N'find',        N'search',         N'Locate county resources, election results, court statuses, and districts.', 30, 1, 1),
+					(N'File A',      N'file-a',      N'file-text',      N'Submit official claims, petitions, and formal filings.', 40, 1, 1),
+					(N'Join',        N'join',        N'users',          N'Volunteer boards, advisory committees, and community programs.', 50, 1, 1),
+					(N'Pay For',     N'pay-for',     N'hard-drive',     N'Online payments for property taxes, court costs, probation, and accounts.', 60, 1, 1),
+					(N'Learn About', N'learn-about', N'book',           N'Educational guides, court protection orders, and county initiatives.', 70, 1, 1),
+					(N'Register To', N'register-to', N'check-square',   N'Voter registration, jury duty check-in, and court classes.', 80, 1, 1),
+					(N'Report',      N'report',      N'megaphone',      N'Report road hazards, code violations, pest infestations, or tips.', 90, 1, 1),
+					(N'Request',     N'request',     N'mail',           N'Public records requests, court case records, and vital certificates.', 100, 1, 1),
+					(N'Search For',  N'search-for',  N'globe',          N'Public document archives, parcel lookups, and jail registries.', 110, 1, 1),
+					(N'View',        N'view',        N'eye',            N'Court calendars, dockets, schedules, and public hearings.', 120, 1, 1)
+				) AS Source ([name], [slug], [icon], [description], [sort_order], [is_active], [is_system])
+				ON Target.[slug] = Source.[slug] AND Target.[deletedat] IS NULL
+				WHEN NOT MATCHED BY TARGET THEN
+					INSERT ([name], [slug], [icon], [description], [sort_order], [is_active], [is_system], [createdat], [updatedat])
+					VALUES (Source.[name], Source.[slug], Source.[icon], Source.[description], Source.[sort_order], Source.[is_active], Source.[is_system], SYSUTCDATETIME(), SYSUTCDATETIME());
 			", {}, { datasource: "ChelanCountyWebsite" });
 		} catch (any e) {
 			writeLog(type="error", file="pages", text="ensureHowDoITables failed: #e.message# #e.detail#");

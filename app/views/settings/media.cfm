@@ -218,10 +218,16 @@
 				<p style="font-size:0.8rem; color:var(--admin-text-muted); margin-bottom:0.75rem; line-height:1.45;">
 					Inspect, upload, replace, and audit WCAG alt-text metadata across all county media files.
 				</p>
-				<a href="#urlFor(controller='media', action='index')#" class="btn btn-outline-primary btn-sm" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.82rem;">
-					#svgIcon(name="arrow-right", size=14)#
-					<span>Open Media Library</span>
-				</a>
+				<div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+					<a href="#urlFor(controller='media', action='upload')#" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.82rem;">
+						#svgIcon(name="upload", size=14)#
+						<span>Upload Media</span>
+					</a>
+					<a href="#urlFor(controller='media', action='index')#" class="btn btn-outline-primary btn-sm" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.82rem;">
+						#svgIcon(name="arrow-right", size=14)#
+						<span>Open Media Library</span>
+					</a>
+				</div>
 			</div>
 		</div>
 	</div>

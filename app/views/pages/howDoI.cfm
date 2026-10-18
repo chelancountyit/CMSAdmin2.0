@@ -54,7 +54,8 @@
 			"deleteItem": urlFor(controller="pages", action="deleteHowDoIItem"),
 			"reorderItems": urlFor(controller="pages", action="reorderHowDoIItems"),
 			"saveCategory": urlFor(controller="pages", action="saveHowDoICategory"),
-			"deleteCategory": urlFor(controller="pages", action="deleteHowDoICategory")
+			"deleteCategory": urlFor(controller="pages", action="deleteHowDoICategory"),
+			"prefillCategories": urlFor(controller="pages", action="prefillHowDoICategories")
 		}
 	}), "</", "<\/", "all");
 </cfscript>
@@ -522,6 +523,21 @@
 
 		<!--- Category Sections --->
 		<div id="hdiCategoriesContainer">
+			<cfif ArrayLen(categories) eq 0>
+				<div class="admin-card" style="text-align:center; padding:3rem 2rem;">
+					<div style="width:52px; height:52px; border-radius:14px; background:var(--admin-primary-light); color:var(--admin-primary); display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem;">
+						#svgIcon(name="help-circle", size=28)#
+					</div>
+					<h3 style="margin:0 0 0.5rem 0; font-size:1.15rem; font-weight:700;">No "How Do I" Categories Found</h3>
+					<p style="margin:0 auto 1.25rem; font-size:0.88rem; color:var(--admin-text-muted); max-width:540px; line-height:1.5;">
+						Chelan County organizes resident actions across 12 standard action categories: <strong>Apply For</strong>, <strong>Contact</strong>, <strong>Find</strong>, <strong>File A</strong>, <strong>Join</strong>, <strong>Pay For</strong>, <strong>Learn About</strong>, <strong>Register To</strong>, <strong>Report</strong>, <strong>Request</strong>, <strong>Search For</strong>, and <strong>View</strong>.
+					</p>
+					<button type="button" class="btn btn-primary btn-sm" id="btnPrefillEmptyCats" style="display:inline-flex; align-items:center; gap:0.4rem;">
+						#svgIcon(name="plus-circle", size=16)#
+						<span>Prefill 12 Standard Categories</span>
+					</button>
+				</div>
+			</cfif>
 			<cfloop array="#categories#" index="cat">
 				<cfset catItems = []>
 				<cfloop array="#howDoIItems#" index="it">
@@ -905,7 +921,11 @@
 			</div>
 		</div>
 
-		<div class="hdi-modal-footer">
+		<div class="hdi-modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+			<button type="button" class="btn btn-outline-primary btn-sm" id="btnPrefillStandardCats" style="display:inline-flex; align-items:center; gap:0.35rem;">
+				#svgIcon(name="refresh-cw", size=13)#
+				<span>Prefill / Reset Standard Categories</span>
+			</button>
 			<button type="button" class="btn btn-outline btn-sm" id="btnDismissCategoriesModal">Done</button>
 		</div>
 	</div>
@@ -1666,6 +1686,32 @@
 				}
 			});
 		});
+
+		var btnPrefill = document.getElementById("btnPrefillStandardCats");
+		var btnPrefillEmpty = document.getElementById("btnPrefillEmptyCats");
+		async function handlePrefillCategories() {
+			var confirmed = await showDialogConfirm(
+				"Prefill the 12 standard Chelan County 'How Do I' action categories (Apply For, Contact, Find, File A, Join, Pay For, Learn About, Register To, Report, Request, Search For, View)? Any missing standard categories will be added or restored.",
+				{
+					title: "Prefill Standard Categories",
+					acceptText: "Prefill Categories",
+					cancelText: "Cancel",
+					destructive: false
+				}
+			);
+			if (!confirmed) return;
+			try {
+				await hdiPostJson(cfg.urls.prefillCategories, {});
+				window.location.reload();
+			} catch (err) {
+				await showDialogAlert(err.message || "Unable to prefill categories.", {
+					title: "Prefill Failed",
+					type: "danger"
+				});
+			}
+		}
+		if (btnPrefill) btnPrefill.addEventListener("click", handlePrefillCategories);
+		if (btnPrefillEmpty) btnPrefillEmpty.addEventListener("click", handlePrefillCategories);
 	}
 })();
 </script>

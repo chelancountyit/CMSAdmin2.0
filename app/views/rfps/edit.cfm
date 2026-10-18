@@ -353,9 +353,15 @@
 		<h2 class="modal-title" id="mediaPickerModalTitle" style="margin:0; font-size:1.05rem; font-weight:700; color:var(--admin-text-main);">
 			<span id="mediaPickerTitleText">Select Asset from Media Library</span>
 		</h2>
-		<button type="button" class="btn btn-sm btn-icon-only btn-outline" onclick="closeMediaPickerModal()">
-			#svgIcon(name="close", size=14)#
-		</button>
+		<div style="display:flex; align-items:center; gap:0.5rem;">
+			<button type="button" class="btn btn-outline-primary btn-sm" onclick="triggerMediaPickerUpload()" style="display:inline-flex; align-items:center; gap:0.35rem;" title="Upload new media asset to repository">
+				#svgIcon(name="upload", size=14)#
+				<span>Upload New File</span>
+			</button>
+			<button type="button" class="btn btn-sm btn-icon-only btn-outline" onclick="closeMediaPickerModal()">
+				#svgIcon(name="close", size=14)#
+			</button>
+		</div>
 	</div>
 	<div class="modal-body" style="flex:1; padding:0; overflow:hidden; position:relative;">
 		<iframe id="mediaPickerIframe" src="about:blank" style="width:100%; height:100%; border:none;" title="Media Asset Picker"></iframe>
@@ -573,6 +579,17 @@ function closeMediaPickerModal() {
 	document.getElementById('mediaPickerModal').style.display = 'none';
 	document.getElementById('mediaPickerIframe').src = 'about:blank';
 	currentMediaTargetInputId = null;
+}
+
+function triggerMediaPickerUpload() {
+	try {
+		const iframe = document.getElementById('mediaPickerIframe');
+		if (iframe && iframe.contentDocument) {
+			const b = iframe.contentDocument.getElementById('btn-upload');
+			if (b) { b.click(); return; }
+		}
+	} catch (e) {}
+	window.open('/media/upload', '_blank');
 }
 
 // Listen for PostMessage from Media Picker

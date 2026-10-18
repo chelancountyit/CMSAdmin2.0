@@ -14,6 +14,11 @@
 --   7. "How Do I" Directory & Mega-Menu (how_do_i_categories, how_do_i_items)
 --   8. County Calendar of Events (calendar_event_categories, calendar_events)
 --   9. Emergency Alerts & Incident Dispatch (emergency_alerts)
+--  10. Public Information Office (articles, article_categories, article_tags, press_releases)
+--  11. Administrative Settings (cms_settings)
+--  12. Call to Action Studio (page_call_to_actions)
+--  13. Media Assets & ADA WCAG 2.1/2.2 AA Metadata (media_assets)
+--  14. RFP & Solicitations Management (rfp_solicitations, rfp_addenda, rfp_planholders, rfp_bids)
 --
 -- Execution Mode: One-time execution script, safe to rerun (idempotent).
 -- Data Policy: ZERO test data. Only required core system lookup definitions.
@@ -1396,6 +1401,203 @@ GO
 
 
 -- =============================================================================
+-- MODULE 13: MEDIA ASSETS & ADA WCAG 2.1/2.2 AA METADATA (dbo.media_assets)
+-- =============================================================================
+
+PRINT 'Checking Module 13: media_assets...';
+GO
+
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'media_assets')
+BEGIN
+    CREATE TABLE [dbo].[media_assets] (
+        [id]                INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [site_id]           NVARCHAR(50) NOT NULL,
+        [folder]            NVARCHAR(100) NOT NULL,
+        [filename]          NVARCHAR(255) NOT NULL,
+        [file_path]         NVARCHAR(500) NOT NULL,
+        [web_url]           NVARCHAR(500) NOT NULL,
+        [file_size]         BIGINT NOT NULL DEFAULT 0,
+        [file_ext]          NVARCHAR(50) NOT NULL,
+        [mime_type]         NVARCHAR(100) NULL,
+        [file_hash]         NVARCHAR(64) NULL,
+        [title]             NVARCHAR(255) NULL,
+        [alt_text]          NVARCHAR(1000) NULL,
+        [caption]           NVARCHAR(1000) NULL,
+        [credit]            NVARCHAR(255) NULL,
+        [is_image]          BIT NOT NULL DEFAULT 0,
+        [width]             INT NULL,
+        [height]            INT NULL,
+        [is_wcag_compliant] BIT NOT NULL DEFAULT 1,
+        [tags]              NVARCHAR(500) NULL,
+        [created_at]        DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),
+        [created_by]        NVARCHAR(100) NULL,
+        [updated_at]        DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),
+        [updated_by]        NVARCHAR(100) NULL,
+        [deletedat]         DATETIME2(0) NULL
+    );
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_media_assets_site_folder_file' AND object_id = OBJECT_ID('dbo.media_assets'))
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_media_assets_site_folder_file]
+    ON [dbo].[media_assets] ([site_id], [folder], [filename])
+    WHERE [deletedat] IS NULL;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_media_assets_file_hash' AND object_id = OBJECT_ID('dbo.media_assets'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_media_assets_file_hash]
+    ON [dbo].[media_assets] ([file_hash])
+    WHERE [deletedat] IS NULL AND [file_hash] IS NOT NULL;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_media_assets_wcag' AND object_id = OBJECT_ID('dbo.media_assets'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_media_assets_wcag]
+    ON [dbo].[media_assets] ([site_id], [is_image], [is_wcag_compliant])
+    WHERE [deletedat] IS NULL;
+END;
+GO
+
+
+-- =============================================================================
+-- MODULE 14: RFP & SOLICITATIONS MANAGEMENT
+-- =============================================================================
+
+PRINT 'Checking Module 14: rfp_solicitations, rfp_addenda, rfp_planholders, rfp_bids...';
+GO
+
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'rfp_solicitations')
+BEGIN
+    CREATE TABLE [dbo].[rfp_solicitations] (
+        [id]                     INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [site_id]                NVARCHAR(50) NOT NULL,
+        [solicitation_number]    NVARCHAR(100) NOT NULL,
+        [title]                  NVARCHAR(255) NOT NULL,
+        [slug]                   NVARCHAR(255) NOT NULL,
+        [solicitation_type]      NVARCHAR(50) NOT NULL DEFAULT 'RFP',
+        [status]                 NVARCHAR(50) NOT NULL DEFAULT 'Draft',
+        [summary]                NVARCHAR(1000) NULL,
+        [description_html]       NVARCHAR(MAX) NULL,
+        [estimated_budget_range] NVARCHAR(100) NULL,
+        [contact_name]           NVARCHAR(100) NULL,
+        [contact_email]          NVARCHAR(150) NULL,
+        [contact_phone]          NVARCHAR(50) NULL,
+        [publish_at]             DATETIME2 NULL,
+        [pre_bid_datetime]       DATETIME2 NULL,
+        [pre_bid_location]       NVARCHAR(255) NULL,
+        [is_pre_bid_mandatory]   BIT NOT NULL DEFAULT 0,
+        [questions_due_at]       DATETIME2 NULL,
+        [addenda_cutoff_at]      DATETIME2 NULL,
+        [submission_deadline]    DATETIME2 NOT NULL,
+        [bid_opening_datetime]   DATETIME2 NULL,
+        [bid_opening_location]   NVARCHAR(255) NULL,
+        [bocc_award_target_date] DATE NULL,
+        [primary_packet_url]     NVARCHAR(500) NULL,
+        [submission_method]      NVARCHAR(50) NOT NULL DEFAULT 'Physical',
+        [submission_instructions] NVARCHAR(MAX) NULL,
+        [awarded_vendor]         NVARCHAR(255) NULL,
+        [awarded_amount]         DECIMAL(18,2) NULL,
+        [bocc_resolution_number] NVARCHAR(100) NULL,
+        [award_date]             DATE NULL,
+        [tabulation_file_url]    NVARCHAR(500) NULL,
+        [created_at]             DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        [created_by]             NVARCHAR(100) NULL,
+        [updated_at]             DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        [updated_by]             NVARCHAR(100) NULL,
+        [deleted_at]             DATETIME2 NULL
+    );
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_rfp_solicitations_slug_site' AND object_id = OBJECT_ID('dbo.rfp_solicitations'))
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX [UX_rfp_solicitations_slug_site]
+        ON [dbo].[rfp_solicitations] ([site_id], [slug])
+        WHERE [deleted_at] IS NULL;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_rfp_solicitations_number' AND object_id = OBJECT_ID('dbo.rfp_solicitations'))
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX [UX_rfp_solicitations_number]
+        ON [dbo].[rfp_solicitations] ([solicitation_number])
+        WHERE [deleted_at] IS NULL;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_rfp_solicitations_status' AND object_id = OBJECT_ID('dbo.rfp_solicitations'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_rfp_solicitations_status]
+        ON [dbo].[rfp_solicitations] ([status], [submission_deadline])
+        WHERE [deleted_at] IS NULL;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'rfp_addenda')
+BEGIN
+    CREATE TABLE [dbo].[rfp_addenda] (
+        [id]                 INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [solicitation_id]    INT NOT NULL CONSTRAINT [FK_rfp_addenda_solicitation] REFERENCES [dbo].[rfp_solicitations]([id]) ON DELETE CASCADE,
+        [addendum_number]    INT NOT NULL,
+        [title]              NVARCHAR(255) NOT NULL,
+        [description_html]   NVARCHAR(MAX) NULL,
+        [file_url]           NVARCHAR(500) NULL,
+        [published_at]       DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        [created_by]         NVARCHAR(100) NULL
+    );
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_rfp_addenda_solicitation' AND object_id = OBJECT_ID('dbo.rfp_addenda'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_rfp_addenda_solicitation]
+        ON [dbo].[rfp_addenda] ([solicitation_id], [addendum_number]);
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'rfp_planholders')
+BEGIN
+    CREATE TABLE [dbo].[rfp_planholders] (
+        [id]                 INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [solicitation_id]    INT NOT NULL CONSTRAINT [FK_rfp_planholders_solicitation] REFERENCES [dbo].[rfp_solicitations]([id]) ON DELETE CASCADE,
+        [company_name]       NVARCHAR(200) NOT NULL,
+        [contact_name]       NVARCHAR(100) NOT NULL,
+        [email]              NVARCHAR(150) NOT NULL,
+        [phone]              NVARCHAR(50) NULL,
+        [address]            NVARCHAR(255) NULL,
+        [registered_at]      DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+    );
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_rfp_planholders_solicitation' AND object_id = OBJECT_ID('dbo.rfp_planholders'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_rfp_planholders_solicitation]
+        ON [dbo].[rfp_planholders] ([solicitation_id], [registered_at] DESC);
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'rfp_bids')
+BEGIN
+    CREATE TABLE [dbo].[rfp_bids] (
+        [id]                 INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [solicitation_id]    INT NOT NULL CONSTRAINT [FK_rfp_bids_solicitation] REFERENCES [dbo].[rfp_solicitations]([id]) ON DELETE CASCADE,
+        [vendor_name]        NVARCHAR(200) NOT NULL,
+        [bid_amount]         DECIMAL(18,2) NULL,
+        [is_responsive]      BIT NOT NULL DEFAULT 1,
+        [notes]              NVARCHAR(MAX) NULL,
+        [submitted_at]       DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        [created_by]         NVARCHAR(100) NULL
+    );
+END;
+GO
+
+
+-- =============================================================================
 -- FINAL VERIFICATION: TABLE AUDIT REPORT
 -- =============================================================================
 
@@ -1440,7 +1642,12 @@ WHERE t.[schema_id] = SCHEMA_ID(N'dbo')
       N'article_tags',
       N'articles',
       N'press_releases',
-      N'cms_settings'
+      N'cms_settings',
+      N'media_assets',
+      N'rfp_solicitations',
+      N'rfp_addenda',
+      N'rfp_planholders',
+      N'rfp_bids'
   )
 ORDER BY t.[name] ASC;
 GO

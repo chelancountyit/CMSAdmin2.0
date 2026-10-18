@@ -693,9 +693,15 @@
 			#svgIcon(name="image", size=18)#
 			<span id="mediaPickerTitleText">Select Cover Image from Media Library</span>
 		</h2>
-		<button type="button" class="btn btn-secondary btn-sm" onclick="closeMediaPickerModal()" aria-label="Close Media Picker" id="btnCloseMediaPicker">
-			#svgIcon(name="x", size=16)#
-		</button>
+		<div style="display:flex; align-items:center; gap:0.5rem;">
+			<button type="button" class="btn btn-outline-primary btn-sm" onclick="triggerMediaPickerUpload()" style="display:inline-flex; align-items:center; gap:0.35rem;" title="Upload new media asset to repository">
+				#svgIcon(name="upload", size=14)#
+				<span>Upload New File</span>
+			</button>
+			<button type="button" class="btn btn-secondary btn-sm" onclick="closeMediaPickerModal()" aria-label="Close Media Picker" id="btnCloseMediaPicker">
+				#svgIcon(name="x", size=16)#
+			</button>
+		</div>
 	</div>
 	<div style="flex:1; width:100%; height:calc(100% - 60px); position:relative;">
 		<iframe id="mediaPickerIframe" src="about:blank" style="width:100%; height:100%; border:none;" title="Media Asset Picker"></iframe>

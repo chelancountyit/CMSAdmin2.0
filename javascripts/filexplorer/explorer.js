@@ -34,6 +34,7 @@
 		loadToken: 0,
 		armed: null,           // { path, timer } for two-step delete
 		pendingNew: false,
+		pendingUpload: false,
 		loadError: '',
 		initialFolder: '',     // optional initial subfolder ("documents" or "images")
 		pickerMode: '',        // optional picker mode ("document" or "image")
@@ -48,10 +49,15 @@
 	var el = {
 		conn: $('conn'), connText: $('conn-text'), banner: $('offline-banner'), retry: $('btn-retry'),
 		tree: $('tree'), webRoot: $('web-root'),
-		up: $('btn-up'), crumbs: $('crumbs'), filter: $('filter'), btnNew: $('btn-new'),
+		up: $('btn-up'), crumbs: $('crumbs'), filter: $('filter'), btnNew: $('btn-new'), btnUpload: $('btn-upload'),
 		btnGrid: $('btn-grid'), btnList: $('btn-list'),
 		newPanel: $('new-panel'), newName: $('new-name'), newPreview: $('new-preview'), newError: $('new-error'),
 		btnCreate: $('btn-create'), btnCancel: $('btn-cancel'),
+		uploadPanel: $('upload-panel'), uploadFile: $('upload-file-input'),
+		uploadTitle: $('upload-title-input'), uploadAlt: $('upload-alt-input'),
+		uploadPreview: $('upload-destination-preview'), uploadError: $('upload-error'),
+		btnDoUpload: $('btn-do-upload'), btnUploadCancel: $('btn-upload-cancel'),
+		linkFullStudio: $('link-full-upload-studio'),
 		summary: $('summary'), levelHint: $('level-hint'),
 		content: $('content'), items: $('items'),
 		details: $('details'), toast: $('toast')
@@ -386,13 +392,24 @@
 
 	function normaliseItem(it) {
 		return {
+			id: it.id || null,
 			name: String(it.name),
 			type: String(it.type).toLowerCase() === 'dir' ? 'dir' : 'file',
 			modified: String(it.modified || ''),
 			size: Number(it.size || 0),
 			ext: String(it.ext || '').toLowerCase(),
 			dirs: Number(it.dirs || 0),
-			files: Number(it.files || 0)
+			files: Number(it.files || 0),
+			title: it.title || '',
+			altText: it.altText || it.alt_text || '',
+			caption: it.caption || '',
+			credit: it.credit || '',
+			tags: it.tags || '',
+			hash: it.hash || it.fileHash || '',
+			fileHash: it.fileHash || it.hash || '',
+			isWcagCompliant: typeof it.isWcagCompliant !== 'undefined' ? Boolean(it.isWcagCompliant) : null,
+			width: it.width ? Number(it.width) : null,
+			height: it.height ? Number(it.height) : null
 		};
 	}
 
@@ -435,6 +452,7 @@
 
 		if (state.selected) focusSelected();
 		if (state.pendingNew) { state.pendingNew = false; openNew(); }
+		if (state.pendingUpload) { state.pendingUpload = false; openUpload(); }
 	}
 
 	// ------------------------------------------------------------------
@@ -445,7 +463,9 @@
 		file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
 		image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
 		chevron: '<path d="M9 6l6 6-6 6"/>',
-		root: '<path d="M4 6h16v4H4zM4 14h16v4H4z"/><path d="M8 8h.01M8 16h.01"/>'
+		root: '<path d="M4 6h16v4H4zM4 14h16v4H4z"/><path d="M8 8h.01M8 16h.01"/>',
+		check: '<path d="M20 6L9 17l-5-5"/>',
+		alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
 	};
 	function svg(name, cls) { return '<svg viewBox="0 0 24 24" aria-hidden="true"' + (cls ? ' class="' + cls + '"' : '') + '>' + ICON[name] + '</svg>'; }
 
@@ -588,7 +608,12 @@
 
 	function applyFilter() {
 		var q = state.filter.trim().toLowerCase();
-		state.shown = q ? state.items.filter(function (it) { return it.name.toLowerCase().indexOf(q) >= 0; }) : state.items.slice();
+		state.shown = q ? state.items.filter(function (it) {
+			return it.name.toLowerCase().indexOf(q) >= 0 ||
+				(it.title && it.title.toLowerCase().indexOf(q) >= 0) ||
+				(it.altText && it.altText.toLowerCase().indexOf(q) >= 0) ||
+				(it.tags && it.tags.toLowerCase().indexOf(q) >= 0);
+		}) : state.items.slice();
 		if (state.selected && !state.shown.some(function (it) { return it.name === state.selected; })) state.selected = null;
 
 		var nd = 0, nf = 0;
@@ -720,6 +745,7 @@
 				: (depth <= 1 ? friendly(rawName) : rawName);
 
 			var isSharedDir = p.toLowerCase().indexOf('shared images') >= 0;
+			var canUpload = !isSharedDir;
 			var canNew = !isSharedDir && (depth >= state.cfg.systemDepth);
 			var canDel = !isSharedDir && (depth > state.cfg.systemDepth) && (nd + nf === 0);
 			var armed = state.armed && state.armed.path === p;
@@ -731,6 +757,7 @@
 				'<div class="kind">' + esc(isSharedDir ? 'Shared Stock Library (Read-Only)' : (folderKind(depth) + (isCurrent ? ' \u00b7 current folder' : ''))) + '</div>' +
 				'<div class="actions">' +
 				(isCurrent ? '' : '<button type="button" class="btn btn-primary btn-block" data-act="open">Open folder</button>') +
+				(canUpload ? '<button type="button" class="btn ' + (isCurrent ? 'btn-primary' : '') + ' btn-block" data-act="upload"' + (online ? '' : ' disabled') + '>Upload file here</button>' : '') +
 				(canNew ? '<button type="button" class="btn btn-block" data-act="new"' + (online ? '' : ' disabled') + '>New subfolder</button>' : '') +
 				(canDel && depth > state.cfg.systemDepth
 					? '<button type="button" class="btn btn-danger btn-block' + (armed ? ' confirming' : '') + '" data-act="delete" data-path="' + esc(p) + '"' +
@@ -749,12 +776,27 @@
 			var k = fileKind(it.ext);
 			var isSharedFile = fp.toLowerCase().indexOf('shared images') >= 0;
 			var preview = k.cls === 'image'
-				? '<img alt="" src="' + esc(webHref(fp)) + '" data-fallback="1">'
+				? '<img alt="' + esc(it.altText || it.title || '') + '" src="' + esc(webHref(fp)) + '" data-fallback="1">'
 				: svg(k.cls === 'image' ? 'image' : 'file', 't-' + k.cls);
 			var isPicker = Boolean(state.pickerMode || state.pickerCallback || state.targetInput);
 			var selectLabel = state.pickerMode === 'document' ? 'Select Document' : (state.pickerMode === 'image' ? 'Select Image' : 'Select File');
+
+			var isImg = k.cls === 'image';
+			var isCompliant = (it.isWcagCompliant === true) || (!isImg) || (Boolean(it.altText && it.altText.trim()));
+			var wcagPill = '';
+			if (isImg) {
+				if (isCompliant) {
+					wcagPill = '<dd><span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; font-size:11.5px; font-weight:600; background:#dcfce7; color:#166534; border-radius:12px;">' +
+						svg('check', '') + ' WCAG AA Compliant</span></dd>';
+				} else {
+					wcagPill = '<dd><span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; font-size:11.5px; font-weight:600; background:#fef3c7; color:#92400e; border-radius:12px;">' +
+						svg('alert', '') + ' Needs Alt Text (WCAG 1.1.1)</span></dd>';
+				}
+			}
+
 			html = '<div class="preview">' + preview + '</div>' +
-				'<h2>' + esc(it.name) + '</h2>' +
+				'<h2>' + esc(it.title || it.name) + '</h2>' +
+				(it.title && it.title !== it.name ? '<div style="font-family:monospace; font-size:11.5px; color:var(--fx-muted); margin-bottom:4px;">' + esc(it.name) + '</div>' : '') +
 				'<div class="kind">' + esc(k.label + ' \u00b7 ' + fmtSize(it.size)) + (isSharedFile ? ' \u00b7 <span style="font-weight:700; color:#0284c7;">Read-Only</span>' : '') + '</div>' +
 				'<div class="actions">' +
 				(isPicker
@@ -765,9 +807,16 @@
 				'<button type="button" class="btn btn-block" data-act="copy">Copy link</button>' +
 				'</div>' +
 				'<dl>' +
+				(isImg ? '<dt>ADA Accessibility</dt>' + wcagPill : '') +
+				(isImg ? '<dt>Alt text (WCAG 1.1.1)</dt><dd>' + (it.altText ? ('&ldquo;' + esc(it.altText) + '&rdquo;') : '<span style="color:#b45309; font-style:italic;">None specified &mdash; required for screen readers</span>') + '</dd>' : '') +
+				(it.width && it.height ? '<dt>Dimensions</dt><dd>' + esc(it.width + ' \u00d7 ' + it.height + ' px') + '</dd>' : '') +
+				(it.caption ? '<dt>Caption</dt><dd>' + esc(it.caption) + '</dd>' : '') +
+				(it.credit ? '<dt>Attribution / Credit</dt><dd>' + esc(it.credit) + '</dd>' : '') +
+				(it.tags ? '<dt>Tags</dt><dd>' + esc(it.tags) + '</dd>' : '') +
 				'<dt>Server path</dt><dd class="mono">' + esc(diskPath(fp, false)) + '</dd>' +
 				'<dt>Web URL</dt><dd class="mono">' + esc(webPath(fp, false)) + '</dd>' +
 				'<dt>Size</dt><dd>' + esc(fmtSize(it.size) + ' (' + it.size.toLocaleString() + ' bytes)') + '</dd>' +
+				(it.fileHash || it.hash ? '<dt>SHA-256 Hash</dt><dd class="mono" style="font-size:11px; word-break:break-all;" title="' + esc(it.fileHash || it.hash) + '">' + esc(it.fileHash || it.hash) + '</dd>' : '') +
 				'<dt>Modified</dt><dd>' + esc(it.modified) + '</dd>' +
 				'</dl>';
 		}
@@ -789,14 +838,23 @@
 		var online = state.online === true;
 		var isShared = (state.path && state.path.toLowerCase().indexOf('shared images') >= 0);
 		var canCreate = !isShared && !!state.data && state.depth >= state.cfg.systemDepth && (state.data.canCreate !== false);
+		var canUpload = !isShared && (state.depth >= 1);
 		if (el.btnNew) {
 			el.btnNew.disabled = !(online && canCreate);
 			el.btnNew.title = !online ? 'Unavailable while offline'
 				: (isShared ? 'Shared images is read-only. Adding or modifying folders is disabled.'
 				: (canCreate ? 'Create a folder here' : 'Folders can only be created inside images or documents (or below)'));
 		}
+		if (el.btnUpload) {
+			el.btnUpload.disabled = !(online && canUpload);
+			el.btnUpload.title = !online ? 'Unavailable while offline'
+				: (isShared ? 'Shared images is read-only. Uploading files is disabled.'
+				: (canUpload ? 'Upload file to this folder' : 'Select a folder to upload files'));
+		}
 		if (el.btnCreate) el.btnCreate.disabled = !online || isShared;
+		if (el.btnDoUpload) el.btnDoUpload.disabled = !online || isShared;
 		if (!canCreate) closeNew();
+		if (!canUpload) closeUpload();
 	}
 
 	// ------------------------------------------------------------------
@@ -831,14 +889,15 @@
 			var relShared = fp.substring(fp.toLowerCase().indexOf('shared images/') + 14);
 			webUrl = '/images/picjumbo/' + relShared.split('/').map(encodeURIComponent).join('/');
 		}
-		var baseTitle = it.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || it.name;
+		var baseTitle = it.title || it.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || it.name;
+		var altText = it.altText || it.alt_text || baseTitle;
 		var ext = (it.ext || it.name.split('.').pop() || 'FILE').toUpperCase();
 		var sizeStr = fmtSize(it.size);
 		var isImg = IMAGE_EXT.indexOf((it.ext || '').toLowerCase()) >= 0;
 		var htmlSnippet = '';
 
 		if (isImg) {
-			htmlSnippet = '<img src="' + esc(webUrl) + '" alt="' + esc(baseTitle) + '" title="' + esc(baseTitle) + '" style="max-width:100%; height:auto;" loading="lazy">';
+			htmlSnippet = '<img src="' + esc(webUrl) + '" alt="' + esc(altText) + '" title="' + esc(baseTitle) + '" style="max-width:100%; height:auto;" loading="lazy">';
 		} else {
 			var adaNotice = baseTitle + ' (' + ext + ', opens in a new tab)';
 			htmlSnippet = '<a href="' + esc(webUrl) + '" class="document-download-link" target="_blank" rel="noopener noreferrer" aria-label="' + esc(adaNotice) + '" title="' + esc(adaNotice) + '">' + esc(baseTitle) + ' (' + esc(ext) + ', ' + esc(sizeStr) + ')</a>';
@@ -848,11 +907,19 @@
 			html: htmlSnippet,
 			url: webUrl,
 			title: baseTitle,
-			alt: baseTitle,
+			alt: altText,
 			data: {
+				id: it.id || null,
 				name: it.name,
 				title: baseTitle,
-				altText: baseTitle,
+				altText: altText,
+				caption: it.caption || '',
+				credit: it.credit || '',
+				tags: it.tags || '',
+				fileHash: it.fileHash || it.hash || '',
+				width: it.width || null,
+				height: it.height || null,
+				isWcagCompliant: it.isWcagCompliant,
 				webUrl: webUrl,
 				size: sizeStr,
 				sizeFormatted: sizeStr,
@@ -881,13 +948,18 @@
 				html: htmlSnippet,
 				url: webUrl,
 				title: baseTitle,
-				alt: baseTitle
+				alt: altText,
+				altText: altText,
+				data: payload.data
 			}, '*');
 			window.parent.postMessage({
 				type: 'cmsMediaSelected',
 				url: webUrl,
 				title: baseTitle,
-				targetInput: state.targetInput
+				alt: altText,
+				altText: altText,
+				targetInput: state.targetInput,
+				data: payload.data
 			}, '*');
 		}
 	}
@@ -970,6 +1042,9 @@
 				if (it) selectForPicker(it);
 			} else if (act === 'open') {
 				if (it) openItem(it);
+			} else if (act === 'upload') {
+				if (!it) openUpload();
+				else { state.pendingUpload = true; navigate(itemPath(it)); }
 			} else if (act === 'copy') {
 				if (it) {
 					var url = location.origin + webHref(itemPath(it));
@@ -1101,9 +1176,142 @@
 	});
 
 	// ------------------------------------------------------------------
+	// Inline Upload File
+	// ------------------------------------------------------------------
+	function openUpload() {
+		var isShared = (state.path && state.path.toLowerCase().indexOf('shared images') >= 0);
+		if (isShared || !el.uploadPanel) return;
+		closeNew();
+		el.uploadPanel.hidden = false;
+		if (el.uploadFile) el.uploadFile.value = '';
+		if (el.uploadTitle) el.uploadTitle.value = '';
+		if (el.uploadAlt) el.uploadAlt.value = '';
+		if (el.uploadError) el.uploadError.textContent = '';
+		updateUploadPreview();
+		if (el.uploadFile) el.uploadFile.focus();
+	}
+
+	function closeUpload(focusButton) {
+		if (!el.uploadPanel || el.uploadPanel.hidden) return;
+		el.uploadPanel.hidden = true;
+		if (el.uploadFile) el.uploadFile.value = '';
+		if (el.uploadTitle) el.uploadTitle.value = '';
+		if (el.uploadAlt) el.uploadAlt.value = '';
+		if (el.uploadError) el.uploadError.textContent = '';
+		if (focusButton && el.btnUpload) el.btnUpload.focus();
+	}
+
+	function updateUploadPreview() {
+		if (!el.uploadPreview) return;
+		var isShared = (state.path && state.path.toLowerCase().indexOf('shared images') >= 0);
+		if (isShared) {
+			el.uploadPreview.textContent = 'Shared library is read-only. Uploading disabled.';
+			if (el.btnDoUpload) el.btnDoUpload.disabled = true;
+			return;
+		}
+		var p = state.path || state.ws || '';
+		el.uploadPreview.textContent = 'Uploading to: /files/' + (p ? p + '/' : '');
+		if (el.btnDoUpload) el.btnDoUpload.disabled = state.online !== true;
+		if (el.linkFullStudio) {
+			var segList = segs(p);
+			var ws = segList.length > 0 ? segList[0] : (state.ws || '');
+			var sub = segList.length > 1 ? segList.slice(1).join('/') : '';
+			el.linkFullStudio.href = '/media/upload?ws=' + encodeURIComponent(ws) + (sub ? '&folder=' + encodeURIComponent(sub) : '');
+		}
+	}
+
+	if (el.uploadFile) {
+		el.uploadFile.addEventListener('change', function () {
+			if (this.files && this.files[0]) {
+				var f = this.files[0];
+				if (el.uploadTitle && !el.uploadTitle.value) {
+					var clean = f.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
+					el.uploadTitle.value = clean.charAt(0).toUpperCase() + clean.slice(1);
+				}
+				var isImg = /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(f.name);
+				if (el.uploadAlt && isImg && !el.uploadAlt.value) {
+					el.uploadAlt.placeholder = 'Describe "' + f.name + '" for screen readers (WCAG 1.1.1)...';
+				}
+			}
+		});
+		el.uploadFile.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); closeUpload(true); } });
+	}
+
+	if (el.uploadPanel) {
+		el.uploadPanel.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); closeUpload(true); } });
+	}
+
+	if (el.btnUploadCancel) {
+		el.btnUploadCancel.addEventListener('click', function () { closeUpload(true); });
+	}
+
+	if (el.uploadPanel) {
+		el.uploadPanel.addEventListener('submit', async function (e) {
+			e.preventDefault();
+			if (!el.uploadFile || !el.uploadFile.files || !el.uploadFile.files[0]) {
+				if (el.uploadError) el.uploadError.textContent = 'Please choose a file to upload.';
+				return;
+			}
+			if (state.online !== true) {
+				if (el.uploadError) el.uploadError.textContent = 'Unavailable while offline.';
+				return;
+			}
+			var f = el.uploadFile.files[0];
+			var fd = new FormData();
+			fd.append('mediaFile', f);
+			var p = state.path || state.ws || '';
+			var segList = segs(p);
+			var ws = segList.length > 0 ? segList[0] : (state.ws || '');
+			var sub = segList.length > 1 ? segList.slice(1).join('/') : (state.pickerMode === 'document' ? 'documents' : 'images');
+			fd.append('workspace', ws);
+			fd.append('subfolder', sub);
+			fd.append('path', p);
+			if (el.uploadTitle && el.uploadTitle.value.trim()) fd.append('title', el.uploadTitle.value.trim());
+			if (el.uploadAlt && el.uploadAlt.value.trim()) fd.append('altText', el.uploadAlt.value.trim());
+			fd.append('format', 'json');
+
+			if (el.btnDoUpload) el.btnDoUpload.disabled = true;
+			if (el.uploadError) el.uploadError.textContent = 'Uploading file\u2026';
+
+			try {
+				var res = await fetch('/media/processUpload?format=json', {
+					method: 'POST',
+					headers: {
+						'X-Requested-With': 'XMLHttpRequest'
+					},
+					body: fd
+				});
+				var data = await res.json();
+				if (el.btnDoUpload) el.btnDoUpload.disabled = false;
+
+				if (!data || !data.success) {
+					if (el.uploadError) el.uploadError.textContent = (data && data.message) ? data.message : 'Upload failed.';
+					return;
+				}
+
+				closeUpload(false);
+				var uploadedName = (data.file && data.file.name) ? data.file.name : f.name;
+				toast('File "' + uploadedName + '" uploaded successfully.');
+				await load(state.path, uploadedName);
+			} catch (err) {
+				if (el.btnDoUpload) el.btnDoUpload.disabled = false;
+				if (el.uploadError) el.uploadError.textContent = 'Upload failed: ' + (err.message || 'Network error');
+			}
+		});
+	}
+
+	// ------------------------------------------------------------------
 	// Toolbar, Tree, Breadcrumbs
 	// ------------------------------------------------------------------
+	if (el.btnUpload) {
+		el.btnUpload.addEventListener('click', function () {
+			if (el.uploadPanel && el.uploadPanel.hidden) openUpload();
+			else if (el.uploadFile) el.uploadFile.focus();
+		});
+	}
+
 	el.btnNew.addEventListener('click', function () {
+		closeUpload();
 		if (el.newPanel.hidden) openNew(); else el.newName.focus();
 	});
 

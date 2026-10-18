@@ -12,6 +12,82 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 17, 2026 — Seeding & Self-Healing Prefill for Standard Chelan County "How Do I" Categories
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/controllers/Pages.cfc`, `app/views/pages/howDoI.cfm`, `config/sql/schema-how-do-i.sql`, `TODO.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Database Seeding (`dbo.how_do_i_categories`):**
+     - Executed the `MERGE` statement from `config/sql/schema-how-do-i.sql` on database `ChelanCountyWebsite`, establishing the 12 standard action categories:
+       - **Apply For** (`apply-for`, icon: `clipboard-list`, sort: 10)
+       - **Contact** (`contact`, icon: `phone`, sort: 20)
+       - **Find** (`find`, icon: `search`, sort: 30)
+       - **File A** (`file-a`, icon: `file-text`, sort: 40)
+       - **Join** (`join`, icon: `users`, sort: 50)
+       - **Pay For** (`pay-for`, icon: `hard-drive`, sort: 60)
+       - **Learn About** (`learn-about`, icon: `book`, sort: 70)
+       - **Register To** (`register-to`, icon: `check-square`, sort: 80)
+       - **Report** (`report`, icon: `megaphone`, sort: 90)
+       - **Request** (`request`, icon: `mail`, sort: 100)
+       - **Search For** (`search-for`, icon: `globe`, sort: 110)
+       - **View** (`view`, icon: `eye`, sort: 120)
+  2. **Controller Self-Healing & API (`Pages.cfc`):**
+     - Updated `ensureHowDoITables()` with `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` to auto-merge the 12 standard categories on startup or table check.
+     - Implemented `prefillHowDoICategories()` endpoint (exempted from CSRF in `config()`) allowing administrators to restore or update the standard categories with idempotent merging.
+  3. **User Interface Integration (`app/views/pages/howDoI.cfm`):**
+     - Added an empty state callout card in `#hdiCategoriesContainer` when categories count is 0, featuring a 1-click **"Prefill 12 Standard Categories"** action.
+     - Added a **"Prefill / Reset Standard Categories"** action button in the Manage Categories modal (`#hdiCategoriesModal`) footer.
+     - Wired up async AJAX handlers with `showDialogConfirm()` and `showDialogAlert()`, providing seamless category reloading without losing state.
+
+### Session: October 17, 2026 — Universal Media Upload Action Integration Across CMSAdmin 2.0
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/controllers/Media.cfc`, `app/views/media/index.cfm`, `app/views/media/picker.cfm`, `app/views/layout.cfm`, `app/views/main/index.cfm`, `app/views/settings/media.cfm`, `app/views/pages/edit.cfm`, `app/views/articles/edit.cfm`, `app/views/pages/callToAction.cfm`, `app/views/rfps/edit.cfm`, `javascripts/filexplorer/explorer.js`, `stylesheets/filexplorer/explorer.css`, `TODO.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Flexible Path Parsing in `Media.cfc:processUpload()`:**
+     - Enabled inline quick uploads to accept relative directory paths (e.g. `assessor/images`) to automatically parse the target workspace and folder when uploaded from inline file explorer components.
+  2. **Standalone Media Explorer (`/media/index`):**
+     - Added an "Upload Media" button in the `.content-header` and an "Upload" button (`#btn-upload`) in the file explorer toolbar (`.pathbar-tools`).
+     - Added an inline slide-down upload panel (`#upload-panel`) with file selection, auto-generated display title, WCAG 1.1.1 alt text input, dynamic destination preview, and a link to the full upload studio.
+  3. **Media Picker Modal (`/media/picker`):**
+     - Integrated `#btn-upload` and the inline `#upload-panel` directly within the picker modal toolbar, allowing editors to upload new media assets without leaving the picker or losing modal selection state.
+  4. **Explorer Details Panel (`explorer.js`):**
+     - When inspecting any non-read-only folder, added an "Upload file here" action button that opens the upload panel or navigates into the subfolder with `pendingUpload` enabled.
+  5. **Global Navigation & Dashboard Entry Points:**
+     - Left sidebar (`app/views/layout.cfm`): Upgraded "Media Library" nav item to a submenu with "Browse Explorer" (`/media/index`) and "+ Upload Files" (`/media/upload`).
+     - Dashboard (`app/views/main/index.cfm`): Added "Upload Media" action button in the Media card footer alongside "Browse Media Library".
+     - Administrative Settings (`app/views/settings/media.cfm`): Added "Upload Media" action button in the Media Library Manager card.
+  6. **Universal Picker Modal Headers:**
+     - Added an "Upload New File" button with inline SVG icon in all modal headers embedding the Media Picker iframe (`app/views/pages/edit.cfm`, `app/views/articles/edit.cfm`, `app/views/pages/callToAction.cfm`, `app/views/rfps/edit.cfm`).
+     - Implemented `window.triggerMediaPickerUpload()` helper in all 4 views that triggers the inline upload panel within the iframe or opens the upload studio in a new tab as fallback.
+
+### Session: October 17, 2026 — Media Library Database Metadata Persistence (`dbo.media_assets`), Deduplication & ADA WCAG Telemetry (TODO 1.3)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`config/sql/schema-media-assets.sql`, `app/models/MediaAsset.cfc`, `app/controllers/Media.cfc`, `app/views/media/upload.cfm`, `api/Files.cfc`, `javascripts/filexplorer/explorer.js`, `TODO.md`).
+- **Key Deliverables:**
+  1. **SQL Server Database Table & Filtered Indexes (`dbo.media_assets`):**
+     - Authored and executed `config/sql/schema-media-assets.sql` on database `ChelanCountyWebsite`.
+     - Fields include `site_id`, `folder`, `filename`, `file_path`, `web_url`, `file_size`, `file_ext`, `file_hash` (SHA-256), `title`, `alt_text`, `caption`, `credit`, `is_image`, `width`, `height`, `is_wcag_compliant`, `tags`, `created_at`, `created_by`, `updated_at`, `updated_by`, and soft-delete `deletedat`.
+     - Created 3 filtered nonclustered indexes (`IX_media_assets_site_folder_file`, `IX_media_assets_file_hash`, `IX_media_assets_wcag`) with `WHERE deletedat IS NULL`.
+  2. **Model & Controller (`MediaAsset.cfc`, `Media.cfc`):**
+     - Created `app/models/MediaAsset.cfc` extending Wheels `Model` with standard timestamps and table mapping.
+     - Updated `Media.cfc` `upload()` to provide workspace options, folder selection (`images`, `documents`, `media`), top recent uploads query from `dbo.media_assets`, and aggregated media stats (total assets, images, documents, WCAG compliant, needing alt text).
+     - Enhanced `processUpload()` to compute cryptographic SHA-256 hashes (`Hash(fileBytes, "SHA-256")`), check cross-workspace duplicates against `dbo.media_assets`, extract image dimensions via `ImageRead()`, validate WCAG 1.1.1 compliance, reject executables (`.cfm, .cfc, .exe, .bat, etc.`), and insert into `dbo.media_assets`.
+     - Implemented `updateMeta()` to allow editing title, alt text, caption, photographer credit, and tags with automatic `is_wcag_compliant` flag recalculation.
+     - Added `syncDiskAssetsToDatabase()` to auto-catalog untracked disk files into `dbo.media_assets`.
+  3. **Modernized Upload Studio View (`app/views/media/upload.cfm`):**
+     - Added KPI statistics row (Total Assets, Images, Documents, and ADA WCAG AA Compliance %).
+     - Implemented accessible workspace selector and subfolder dropdown (`images/` recommended for photos, `documents/` for PDFs, `media/` legacy).
+     - Added real-time destination path preview updating dynamically as destination workspace/subfolder changes.
+     - Integrated ADA WCAG 2.1/2.2 AA card with guidance for WCAG 1.1.1, alt text, display title (auto-populated on file selection), caption, photographer/source credit, and search tags.
+     - Created "Recent Database Tracked Uploads" table displaying thumbnail/file preview, title/filename, folder location, dimensions, file size, SHA-256 hash pill, ADA WCAG status badge, and timestamp.
+  4. **API & File Explorer Integration (`api/Files.cfc`, `explorer.js`):**
+     - Updated `api/Files.cfc` `list()` to enrich scanned files with stored metadata (`id, title, altText, caption, credit, hash, isWcagCompliant, tags, width, height`) and added remote `updateMeta()` method.
+     - Updated `explorer.js` `normaliseItem` to preserve all rich metadata attributes.
+     - Enhanced `explorer.js` `renderDetails()` to display ADA accessibility status badges (WCAG AA Compliant vs Needs Alt Text), full alt text, image dimensions, caption, credit, tags, and SHA-256 hash.
+     - Enhanced `selectForPicker(it)` and postMessage events (`CMS_MEDIA_SELECTED`, `cmsMediaSelected`) so authoritative alt text and full metadata flow cleanly into the picker callback, page editor, and CTA dialogs.
+     - Expanded `applyFilter()` in file explorer to search across file names, titles, alt text, and tags.
+
+---
+
 ### Session: October 17, 2026 — Workspace Primary Color Theming, CTA Grid Embed Modal Fixes & `.jbd-cta-link` SVG Icon Rendering
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 (`app/views/pages/edit.cfm`, `app/views/layout.cfm`, `app/controllers/Pages.cfc`, `app/global/functions.cfm`, `javascripts/admin.js`, `javascripts/jbdeditor.js`, `stylesheets/jbdeditor.css`, `stylesheets/jbd-templates.css`, `config/sql/schema-pages.sql`, `config/sql/schema-complete.sql`) & ChelanCounty.gov (`app/views/layout.cfm`, `app/views/helpers.cfm`, `app/views/assessor/page.cfm`, `app/views/shared/_dept-nav.cfm`, `stylesheets/styles.css`, `stylesheets/jbd-templates.css`, `README.md`).

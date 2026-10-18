@@ -4,7 +4,7 @@
 **Host:** `http://cmsadmin.chelancounty.gov/`  
 **Platform:** CFWheels 4.1.2 + Lucee CFML / IIS 10.0 + Microsoft SQL Server (`ChelanCountyWebsite`)  
 **Compliance Standard:** ADA Title II, Section 508, WCAG 2.1 & 2.2 Level AA  
-**Last Updated:** 2026-10-15  
+**Last Updated:** 2026-10-17  
 
 ---
 
@@ -22,10 +22,11 @@ Essential fixes to replace placeholder navigation, resolve volatile storage patt
     - [x] `Reading & SEO` (`/settings/seo`): Default meta tags, OpenGraph/Twitter card defaults, Google Analytics / GTM IDs, robots.txt rules.
     - [x] `Media Sizes` (`/settings/media`): Automatic image thumbnail dimensions and max upload size caps.
     - [x] `System Info & Diagnostics` (`/settings/system`): ColdFusion version, JVM memory allocation, SQL Server connection health, disk storage telemetry.
-- [ ] **1.3 Media Library Database Metadata Persistence (`dbo.media_assets`)**
-  - [ ] Transition [`Media.cfc`](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Media.cfc) from filesystem-only directory scans to a persistent SQL Server table (`dbo.media_assets`).
-  - [ ] Persist alt-text, captions, copyright/credit, ADA audit flags, and workspace ownership to SQL Server.
-  - [ ] Store SHA-256 hashes to prevent duplicate file uploads.
+- [x] **1.3 Media Library Database Metadata Persistence (`dbo.media_assets`) & Universal Upload Integration**
+  - [x] Transition [`Media.cfc`](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Media.cfc) from filesystem-only directory scans to a persistent SQL Server table (`dbo.media_assets`).
+  - [x] Persist alt-text, captions, copyright/credit, ADA audit flags, and workspace ownership to SQL Server.
+  - [x] Store SHA-256 hashes to prevent duplicate file uploads.
+  - [x] Universal upload entry points: Added direct upload button and inline slide-down upload panel across all instances of the Media Library (standalone explorer `/media/index`, modal picker `/media/picker`, explorer details panel, primary sidebar navigation submenu, dashboard media card, media settings card, and all picker modal headers across Page Editor, Article Editor, CTA Studio, and RFP Editor).
 - [x] **1.4 Header Profile & Notifications Dropdown Functional Wiring**
   - [x] Replace `#profile` in [`layout.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/layout.cfm#L429-L432) with working `/users/profile` action allowing staff to update their display name, job title, phone, and 2FA settings.
   - [x] Replace mockup notification links (`#notif-1`, `#notif-2`, `#all-notifications`) with dynamic notifications driven by form submissions and editorial drafts.
@@ -63,7 +64,15 @@ Mission-critical capabilities focused on public safety, regulatory compliance, a
   - [x] "Quick Fix" actions: convert first table row to `<th scope="col">`, prompt & set image alt/decorative attributes, add link aria-label or new-tab accessibility notice, correct skipped headings, and clean spacer blocks.
   - [x] Companion ADA scorecard in Publish sidebar (`#pgA11yPublishWidget`).
   - [x] Pre-flight save gate on form submit: intercepts public releases (`Visibility: Published` + `Status: Active`) when critical ADA violations exist, prompting author with `window.adminConfirm` to review or proceed.
-- [ ] **2.4 Public Website API Layer & Mega-Menu Integration**
+- [x] **2.4 Call to Action (CTA) Studio, Grid Generator & Shortcode Engine**
+  - [x] Management interface under Pages (`/pages/call-to-action`) with KPI statistics bar, live search, and category filter pills.
+  - [x] Database schema: `dbo.page_call_to_actions` (`id`, `siteid`, `slug`, `title`, `short_description`, `image_path`, `button_text`, `button_icon`, `destination_url`, `open_in_new_tab`, `is_published`, `category`, `sort_order`, `deletedat`).
+  - [x] Add/Edit CTA modal with real-time responsive preview card, Media Library file picker integration, and automatic workspace inheritance.
+  - [x] Multi-Card Grid Builder modal for composite 2/3/4-column responsive shortcode generation (`[cta_grid slugs="..."]`).
+  - [x] In-Editor shortcode insert modal (`#embedCtaModal`) in JBDEditor with multi-card selection and template integration.
+  - [x] Shortcode resolver (`renderCallToActionShortcodes`) and `.jbd-cta-link` inline SVG icon rendering.
+- [ ] **2.5 Public Website API Layer & Mega-Menu Integration**
+  - [x] Pre-seeded 12 Standard Chelan County "How Do I" action categories (`dbo.how_do_i_categories`) with icons, descriptions, and sort orders; implemented self-healing auto-seed on table init and admin `prefillHowDoICategories` endpoint with UI actions in `/pages/how-do-i`.
   - [ ] Read-only REST/JSON endpoints for consumption by `chelancounty.gov`:
     - [ ] `GET /api/v1/how-do-i` (Categorized active items with `show_in_mega_menu = 1`).
     - [ ] `GET /api/v1/navigation/menu?code=main` (Hierarchical navigation structure).
