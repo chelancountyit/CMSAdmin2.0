@@ -186,7 +186,7 @@ component extends="Controller" {
 					title:        { value: local.title, cfsqltype: "cf_sql_nvarchar" },
 					slug:         { value: local.slug, cfsqltype: "cf_sql_nvarchar" },
 					summary:      { value: local.summary, cfsqltype: "cf_sql_nvarchar" },
-					description:  { value: local.description, cfsqltype: "cf_sql_longnvarchar" },
+					description:  { value: local.description, cfsqltype: "cf_sql_nvarchar" },
 					startDate:    { value: local.startDateFormatted, cfsqltype: "cf_sql_date" },
 					endDate:      { value: local.endDateFormatted, cfsqltype: "cf_sql_date" },
 					startTime:    { value: local.startTime, cfsqltype: "cf_sql_nvarchar" },
@@ -222,9 +222,7 @@ component extends="Controller" {
 						contact_name, contact_email, contact_phone,
 						is_featured, is_public_notice, status, publish_at, unpublish_at,
 						created_by, modified_by, createdat, updatedat
-					)
-					OUTPUT INSERTED.id AS newId
-					VALUES (
+					) VALUES (
 						:siteId, :catId, :title, :slug, :summary, :description,
 						:startDate, :endDate, :startTime, :endTime, :isAllDay,
 						:locName, :locAddr, :roomNum,
@@ -232,14 +230,15 @@ component extends="Controller" {
 						:contactName, :contactEmail, :contactPhone,
 						:isFeatured, :isNotice, :status, :publishAt, :unpublishAt,
 						:actor, :actor, SYSUTCDATETIME(), SYSUTCDATETIME()
-					)
+					);
+					SELECT SCOPE_IDENTITY() AS new_id;
 				", {
 					siteId:       { value: local.siteId, cfsqltype: "cf_sql_nvarchar" },
 					catId:        { value: local.categoryId, cfsqltype: "cf_sql_integer" },
 					title:        { value: local.title, cfsqltype: "cf_sql_nvarchar" },
 					slug:         { value: local.slug, cfsqltype: "cf_sql_nvarchar" },
 					summary:      { value: local.summary, cfsqltype: "cf_sql_nvarchar" },
-					description:  { value: local.description, cfsqltype: "cf_sql_longnvarchar" },
+					description:  { value: local.description, cfsqltype: "cf_sql_nvarchar" },
 					startDate:    { value: local.startDateFormatted, cfsqltype: "cf_sql_date" },
 					endDate:      { value: local.endDateFormatted, cfsqltype: "cf_sql_date" },
 					startTime:    { value: local.startTime, cfsqltype: "cf_sql_nvarchar" },
@@ -260,8 +259,9 @@ component extends="Controller" {
 					status:       { value: local.status, cfsqltype: "cf_sql_nvarchar" },
 					publishAt:    local.hasPublishAt ? { value: local.publishAt, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
 					unpublishAt:  local.hasUnpublishAt ? { value: local.unpublishAt, cfsqltype: "cf_sql_timestamp" } : { null: true, cfsqltype: "cf_sql_timestamp" },
+					actor:        { value: local.actor, cfsqltype: "cf_sql_nvarchar" }
 				}, { datasource: "ChelanCountyWebsite" });
-				local.id = Val(local.ins.newId);
+				local.id = Val(local.ins.new_id);
 			}
 
 			evRenderJson({
@@ -419,8 +419,8 @@ component extends="Controller" {
 					SET ANSI_NULLS ON;
 					SET QUOTED_IDENTIFIER ON;
 					INSERT INTO calendar_event_categories (name, slug, color, badge_class, icon, description, sort_order, is_active, is_system, createdat, updatedat)
-					OUTPUT INSERTED.id AS newId
-					VALUES (:name, :slug, :color, :badgeClass, :icon, :desc, :sortOrder, :isActive, 0, SYSUTCDATETIME(), SYSUTCDATETIME())
+					VALUES (:name, :slug, :color, :badgeClass, :icon, :desc, :sortOrder, :isActive, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
+					SELECT SCOPE_IDENTITY() AS new_id;
 				", {
 					name:       { value: local.name, cfsqltype: "cf_sql_nvarchar" },
 					slug:       { value: local.slug, cfsqltype: "cf_sql_nvarchar" },
@@ -431,7 +431,7 @@ component extends="Controller" {
 					sortOrder:  { value: local.sortOrder, cfsqltype: "cf_sql_integer" },
 					isActive:   { value: local.isActive ? 1 : 0, cfsqltype: "cf_sql_bit" }
 				}, { datasource: "ChelanCountyWebsite" });
-				local.id = Val(local.ins.newId);
+				local.id = Val(local.ins.new_id);
 			}
 
 			evRenderJson({
