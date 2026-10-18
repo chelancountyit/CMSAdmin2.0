@@ -25,24 +25,20 @@
 	.table-thumb-placeholder { width: 44px; height: 44px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; background: #f1f5f9; color: var(--admin-text-muted); border: 1px solid var(--admin-border); }
 </style>
 
-<div class="content-header">
-	<div class="content-header-title">
-		<nav class="breadcrumb" aria-label="Breadcrumb">
-			<a href="<cfoutput>#urlFor(controller='main', action='index')#</cfoutput>">Dashboard</a>
-			<span class="breadcrumb-separator">/</span>
-			<a href="<cfoutput>#urlFor(controller='media', action='index')#</cfoutput>">Media Library</a>
-			<span class="breadcrumb-separator">/</span>
-			<span class="breadcrumb-current">Upload Media &amp; Metadata</span>
-		</nav>
-		<h1 class="page-title">
-			<cfoutput>#svgIcon(name="upload", size=24)#</cfoutput>
-			<span>Upload Media &amp; Documents</span>
-		</h1>
-	</div>
-
+<div class="page-header">
 	<div>
-		<a href="<cfoutput>#urlFor(controller='media', action='index')#</cfoutput>" class="btn btn-secondary">
-			<cfoutput>#svgIcon(name="chevron-right", size=14, class="nav-caret")#</cfoutput>
+		<h1 class="page-title" style="margin-bottom:0;">Upload Media &amp; Documents</h1>
+		<nav aria-label="Breadcrumb">
+			<ol class="breadcrumb" style="margin-top:0.35rem;">
+				<li class="breadcrumb-item"><a href="<cfoutput>#urlFor(controller='main', action='index')#</cfoutput>"><cfoutput>#svgIcon(name="dashboard", size=14)#</cfoutput> Home</a></li>
+				<li class="breadcrumb-item"><a href="<cfoutput>#urlFor(controller='media', action='index')#</cfoutput>">Media Library</a></li>
+				<li class="breadcrumb-item active" aria-current="page">Upload Media</li>
+			</ol>
+		</nav>
+	</div>
+	<div class="page-actions" style="display:flex; gap:0.5rem; align-items:center;">
+		<a href="<cfoutput>#urlFor(controller='media', action='index')#</cfoutput>" class="btn btn-outline btn-sm">
+			<cfoutput>#svgIcon(name="arrow-left", size=14)#</cfoutput>
 			<span>Back to Library</span>
 		</a>
 	</div>

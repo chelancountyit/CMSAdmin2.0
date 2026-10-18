@@ -13,7 +13,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Select Media Asset - Chelan County CMS</title>
 	<link rel="stylesheet" href="/stylesheets/admin-theme.css?v=3.0">
-	<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=2.8">
+	<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=3.2">
 	<style>
 		body {
 			background: #f8fafc;
@@ -120,40 +120,54 @@
 				<div class="new-error" id="new-error" role="alert"></div>
 			</form>
 
-			<!-- Inline upload-file panel -->
-			<form id="upload-panel" class="panel upload-panel" hidden novalidate enctype="multipart/form-data">
-				<div class="upload-row" style="display:flex; flex-direction:column; gap:0.75rem; padding:0.5rem 0;">
-					<div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-						<label for="upload-file-input" class="new-label" style="font-weight:700; font-size:0.85rem; color:var(--admin-text-main); white-space:nowrap;">Select File:</label>
-						<input type="file" id="upload-file-input" class="input" style="flex:1; min-width:220px;" required>
-						<button type="submit" id="btn-do-upload" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:0.35rem;">
-							<svg viewBox="0 0 24 24" aria-hidden="true" style="width:16px; height:16px; stroke:currentColor; stroke-width:2; fill:none;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-							<span>Upload Now</span>
+			<!-- Inline upload-file panel (CMSAdmin 2.0 Standard Design) -->
+			<form id="upload-panel" class="panel upload-panel admin-card" hidden novalidate enctype="multipart/form-data" aria-label="Quick file upload" style="padding:1.5rem; margin-bottom:1.5rem;">
+				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
+					<h3 style="margin:0; font-size:1.1rem; font-weight:700; color:var(--admin-text-main); display:flex; align-items:center; gap:0.5rem;">
+						#svgIcon(name="upload", size=18)# Quick Upload to Folder
+					</h3>
+					<div style="display:flex; align-items:center; gap:0.75rem; font-size:0.825rem;">
+						<span id="upload-destination-preview" class="mono" style="color:var(--admin-text-muted); background:var(--admin-surface-hover, ##f8fafc); padding:0.25rem 0.65rem; border-radius:var(--radius-sm, 4px); border:1px solid var(--admin-border-subtle, ##e2e8f0);"></span>
+						<a href="/media/upload" target="_blank" rel="noopener" id="link-full-upload-studio" style="color:var(--admin-primary); font-weight:600; text-decoration:none;">Full Studio &rarr;</a>
+						<button type="button" id="btn-upload-close-icon" class="btn btn-icon btn-sm" aria-label="Close upload panel" title="Close (Esc)" style="border:none; background:transparent;">
+							#svgIcon(name="x", size=16)#
 						</button>
-						<button type="button" id="btn-upload-cancel" class="btn btn-secondary">Cancel</button>
 					</div>
-
-					<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-						<div>
-							<label for="upload-alt-input" style="display:block; font-size:0.78rem; font-weight:600; color:var(--admin-text-muted); margin-bottom:0.25rem;">
-								Alternative Text (WCAG 1.1.1):
-							</label>
-							<input type="text" id="upload-alt-input" class="input" style="width:100%;" placeholder="Describe image for screen readers...">
-						</div>
-						<div>
-							<label for="upload-title-input" style="display:block; font-size:0.78rem; font-weight:600; color:var(--admin-text-muted); margin-bottom:0.25rem;">
-								Display Title:
-							</label>
-							<input type="text" id="upload-title-input" class="input" style="width:100%;" placeholder="Optional title (auto-fills from filename)">
-						</div>
-					</div>
-
-					<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:var(--admin-text-muted);">
-						<span id="upload-destination-preview" class="mono"></span>
-						<a href="/media/upload" target="_blank" rel="noopener" id="link-full-upload-studio" style="color:var(--admin-primary); font-weight:600; text-decoration:none;">Open Full Upload Studio &rarr;</a>
-					</div>
-					<div id="upload-error" class="new-error" role="alert" style="color:var(--admin-danger); font-size:0.8rem;"></div>
 				</div>
+
+				<div style="margin-bottom:1rem;">
+					<label for="upload-file-input" class="form-label" style="font-weight:600;">
+						Select File <span style="color:var(--admin-danger);">*</span>
+					</label>
+					<div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+						<input type="file" id="upload-file-input" name="mediaFile" class="form-control" style="flex:1; min-width:240px;" required>
+						<button type="submit" id="btn-do-upload" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.5rem 1.1rem; white-space:nowrap;">
+							<svg id="btn-do-upload-icon" viewBox="0 0 24 24" aria-hidden="true" style="width:15px; height:15px; stroke:currentColor; stroke-width:2; fill:none;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+							<svg id="btn-do-upload-spinner" class="fx-spinner" viewBox="0 0 24 24" aria-hidden="true" hidden style="width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2.5;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+							<span id="btn-do-upload-text">Upload Now</span>
+						</button>
+						<button type="button" id="btn-upload-cancel" class="btn btn-outline btn-sm">Cancel</button>
+					</div>
+				</div>
+
+				<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+					<div>
+						<label for="upload-alt-input" class="form-label" style="font-weight:600;">
+							Alternative Text (WCAG 1.1.1)
+						</label>
+						<input type="text" id="upload-alt-input" class="form-control" placeholder="Describe image for screen readers...">
+						<small style="color:var(--admin-text-muted); font-size:0.75rem; margin-top:0.25rem; display:block;">Required for web accessibility on photos &amp; graphics.</small>
+					</div>
+					<div>
+						<label for="upload-title-input" class="form-label" style="font-weight:600;">
+							Display Title
+						</label>
+						<input type="text" id="upload-title-input" class="form-control" placeholder="Optional title (auto-fills from filename)">
+						<small style="color:var(--admin-text-muted); font-size:0.75rem; margin-top:0.25rem; display:block;">Human-readable asset title used for catalog searches.</small>
+					</div>
+				</div>
+
+				<div id="upload-error" class="new-error" role="alert" style="color:var(--admin-danger); font-size:0.825rem; margin-top:0.5rem;" hidden></div>
 			</form>
 
 			<div class="subbar">
@@ -175,7 +189,7 @@
 	<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=2.9"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=3.2"></script>
 </cfoutput>
 </body>
 </html>

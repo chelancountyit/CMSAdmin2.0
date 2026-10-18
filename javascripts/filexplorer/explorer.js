@@ -58,6 +58,12 @@
 		uploadPreview: $('upload-destination-preview'), uploadError: $('upload-error'),
 		btnDoUpload: $('btn-do-upload'), btnUploadCancel: $('btn-upload-cancel'),
 		linkFullStudio: $('link-full-upload-studio'),
+		uploadDropzone: $('upload-dropzone'), dropzonePrompt: $('upload-dropzone-prompt'),
+		selectedCard: $('upload-selected-card'), selectedName: $('upload-selected-name'),
+		selectedMeta: $('upload-selected-meta'), selectedThumb: $('upload-selected-thumb'),
+		btnRemoveFile: $('btn-remove-selected-file'), btnCloseUploadIcon: $('btn-upload-close-icon'),
+		btnDoUploadText: $('btn-do-upload-text'), btnDoUploadSpinner: $('btn-do-upload-spinner'),
+		btnDoUploadIcon: $('btn-do-upload-icon'),
 		summary: $('summary'), levelHint: $('level-hint'),
 		content: $('content'), items: $('items'),
 		details: $('details'), toast: $('toast')
@@ -1178,15 +1184,83 @@
 	// ------------------------------------------------------------------
 	// Inline Upload File
 	// ------------------------------------------------------------------
+	function resetFileSelection() {
+		if (el.uploadFile) el.uploadFile.value = '';
+		if (el.selectedCard) el.selectedCard.hidden = true;
+		if (el.dropzonePrompt) el.dropzonePrompt.hidden = false;
+		if (el.selectedThumb) el.selectedThumb.innerHTML = '';
+		if (el.selectedName) el.selectedName.textContent = '';
+		if (el.selectedMeta) el.selectedMeta.textContent = '';
+		if (el.btnDoUploadSpinner) el.btnDoUploadSpinner.hidden = true;
+		if (el.btnDoUploadIcon) el.btnDoUploadIcon.hidden = false;
+		if (el.btnDoUploadText) el.btnDoUploadText.textContent = 'Upload Now';
+		showUploadError('');
+	}
+
+	function handleFileSelected(file) {
+		if (!file) {
+			resetFileSelection();
+			return;
+		}
+
+		if (el.uploadTitle && !el.uploadTitle.value) {
+			var clean = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
+			el.uploadTitle.value = clean.charAt(0).toUpperCase() + clean.slice(1);
+		}
+
+		var ext = file.name.split('.').pop().toLowerCase();
+		var isImg = IMAGE_EXT.indexOf(ext) >= 0;
+
+		if (el.uploadAlt && isImg && !el.uploadAlt.value) {
+			el.uploadAlt.placeholder = 'Describe "' + file.name + '" for screen readers (WCAG 1.1.1)...';
+		}
+
+		if (el.selectedName) el.selectedName.textContent = file.name;
+		if (el.selectedMeta) {
+			var kind = fileKind(ext);
+			el.selectedMeta.textContent = fmtSize(file.size) + ' \u2022 ' + kind.label;
+		}
+
+		if (el.selectedThumb) {
+			if (isImg && window.FileReader) {
+				var reader = new FileReader();
+				reader.onload = function (e) {
+					if (el.selectedThumb) {
+						el.selectedThumb.innerHTML = '<img src="' + esc(e.target.result) + '" alt="' + esc(file.name) + '">';
+					}
+				};
+				reader.readAsDataURL(file);
+			} else {
+				el.selectedThumb.innerHTML = '<svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+			}
+		}
+
+		if (el.dropzonePrompt) el.dropzonePrompt.hidden = true;
+		if (el.selectedCard) el.selectedCard.hidden = false;
+		showUploadError('');
+	}
+
+	function showUploadError(msg) {
+		if (!el.uploadError) return;
+		if (!msg) {
+			el.uploadError.textContent = '';
+			el.uploadError.hidden = true;
+			el.uploadError.style.display = 'none';
+		} else {
+			el.uploadError.hidden = false;
+			el.uploadError.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>' + esc(msg) + '</span>';
+			el.uploadError.style.display = 'flex';
+		}
+	}
+
 	function openUpload() {
 		var isShared = (state.path && state.path.toLowerCase().indexOf('shared images') >= 0);
 		if (isShared || !el.uploadPanel) return;
 		closeNew();
 		el.uploadPanel.hidden = false;
-		if (el.uploadFile) el.uploadFile.value = '';
+		resetFileSelection();
 		if (el.uploadTitle) el.uploadTitle.value = '';
 		if (el.uploadAlt) el.uploadAlt.value = '';
-		if (el.uploadError) el.uploadError.textContent = '';
 		updateUploadPreview();
 		if (el.uploadFile) el.uploadFile.focus();
 	}
@@ -1194,10 +1268,9 @@
 	function closeUpload(focusButton) {
 		if (!el.uploadPanel || el.uploadPanel.hidden) return;
 		el.uploadPanel.hidden = true;
-		if (el.uploadFile) el.uploadFile.value = '';
+		resetFileSelection();
 		if (el.uploadTitle) el.uploadTitle.value = '';
 		if (el.uploadAlt) el.uploadAlt.value = '';
-		if (el.uploadError) el.uploadError.textContent = '';
 		if (focusButton && el.btnUpload) el.btnUpload.focus();
 	}
 
@@ -1223,22 +1296,58 @@
 	if (el.uploadFile) {
 		el.uploadFile.addEventListener('change', function () {
 			if (this.files && this.files[0]) {
-				var f = this.files[0];
-				if (el.uploadTitle && !el.uploadTitle.value) {
-					var clean = f.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
-					el.uploadTitle.value = clean.charAt(0).toUpperCase() + clean.slice(1);
-				}
-				var isImg = /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(f.name);
-				if (el.uploadAlt && isImg && !el.uploadAlt.value) {
-					el.uploadAlt.placeholder = 'Describe "' + f.name + '" for screen readers (WCAG 1.1.1)...';
-				}
+				handleFileSelected(this.files[0]);
+			} else {
+				resetFileSelection();
 			}
 		});
-		el.uploadFile.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); closeUpload(true); } });
+		el.uploadFile.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') { e.preventDefault(); closeUpload(true); }
+		});
+	}
+
+	if (el.uploadDropzone) {
+		['dragenter', 'dragover'].forEach(function (eventName) {
+			el.uploadDropzone.addEventListener(eventName, function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+				el.uploadDropzone.classList.add('is-dragover');
+			});
+		});
+		['dragleave', 'dragend', 'drop'].forEach(function (eventName) {
+			el.uploadDropzone.addEventListener(eventName, function (e) {
+				e.preventDefault();
+				e.stopPropagation();
+				el.uploadDropzone.classList.remove('is-dragover');
+			});
+		});
+		el.uploadDropzone.addEventListener('drop', function (e) {
+			if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+				el.uploadFile.files = e.dataTransfer.files;
+				handleFileSelected(e.dataTransfer.files[0]);
+			}
+		});
+	}
+
+	if (el.btnRemoveFile) {
+		el.btnRemoveFile.addEventListener('click', function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			resetFileSelection();
+			if (el.uploadFile) el.uploadFile.focus();
+		});
+	}
+
+	if (el.btnCloseUploadIcon) {
+		el.btnCloseUploadIcon.addEventListener('click', function () {
+			closeUpload(true);
+		});
 	}
 
 	if (el.uploadPanel) {
-		el.uploadPanel.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); closeUpload(true); } });
+		el.uploadPanel.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') { e.preventDefault(); closeUpload(true); }
+		});
 	}
 
 	if (el.btnUploadCancel) {
@@ -1249,11 +1358,11 @@
 		el.uploadPanel.addEventListener('submit', async function (e) {
 			e.preventDefault();
 			if (!el.uploadFile || !el.uploadFile.files || !el.uploadFile.files[0]) {
-				if (el.uploadError) el.uploadError.textContent = 'Please choose a file to upload.';
+				showUploadError('Please choose or drop a file to upload.');
 				return;
 			}
 			if (state.online !== true) {
-				if (el.uploadError) el.uploadError.textContent = 'Unavailable while offline.';
+				showUploadError('Unavailable while offline.');
 				return;
 			}
 			var f = el.uploadFile.files[0];
@@ -1271,31 +1380,74 @@
 			fd.append('format', 'json');
 
 			if (el.btnDoUpload) el.btnDoUpload.disabled = true;
-			if (el.uploadError) el.uploadError.textContent = 'Uploading file\u2026';
+			if (el.btnDoUploadSpinner) el.btnDoUploadSpinner.hidden = false;
+			if (el.btnDoUploadIcon) el.btnDoUploadIcon.hidden = true;
+			if (el.btnDoUploadText) el.btnDoUploadText.textContent = 'Uploading\u2026';
+			showUploadError('');
 
 			try {
-				var res = await fetch('/media/processUpload?format=json', {
+				var uploadUrl = '/media/upload?format=json';
+				var res = await fetch(uploadUrl, {
 					method: 'POST',
 					headers: {
 						'X-Requested-With': 'XMLHttpRequest'
 					},
 					body: fd
 				});
-				var data = await res.json();
-				if (el.btnDoUpload) el.btnDoUpload.disabled = false;
 
-				if (!data || !data.success) {
-					if (el.uploadError) el.uploadError.textContent = (data && data.message) ? data.message : 'Upload failed.';
+				// Fallback to /media/processUpload if needed
+				if (res.status === 404 || res.status === 405) {
+					res = await fetch('/media/processUpload?format=json', {
+						method: 'POST',
+						headers: {
+							'X-Requested-With': 'XMLHttpRequest'
+						},
+						body: fd
+					});
+				}
+
+				if (el.btnDoUpload) el.btnDoUpload.disabled = false;
+				if (el.btnDoUploadSpinner) el.btnDoUploadSpinner.hidden = true;
+				if (el.btnDoUploadIcon) el.btnDoUploadIcon.hidden = false;
+				if (el.btnDoUploadText) el.btnDoUploadText.textContent = 'Upload Now';
+
+				if (res.status === 401) {
+					showUploadError('Session has expired. Please refresh the page and sign in.');
+					return;
+				}
+
+				var data = null;
+				try {
+					data = await res.json();
+				} catch (jsonErr) {
+					var raw = await res.text().catch(function () { return ''; });
+					showUploadError(raw.indexOf('<!DOCTYPE') >= 0 ? 'Server returned an error (HTTP ' + res.status + ').' : (raw.slice(0, 150) || 'Upload failed.'));
+					return;
+				}
+
+				if (data && data.REDIRECT && (data.SUCCESS === false || data.success === false)) {
+					showUploadError((data.MESSAGE || data.message || 'Session expired.') + ' Please refresh and log in.');
+					return;
+				}
+
+				var isSuccess = data && (data.success === true || data.SUCCESS === true);
+				var msg = data && (data.message || data.MESSAGE);
+				if (!isSuccess) {
+					showUploadError(msg || 'Upload failed.');
 					return;
 				}
 
 				closeUpload(false);
-				var uploadedName = (data.file && data.file.name) ? data.file.name : f.name;
+				var fileObj = data && (data.file || data.FILE);
+				var uploadedName = (fileObj && (fileObj.name || fileObj.NAME)) ? (fileObj.name || fileObj.NAME) : f.name;
 				toast('File "' + uploadedName + '" uploaded successfully.');
 				await load(state.path, uploadedName);
 			} catch (err) {
 				if (el.btnDoUpload) el.btnDoUpload.disabled = false;
-				if (el.uploadError) el.uploadError.textContent = 'Upload failed: ' + (err.message || 'Network error');
+				if (el.btnDoUploadSpinner) el.btnDoUploadSpinner.hidden = true;
+				if (el.btnDoUploadIcon) el.btnDoUploadIcon.hidden = false;
+				if (el.btnDoUploadText) el.btnDoUploadText.textContent = 'Upload Now';
+				showUploadError('Upload failed: ' + (err.message || 'Network error'));
 			}
 		});
 	}

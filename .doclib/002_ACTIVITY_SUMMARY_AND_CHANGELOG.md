@@ -628,3 +628,92 @@ This log maintains a chronological, permanent record of engineering milestones, 
   5. **CFML Output Hash Escaping (`callToAction.cfm`):**
      - Resolved `[coldfusion.util.RuntimeWrapper] 10b981 is not a valid identifier name` by escaping hex color hashes (`#10b981`, `#065f46`, `#d1fae5`) as double pound signs (`##10b981`, `##065f46`, `##d1fae5`) within the `<cfoutput>` block.
 
+---
+
+### Milestone 15: Media Library Inline Quick-Upload Beautification & Modernization
+- **Files Modified:**
+  - `app/views/media/index.cfm`
+  - `app/views/media/picker.cfm`
+  - `config/routes.cfm`
+  - `stylesheets/filexplorer/explorer.css`
+  - `javascripts/filexplorer/explorer.js`
+- **Issue:**
+  - The inline upload portion of the Media Library (`#upload-panel`) was visually outdated, utilizing raw browser default `<input type="file">` controls, crammed labels, and awkward spacing where destination path strings collided directly with the "Open Full Upload Studio" link.
+  - Furthermore, clicking "Upload Now" previously failed because the client was calling `/media/processUpload`, but CFWheels routes only had `POST media/upload`, resulting in `Wheels.RouteNotFound: Incorrect HTTP Verb for route`.
+- **Root Cause & Engineering Solutions:**
+  1. **Upload Route & Endpoint Hardening (`config/routes.cfm` & `explorer.js`):**
+     - Registered explicit route aliases in `config/routes.cfm` for `POST /media/processUpload` and `POST /media/process-upload` pointing to `media##processUpload`.
+     - In `explorer.js`, targeted the canonical route `/media/upload?format=json` with automatic fallback to `/media/processUpload`.
+     - Added resilient case-insensitive response parsing (`data.success || data.SUCCESS`, `data.file || data.FILE`) and session expiration redirect detection (`data.REDIRECT`).
+     - Added `name="mediaFile"` to native `<input type="file">` controls in `index.cfm` and `picker.cfm`.
+     - Reloaded CFWheels routing framework via `/?reload=true&password=chelancms`.
+  2. **Modern Header & Path Segregation:**
+     - Separated the destination folder into a dedicated pill badge with folder icon (`.fx-upload-dest-badge`), distinct from the "Full Upload Studio" external studio link.
+     - Added quick close icon button (`btn-upload-close-icon`) and prominent "Quick Upload to Folder" title.
+  3. **Interactive Drag & Drop Zone with Live Previews:**
+     - Replaced the browser-default file selector with a modern dashed dropzone (`.fx-upload-dropzone`) that highlights on dragover (`is-dragover`).
+     - Added instant image thumbnail preview via `FileReader` (or file type SVG badge for PDFs/documents), formatted file size (`fmtSize`), filename, and "Ready to upload" status badge.
+     - Added a "Change / Remove" action button to swap or clear the selected file without breaking form state.
+  4. **Editorial & ADA WCAG 2.1 AA Metadata Section:**
+     - Styled a balanced 2-column grid for Alternative Text (`WCAG 1.1.1`) and Display Title.
+     - Added an "ADA / WCAG AA" badge and clear explanatory helper hints to educate editors on accessibility requirements.
+  5. **Progress Feedback & Loading State:**
+     - Added SVG loading spinner and "Uploading..." state to `#btn-do-upload` during network submission.
+     - Transformed `#upload-error` into a polished callout alert banner with error icon.
+  6. **Asset Cache Busting:**
+     - Bumped `explorer.css` and `explorer.js` cache-buster query strings to `v=3.1` across `index.cfm` and `picker.cfm`.
+- **Verification:** Verified syntax with `node -c`, tested `POST /media/upload` and `POST /media/processUpload` endpoints with curl returning HTTP 200/401 JSON envelopes instead of 404 RouteNotFound errors.
+
+---
+
+### Milestone 16: Media Upload Controller — ColdFusion Undefined `local.width` Variable Resolution
+- **Files Modified:**
+  - `app/controllers/Media.cfc`
+- **Issue:**
+  - When submitting the upload form, ColdFusion threw: `Upload failed: Element WIDTH is undefined in LOCAL.`
+- **Root Cause & Technical Resolution:**
+  1. **ColdFusion 2025 Null Variable Unsetting:**
+     - In Adobe ColdFusion 2025, assigning `local.width = javaCast("null", "")` de-registers the key from the `local` scope entirely.
+     - When uploading non-image documents (e.g. PDFs, Word documents) or when `ImageRead()` was bypassed, referencing `local.width` and `local.height` in `queryExecute()` struct parameters or evaluation statements triggered an unhandled runtime exception: `Element WIDTH is undefined in LOCAL`.
+  2. **Safe Value Initialization & Query Parameter Normalization (`Media.cfc`):**
+     - Updated `processUpload()` (lines 360–370 and 420–425) and `syncDiskAssetsToDatabase()` (lines 670–680 and 708–712) to initialize `local.width = ""` and `local.height = ""`.
+     - Normalized `queryExecute()` parameters for `width` and `height` to safely check numeric values and insert SQL NULL cleanly:
+       ```cfc
+       width: { value: Val(local.width) > 0 ? Val(local.width) : JavaCast("null", ""), cfsqltype: "cf_sql_integer", null: (Val(local.width) <= 0) },
+       height: { value: Val(local.height) > 0 ? Val(local.height) : JavaCast("null", ""), cfsqltype: "cf_sql_integer", null: (Val(local.height) <= 0) }
+       ```
+- **Verification:** Verified syntax and variable initialization in `app/controllers/Media.cfc`, confirmed zero exceptions logged in `wheels-errors.log` and `exception.log`.
+
+---
+
+### Milestone 17: Media Library Re-alignment to Chelan County CMSAdmin 2.0 Institutional Design System
+- **Files Modified:**
+  - `app/views/media/index.cfm`
+  - `app/views/media/picker.cfm`
+  - `app/views/media/upload.cfm`
+  - `stylesheets/filexplorer/explorer.css`
+  - `javascripts/filexplorer/explorer.js`
+- **Issue:**
+  - The previous inline quick-upload modernization introduced non-standard custom widgets (such as a dashed drag-and-drop cloud card, custom dropzone styles, and dark badges) that deviated from the established Chelan County CMSAdmin 2.0 design system.
+  - Additionally, the page header in `media/index.cfm` and `media/upload.cfm` used legacy `content-header` structures with inverted breadcrumb hierarchy.
+- **Root Cause & Technical Resolution:**
+  1. **Canonical Design System Re-Alignment:**
+     - Aligned Media Library views directly to the institutional pattern demonstrated in modules like `rfps/edit.cfm` (`Post Solicitation Announcement` / `Announcement Information`).
+  2. **Page Header Normalization (`.page-header`):**
+     - Replaced legacy `.content-header` in `media/index.cfm` and `media/upload.cfm` with the canonical `.page-header` layout:
+       - Page title on top (`.page-title`).
+       - Breadcrumb beneath (`.breadcrumb` with `.breadcrumb-item` and SVG dashboard icon: `Home / Media Library`).
+       - Action buttons on the right (`.btn .btn-primary .btn-sm` with SVG icon).
+  3. **Institutional Quick-Upload Card Design (`#upload-panel`):**
+     - Replaced the foreign dropzone widget with a clean, standard `.admin-card` section matching the `Announcement Information` card design.
+     - Form controls use standard `.form-label` (`font-weight: 600` with `<span style="color:var(--admin-danger);">*</span>` required indicators) and `.form-control` inputs.
+     - Preserved clean 2-column layout for Alternative Text (WCAG 1.1.1) and Display Title.
+     - Kept full functionality: auto-title generation from filename, dynamic alt text placeholder hints, SVG loading indicators, and error banners.
+  4. **CSS Streamlining (`explorer.css`):**
+     - Stripped over 350 lines of redundant `.fx-upload-*` dropzone CSS, allowing the global `admin-theme.css` to govern inputs, labels, cards, and buttons consistently.
+  5. **Cache-Busting:**
+     - Bumped `explorer.css` and `explorer.js` cache-buster query strings to `v=3.2` across `index.cfm` and `picker.cfm`.
+- **Verification:** Verified syntax with `node -c`, confirmed zero template compilation errors, and verified all inputs and headers match `admin-theme.css`.
+
+
+

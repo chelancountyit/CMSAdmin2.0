@@ -124,7 +124,10 @@
 		.get(name="mediaIndex", pattern="media", to="media##index")
 		.get(name="mediaUpload", pattern="media/upload", to="media##upload")
 		.post(name="mediaProcessUpload", pattern="media/upload", to="media##processUpload")
+		.post(name="mediaProcessUploadDirect", pattern="media/processUpload", to="media##processUpload")
+		.post(name="mediaProcessUploadHyphen", pattern="media/process-upload", to="media##processUpload")
 		.post(name="mediaUpdateMeta", pattern="media/update-meta", to="media##updateMeta")
+		.post(name="mediaUpdateMetaDirect", pattern="media/updateMeta", to="media##updateMeta")
 		.get(name="mediaPicker", pattern="media/picker", to="media##picker")
 
 		// Events / County Calendar Routes

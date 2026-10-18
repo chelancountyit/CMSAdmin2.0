@@ -358,8 +358,8 @@ component extends="Controller" {
 				}
 
 				// Compute image dimensions
-				local.width = javaCast("null", "");
-				local.height = javaCast("null", "");
+				local.width = "";
+				local.height = "";
 				if (local.isImg && ListFindNoCase("jpg,jpeg,png,gif,bmp", local.ext) > 0) {
 					try {
 						local.cfImg = ImageRead(local.uploadedPath);
@@ -419,8 +419,8 @@ component extends="Controller" {
 					caption: { value: local.caption, cfsqltype: "cf_sql_nvarchar" },
 					credit: { value: local.credit, cfsqltype: "cf_sql_nvarchar" },
 					is_image: { value: local.isImg ? 1 : 0, cfsqltype: "cf_sql_bit" },
-					width: { value: local.width, cfsqltype: "cf_sql_integer", null: IsNull(local.width) },
-					height: { value: local.height, cfsqltype: "cf_sql_integer", null: IsNull(local.height) },
+					width: { value: Val(local.width) > 0 ? Val(local.width) : JavaCast("null", ""), cfsqltype: "cf_sql_integer", null: (Val(local.width) <= 0) },
+					height: { value: Val(local.height) > 0 ? Val(local.height) : JavaCast("null", ""), cfsqltype: "cf_sql_integer", null: (Val(local.height) <= 0) },
 					is_wcag_compliant: { value: local.isWcagCompliant ? 1 : 0, cfsqltype: "cf_sql_bit" },
 					tags: { value: local.tags, cfsqltype: "cf_sql_nvarchar" },
 					created_by: { value: local.userEmail, cfsqltype: "cf_sql_nvarchar" }
@@ -668,8 +668,8 @@ component extends="Controller" {
 										local.ext = LCase(ListLast(local.fileRow.name, "."));
 										local.isImg = ListFindNoCase("jpg,jpeg,png,gif,webp,svg,ico,bmp", local.ext) > 0;
 										local.title = formatTitleFromName(local.fileRow.name);
-										local.width = javaCast("null", "");
-										local.height = javaCast("null", "");
+										local.width = "";
+										local.height = "";
 										if (local.isImg && ListFindNoCase("jpg,jpeg,png,gif,bmp", local.ext) > 0) {
 											try {
 												local.imgObj = ImageRead(local.fullPath);
@@ -706,8 +706,8 @@ component extends="Controller" {
 											file_hash: { value: local.fileHash, cfsqltype: "cf_sql_nvarchar" },
 											title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
 											is_image: { value: local.isImg ? 1 : 0, cfsqltype: "cf_sql_bit" },
-											width: { value: local.width, cfsqltype: "cf_sql_integer", null: IsNull(local.width) },
-											height: { value: local.height, cfsqltype: "cf_sql_integer", null: IsNull(local.height) },
+											width: { value: Val(local.width) > 0 ? Val(local.width) : JavaCast("null", ""), cfsqltype: "cf_sql_integer", null: (Val(local.width) <= 0) },
+											height: { value: Val(local.height) > 0 ? Val(local.height) : JavaCast("null", ""), cfsqltype: "cf_sql_integer", null: (Val(local.height) <= 0) },
 											is_wcag: { value: local.isWcag ? 1 : 0, cfsqltype: "cf_sql_bit" },
 											tags: { value: local.wsName & ", " & local.folderName, cfsqltype: "cf_sql_nvarchar" }
 										}, { datasource: "ChelanCountyWebsite" });
