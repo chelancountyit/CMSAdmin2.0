@@ -862,6 +862,20 @@ button, input, select, textarea {
   align-items: center;
   gap: 0.65rem;
 }
+.page-actions .btn.btn-sm,
+.page-header .page-actions .btn {
+  padding: 0.28rem 0.65rem;
+  font-size: 0.785rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  border-radius: var(--radius-sm);
+}
+.page-actions .btn.btn-sm svg,
+.page-header .page-actions .btn svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
 
 /* ==========================================================================
    Components: Cards, Stats, Tables, Badges, Buttons
@@ -899,7 +913,22 @@ button, input, select, textarea {
 .card-tools {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
+}
+.card-header .card-tools .btn,
+.card-header .btn {
+  padding: 0.22rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  border-radius: var(--radius-sm);
+  gap: 0.35rem;
+}
+.card-header .card-tools .btn svg,
+.card-header .btn svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 .card-body {
   padding: 1.5rem;
@@ -1026,8 +1055,20 @@ button, input, select, textarea {
   line-height: 1.25;
 }
 .btn-sm {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8rem;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.785rem;
+}
+.btn-xs {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.725rem;
+  border-radius: var(--radius-sm);
+  gap: 0.3rem;
+  line-height: 1.2;
+}
+.btn-xs svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
 }
 .btn-primary {
   background: var(--admin-primary);
@@ -1567,6 +1608,23 @@ body.sidebar-collapsed .brand-wrapper {
   display: inline-block;
   width: 100%;
   vertical-align: top;
+}
+.dashboard-grid .card-header .card-title,
+.dashboard-grid .card-title {
+  font-family: var(--admin-font);
+  font-size: 0.825rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--admin-text-muted);
+}
+.dashboard-grid .card-header .card-title svg,
+.dashboard-grid .card-title svg {
+  color: var(--admin-text-muted);
+  flex-shrink: 0;
+}
+.dashboard-grid .card-header {
+  padding: 0.85rem 1.25rem;
 }
 @media (max-width: 1280px) {
   .dashboard-grid {
