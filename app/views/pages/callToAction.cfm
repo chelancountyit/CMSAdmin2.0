@@ -199,7 +199,7 @@
 	<div class="page-actions" style="display:flex; gap:0.5rem; align-items:center;">
 		<a href="#urlFor(controller='pages', action='index')#" class="btn btn-outline btn-sm">
 			#svgIcon(name="pages", size=15)#
-			<span>All Pages</span>
+			<span>Content Manager</span>
 		</a>
 		<button type="button" class="btn btn-outline btn-sm" id="btnOpenGridBuilder" title="Build multi-card grid shortcodes">
 			#svgIcon(name="grid", size=15)#

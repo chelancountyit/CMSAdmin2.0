@@ -572,7 +572,7 @@
 										<cfoutput>#svgIcon(name="chevron-right", size=14, class="nav-caret")#</cfoutput>
 									</a>
 									<ul class="nav-submenu">
-										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'pages' and structKeyExists(params, 'action') and (params.action eq 'index' or params.action eq 'edit') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='pages', action='index')#</cfoutput>" class="submenu-link">All Pages</a></li>
+										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'pages' and structKeyExists(params, 'action') and (params.action eq 'index' or params.action eq 'edit') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='pages', action='index')#</cfoutput>" class="submenu-link">Content Manager</a></li>
 										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'pages' and structKeyExists(params, 'action') and (lCase(params.action) eq 'calltoaction' or lCase(params.action) eq 'calltoactionmanager' or lCase(params.action) eq 'calltoactionstudio') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='pages', action='callToAction')#</cfoutput>" class="submenu-link">Call to Action Studio</a></li>
 										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'pages' and structKeyExists(params, 'action') and lCase(params.action) eq 'howdoi' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='pages', action='howDoI')#</cfoutput>" class="submenu-link">How Do I</a></li>
 									</ul>

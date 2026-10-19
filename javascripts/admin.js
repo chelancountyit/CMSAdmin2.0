@@ -451,7 +451,7 @@ document.addEventListener("click", function (e) {
     title = url.searchParams.has("id") ? "Opening Page Editor..." : "Initializing New Page...";
     subtitle = "Loading layout, navigation trees, and media assets...";
   } else if (path.includes("/pages") || (url.searchParams.has("controller") && url.searchParams.get("controller") === "pages")) {
-    title = "Loading All Pages...";
+    title = "Loading Content Manager...";
     subtitle = "Retrieving page hierarchy, status metrics, and workspaces...";
   } else if (path.includes("/forms")) {
     title = "Loading Form Studio...";

@@ -1,4 +1,4 @@
-<cfset pageTitle = "All Pages">
+<cfset pageTitle = "Content Manager">
 <cfscript>
 	cntTotal = ArrayLen(pages);
 	cntPublished = 0; cntDraft = 0; cntMenu = 0; cntInactive = 0;
@@ -214,15 +214,15 @@ form.admin-modal-dialog {
 }
 </style>
 
-<!--- CMS Admin 2.0 - All Pages (mockup) --->
+<!--- CMS Admin 2.0 - Content Manager --->
 <div class="page-header">
 	<div>
-		<h1 class="page-title" style="margin-bottom:0;">All Pages</h1>
+		<h1 class="page-title" style="margin-bottom:0;">Content Manager</h1>
 		<nav aria-label="Breadcrumb">
 			<ol class="breadcrumb" style="margin-top:0.35rem;">
 				<li class="breadcrumb-item"><a href="#urlFor(controller='main', action='index')#">#svgIcon(name="dashboard", size=14)# Home</a></li>
 				<li class="breadcrumb-item">Content Management</li>
-				<li class="breadcrumb-item active" aria-current="page">Pages</li>
+				<li class="breadcrumb-item active" aria-current="page">Content Manager</li>
 			</ol>
 		</nav>
 	</div>
@@ -956,7 +956,7 @@ form.admin-modal-dialog {
 		});
 	});
 
-	// Ensure any loading transition screen dismisses when All Pages view is ready
+	// Ensure any loading transition screen dismisses when Content Manager view is ready
 	if (typeof window.hidePageLoader === "function") window.hidePageLoader();
 	if (typeof window.finishTopProgress === "function") window.finishTopProgress();
 })();

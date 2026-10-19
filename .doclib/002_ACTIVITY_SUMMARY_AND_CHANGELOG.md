@@ -985,6 +985,20 @@ This log maintains a chronological, permanent record of engineering milestones, 
     - Authenticated `POST /workspaces/update` confirmed persistence of modifications.
     - Authenticated deletion and cleanup verified soft delete and removed temporary test entries.
 
+### 2026-10-18: Navigation & Page Directory Renamed to "Content Manager"
+- **Task Overview:** Renamed the primary "All Pages" menu item under the Content Management group to "Content Manager", aligning UI terminology across controllers, views, breadcrumbs, action buttons, and loading states.
+- **Architectural & View Updates:**
+  1. **Sidebar Navigation (`app/views/layout.cfm`):** Updated primary submenu anchor text from `All Pages` to `Content Manager` under Content Management > Pages accordion.
+  2. **Pages Controller (`app/controllers/Pages.cfc`):** Updated `variables.pageTitle = "Content Manager";` and method doc comments.
+  3. **Pages Directory View (`app/views/pages/index.cfm`):** Updated `<cfset pageTitle = "Content Manager">`, header `<h1 class="page-title">Content Manager</h1>`, and breadcrumb active item.
+  4. **Page Editor & CTA Studio (`app/views/pages/edit.cfm`, `app/views/pages/callToAction.cfm`):** Updated header back action buttons to `<span>Content Manager</span>`.
+  5. **Dashboard Quick Links (`app/views/main/index.cfm`):** Updated workspace pages card tools (`View in Content Manager` / `Content Manager`), card footer (`Manage in Content Manager`), and quick-launch grid link.
+  6. **Admin Shell & Loaders (`javascripts/admin.js`):** Updated animated transition overlay title to `"Loading Content Manager..."`.
+  7. **Role Capability Matrix (`app/controllers/Users.cfc`):** Updated permissions feature description to `"Content Manager & Page Editor"`.
+- **Verification:**
+  - Verified ColdFusion compilation and HTTP routing via IIS (`cmsadmin.chelancounty.gov`).
+
+
 
 
 

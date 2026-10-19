@@ -477,7 +477,7 @@
 	<div class="page-actions">
 		<a href="#urlFor(controller='pages', action='index')#" class="btn btn-outline btn-sm">
 			#svgIcon(name="list", size=14)#
-			<span>All Pages</span>
+			<span>Content Manager</span>
 		</a>
 		<cfif not isNew>
 			<button type="button" class="btn btn-outline btn-sm" id="btnOpenRevisions" aria-haspopup="dialog" title="View historical snapshots & compare differences (RCW 42.56 compliance)">

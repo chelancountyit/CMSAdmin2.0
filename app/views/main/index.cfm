@@ -106,9 +106,9 @@
 				</h2>
 				<div class="card-tools">
 					<cfif variables.hasWorkspace>
-						<a href="#urlFor(controller='pages', action='index', params='ws=' & variables.activeWorkspaceId)#" class="btn btn-secondary btn-sm">View All Pages</a>
+						<a href="#urlFor(controller='pages', action='index', params='ws=' & variables.activeWorkspaceId)#" class="btn btn-secondary btn-sm">View in Content Manager</a>
 					<cfelse>
-						<a href="#urlFor(controller='pages', action='index')#" class="btn btn-secondary btn-sm">All Pages</a>
+						<a href="#urlFor(controller='pages', action='index')#" class="btn btn-secondary btn-sm">Content Manager</a>
 					</cfif>
 					<button type="button" class="btn btn-primary btn-sm" id="btnRecentPagesAddPage" onclick="openAddPageModal();">
 						#svgIcon(name="plus", size=14)#
@@ -163,7 +163,7 @@
 						Showing #ArrayLen(variables.recentPages)# of #NumberFormat(variables.stats.totalPages, ",")# pages in this workspace
 					</span>
 					<a href="#urlFor(controller='pages', action='index', params=variables.hasWorkspace ? ('ws=' & variables.activeWorkspaceId) : '')#" class="btn btn-outline btn-sm">
-						<span>Manage All Pages</span>
+						<span>Manage in Content Manager</span>
 						#svgIcon(name="arrow-right", size=12)#
 					</a>
 				</div>
@@ -344,7 +344,7 @@
 
 					<a href="#urlFor(controller='pages', action='index', params=variables.hasWorkspace ? ('ws=' & variables.activeWorkspaceId) : '')#" class="btn btn-outline btn-sm" style="display:flex; align-items:center; justify-content:center; padding:0.75rem 0.5rem; height:auto; text-align:center; gap:0.5rem; text-decoration:none; grid-column: span 2;">
 						<span style="color:var(--admin-primary);">#svgIcon(name="file-text", size=18)#</span>
-						<span style="font-size:0.85rem; font-weight:600; color:var(--admin-text-main);">All Pages</span>
+						<span style="font-size:0.85rem; font-weight:600; color:var(--admin-text-main);">Content Manager</span>
 					</a>
 				</div>
 			</div>

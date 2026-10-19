@@ -1029,7 +1029,7 @@ component extends="Controller" {
 				description: "General web authoring, page editing, media storage, and online form creation",
 				items: [
 					{
-						feature: "All Pages Directory & Page Editor",
+						feature: "Content Manager & Page Editor",
 						detail: "Create, edit, publish, layout selection, and structure web pages",
 						author: "Full Access",
 						hr: "Full Access",

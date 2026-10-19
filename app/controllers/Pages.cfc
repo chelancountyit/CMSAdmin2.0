@@ -6,10 +6,10 @@ component extends="Controller" {
 	}
 
 	/**
-	 * All Pages listing (reads from database with fallback to sample pages)
+	 * Content Manager listing (reads from database with fallback to sample pages)
 	 */
 	function index() {
-		variables.pageTitle = "All Pages";
+		variables.pageTitle = "Content Manager";
 		local.reqWs = (StructKeyExists(params, "ws") && Len(Trim(params.ws))) ? Trim(params.ws)
 			: ((StructKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace))) ? Trim(cookie.cmsadmin_workspace) : "");
 		variables.activeWorkspace = resolveUserActiveWorkspace(
