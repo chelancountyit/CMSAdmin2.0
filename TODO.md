@@ -78,6 +78,12 @@ Mission-critical capabilities focused on public safety, regulatory compliance, a
     - [ ] `GET /api/v1/navigation/menu?code=main` (Hierarchical navigation structure).
     - [ ] `GET /api/v1/events/upcoming?limit=5` (Filtered calendar events).
   - [ ] In-memory caching (`application.apiCache`) with instant cache purge on admin save.
+- [x] **2.6 Document to WCAG AA Converter Studio (Word .docx & PDF .pdf Extraction)**
+  - [x] Pure Adobe ColdFusion 2025 backend parser (`app/models/DocumentConverter.cfc`) using native `<cfzip>` and `<cfpdf>`.
+  - [x] OpenXML AST parsing for `.docx`: shifts Word headings down by 1 (`Heading 1` &rarr; `<h2>`) to preserve singular `<h1>` page title, generates semantic `<table class="table table-bordered">` with `<thead><tr><th scope="col">`, and groups bullet/numbered items into `<ul><li>` / `<ol><li>`.
+  - [x] Text & Figure extraction for `.pdf`: extracts title/author metadata, page XML text streams, and embedded raster figures.
+  - [x] Media Library Integration: unpacks embedded images to `/files/{workspace}/images/`, calculates cryptographic SHA-256 hashes, deduplicates, and catalogs into `dbo.media_assets`.
+  - [x] In-Editor Drag & Drop Canvas & Studio Modal (`app/views/pages/edit.cfm`): drag `.docx` or `.pdf` onto canvas or click "Import Word / PDF", configure import mode (Replace, Insert, Append), preview rendered visual vs code, paste to `JBDEditor`, and auto-trigger live ADA Pre-Flight Linter.
 
 ---
 

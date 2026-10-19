@@ -374,12 +374,44 @@ component extends="Controller" {
 					local.title = formatTitleFromName(local.uploaded.serverFile);
 				}
 
-				// Verify ADA WCAG Compliance for images (WCAG 1.1.1)
-				local.isWcagCompliant = (!local.isImg) || (Len(Trim(local.altText)) > 0);
-				local.wcagNotice = "";
-				if (local.isImg && !local.isWcagCompliant) {
-					local.wcagNotice = " Note: This image is marked as needing Alt Text for ADA WCAG AA compliance.";
+				local.isDecorative = StructKeyExists(params, "isDecorative") && (params.isDecorative eq 1 || params.isDecorative eq "true" || params.isDecorative eq "yes");
+
+				// ADA WCAG 2.1 AA Compliance Requirement (WCAG 1.1.1):
+				// Alternative Text is mandatory for all images under Chelan County ADA policy.
+				if (local.isImg && !local.isDecorative && Len(Trim(local.altText)) eq 0) {
+					try {
+						FileDelete(local.uploadedPath);
+					} catch (any delErr) {}
+					local.result.message = "ADA WCAG 2.1 AA Compliance Violation: Alternative Text (Image Description) is required for all images under County policy (WCAG 1.1.1). Please provide a description for screen readers and try again.";
+					if (StructKeyExists(params, "format") && params.format eq "json") {
+						renderText(text=SerializeJSON(local.result), contentType="application/json");
+						return;
+					}
+					flashInsert(error=local.result.message);
+					redirectTo(controller="media", action="upload", params="ws=" & local.ws);
+					return;
 				}
+
+				// Check for generic or filename placeholder alt text (WCAG 1.1.1 Warning / Guidance)
+				local.lowerAlt = LCase(Trim(local.altText));
+				local.genericWords = "image,photo,picture,graphic,img,pic,file,screenshot";
+				if (local.isImg && !local.isDecorative && (ListFindNoCase(local.genericWords, local.lowerAlt) > 0 || Right(local.lowerAlt, 4) eq ".jpg" || Right(local.lowerAlt, 4) eq ".png" || Right(local.lowerAlt, 5) eq ".webp")) {
+					try {
+						FileDelete(local.uploadedPath);
+					} catch (any delErr) {}
+					local.result.message = "ADA WCAG 2.1 AA Violation: Generic alternative text ('" & local.altText & "') or filenames are not permitted. Please describe the actual visual contents or purpose of the image for assistive technologies.";
+					if (StructKeyExists(params, "format") && params.format eq "json") {
+						renderText(text=SerializeJSON(local.result), contentType="application/json");
+						return;
+					}
+					flashInsert(error=local.result.message);
+					redirectTo(controller="media", action="upload", params="ws=" & local.ws);
+					return;
+				}
+
+				// Verify ADA WCAG Compliance for images (WCAG 1.1.1)
+				local.isWcagCompliant = (!local.isImg) || local.isDecorative || (Len(Trim(local.altText)) > 0);
+				local.wcagNotice = "";
 
 				local.mime = StructKeyExists(local.uploaded, "contentType") && StructKeyExists(local.uploaded, "contentSubType")
 					? (local.uploaded.contentType & "/" & local.uploaded.contentSubType) : "";
@@ -520,7 +552,12 @@ component extends="Controller" {
 
 		if (local.existing.recordCount > 0) {
 			local.isImg = isBoolean(local.existing.is_image) && local.existing.is_image;
-			local.isWcag = (!local.isImg) || (Len(local.altText) > 0);
+			local.isDecorative = StructKeyExists(params, "isDecorative") && (params.isDecorative eq 1 || params.isDecorative eq "true" || params.isDecorative eq "yes");
+			if (local.isImg && !local.isDecorative && Len(Trim(local.altText)) eq 0) {
+				renderText(text=SerializeJSON({ "success": false, "message": "WCAG 1.1.1 Compliance Violation: Alternative Text (Image Description) cannot be blank for images." }), contentType="application/json");
+				return;
+			}
+			local.isWcag = (!local.isImg) || local.isDecorative || (Len(local.altText) > 0);
 
 			queryExecute("
 				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;

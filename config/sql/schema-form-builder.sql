@@ -188,7 +188,7 @@ BEGIN
         CONSTRAINT [FK_form_subval_submission] FOREIGN KEY ([submission_id]) 
             REFERENCES [dbo].[form_submissions] ([id]) ON DELETE CASCADE,
         CONSTRAINT [FK_form_subval_field] FOREIGN KEY ([field_id]) 
-            REFERENCES [dbo].[form_fields] ([id]) ON DELETE SET NULL
+            REFERENCES [dbo].[form_fields] ([id]) ON DELETE NO ACTION
     );
 END;
 GO

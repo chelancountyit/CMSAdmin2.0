@@ -58,6 +58,8 @@
 		.post(name="navigationReorder", pattern="navigation/items/reorder", to="navigation##reorder")
 
 		// Documentation and Knowledge Base Routes
+		.get(name="documentationStartup", pattern="documentation/startup", to="documentation##startup")
+		.get(name="documentationFrontEndCss", pattern="documentation/front-end-css", to="documentation##startup")
 		.get(name="documentationUserGuide", pattern="documentation/user-guide", to="documentation##userGuide")
 		.get(name="documentationUserGuideDirect", pattern="documentation/userGuide", to="documentation##userGuide")
 		.get(name="documentationEditor", pattern="documentation/editor", to="documentation##editor")
@@ -83,6 +85,12 @@
 		.post(name="reorderCallToActions", pattern="pages/call-to-action/reorder", to="pages##reorderCallToActions")
 		.post(name="reorderCallToActionsCamel", pattern="pages/reorderCallToActions", to="pages##reorderCallToActions")
 		.post(name="reorderCallToActionsHyphen", pattern="pages/reorder-call-to-actions", to="pages##reorderCallToActions")
+
+		// Document Converter Routes (Pure Adobe ColdFusion Word/PDF to WCAG AA HTML)
+		.post(name="pagesConvertDocument", pattern="pages/convert-document", to="pages##convertDocument")
+		.post(name="pagesConvertDocumentCamel", pattern="pages/convertDocument", to="pages##convertDocument")
+		.post(name="articlesConvertDocument", pattern="articles/convert-document", to="articles##convertDocument")
+		.post(name="articlesConvertDocumentCamel", pattern="articles/convertDocument", to="articles##convertDocument")
 
 		// Pages, How Do I, and Folder Explorer Routes
 		.get(name="pagesHowDoI", pattern="pages/how-do-i", to="pages##howDoI")

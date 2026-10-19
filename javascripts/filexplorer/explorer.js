@@ -64,9 +64,21 @@
 		btnRemoveFile: $('btn-remove-selected-file'), btnCloseUploadIcon: $('btn-upload-close-icon'),
 		btnDoUploadText: $('btn-do-upload-text'), btnDoUploadSpinner: $('btn-do-upload-spinner'),
 		btnDoUploadIcon: $('btn-do-upload-icon'),
+		uploadTargetUrl: $('upload-target-url-input'),
+		btnBrowseFile: $('btn-browse-file'),
 		summary: $('summary'), levelHint: $('level-hint'),
 		content: $('content'), items: $('items'),
-		details: $('details'), toast: $('toast')
+		details: $('details'), toast: $('toast'),
+		editMetaModal: $('mediaEditMetaModal'), editMetaForm: $('mediaEditMetaForm'),
+		btnCloseEditMeta: $('btn-close-edit-meta'), btnCancelEditMeta: $('btn-cancel-edit-meta'),
+		btnSaveEditMeta: $('btn-save-edit-meta'),
+		editMetaId: $('edit-meta-id'), editMetaPath: $('edit-meta-path'),
+		editMetaFilename: $('edit-meta-filename'), editMetaFileinfo: $('edit-meta-fileinfo'),
+		editMetaThumb: $('edit-meta-thumb'), editMetaWcagBadge: $('edit-meta-wcag-badge'),
+		editMetaAlt: $('edit-meta-alt'), editMetaAltChar: $('edit-meta-alt-char'),
+		editMetaTitle: $('edit-meta-title'), editMetaCaption: $('edit-meta-caption'),
+		editMetaCredit: $('edit-meta-credit'), editMetaTags: $('edit-meta-tags'),
+		editMetaError: $('edit-meta-error')
 	};
 
 	// ------------------------------------------------------------------
@@ -810,8 +822,18 @@
 					  '<a class="btn btn-block" href="' + esc(webHref(fp)) + '" target="_blank" rel="noopener">Open <span class="sr-only">(opens in a new tab)</span></a>'
 					: '<a class="btn btn-primary btn-block" href="' + esc(webHref(fp)) + '" target="_blank" rel="noopener">Open <span class="sr-only">(opens in a new tab)</span></a>'
 				) +
+				(!isSharedFile
+					? (isImg && !isCompliant
+						? '<button type="button" class="btn btn-block" data-act="edit-meta" style="background:#fee2e2; border:1.5px solid #ef4444; color:#991b1b; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px;">' + svg('alert', '') + '<span>Enter WCAG Alt Text</span></button>'
+						: '<button type="button" class="btn btn-block" data-act="edit-meta">Edit WCAG Metadata</button>')
+					: '') +
 				'<button type="button" class="btn btn-block" data-act="copy">Copy link</button>' +
 				'</div>' +
+				(isImg && !isCompliant
+					? '<div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; padding:8px 10px; margin:8px 0; font-size:11.5px; color:#9f1239; line-height:1.4;">' +
+					  '<strong>WCAG 1.1.1 Required:</strong> Missing alternative text description for screen readers. Click "Enter WCAG Alt Text" above to satisfy ADA compliance.' +
+					  '</div>'
+					: '') +
 				'<dl>' +
 				(isImg ? '<dt>ADA Accessibility</dt>' + wcagPill : '') +
 				(isImg ? '<dt>Alt text (WCAG 1.1.1)</dt><dd>' + (it.altText ? ('&ldquo;' + esc(it.altText) + '&rdquo;') : '<span style="color:#b45309; font-style:italic;">None specified &mdash; required for screen readers</span>') + '</dd>' : '') +
@@ -1067,6 +1089,8 @@
 			} else if (act === 'delete') {
 				var p = b.getAttribute('data-path');
 				handleDelete(p);
+			} else if (act === 'edit-meta') {
+				if (it) openEditMetaModal(it);
 			}
 		});
 	}
@@ -1191,9 +1215,20 @@
 		if (el.selectedThumb) el.selectedThumb.innerHTML = '';
 		if (el.selectedName) el.selectedName.textContent = '';
 		if (el.selectedMeta) el.selectedMeta.textContent = '';
-		if (el.btnDoUploadSpinner) el.btnDoUploadSpinner.hidden = true;
-		if (el.btnDoUploadIcon) el.btnDoUploadIcon.hidden = false;
+		if (el.btnDoUploadSpinner) {
+			el.btnDoUploadSpinner.hidden = true;
+			el.btnDoUploadSpinner.style.setProperty('display', 'none', 'important');
+		}
+		if (el.btnDoUploadIcon) {
+			el.btnDoUploadIcon.hidden = false;
+			el.btnDoUploadIcon.style.removeProperty('display');
+		}
 		if (el.btnDoUploadText) el.btnDoUploadText.textContent = 'Upload Now';
+		if (el.uploadTargetUrl) {
+			var p = state.path || state.ws || '';
+			el.uploadTargetUrl.value = '';
+			el.uploadTargetUrl.placeholder = '/files/' + (p ? p + '/' : '') + 'photo.jpg';
+		}
 		showUploadError('');
 	}
 
@@ -1210,9 +1245,20 @@
 
 		var ext = file.name.split('.').pop().toLowerCase();
 		var isImg = IMAGE_EXT.indexOf(ext) >= 0;
+		var reqBadge = $('upload-alt-required-badge');
 
-		if (el.uploadAlt && isImg && !el.uploadAlt.value) {
-			el.uploadAlt.placeholder = 'Describe "' + file.name + '" for screen readers (WCAG 1.1.1)...';
+		if (el.uploadAlt) {
+			if (isImg) {
+				el.uploadAlt.required = true;
+				if (reqBadge) reqBadge.style.display = 'inline';
+				if (!el.uploadAlt.value) {
+					el.uploadAlt.placeholder = 'Required: Describe "' + file.name + '" for screen readers (WCAG 1.1.1)...';
+				}
+			} else {
+				el.uploadAlt.required = false;
+				if (reqBadge) reqBadge.style.display = 'none';
+				el.uploadAlt.placeholder = 'Optional description (not an image)...';
+			}
 		}
 
 		if (el.selectedName) el.selectedName.textContent = file.name;
@@ -1237,6 +1283,10 @@
 
 		if (el.dropzonePrompt) el.dropzonePrompt.hidden = true;
 		if (el.selectedCard) el.selectedCard.hidden = false;
+		if (el.uploadTargetUrl) {
+			var p = state.path || state.ws || '';
+			el.uploadTargetUrl.value = '/files/' + (p ? p + '/' : '') + file.name;
+		}
 		showUploadError('');
 	}
 
@@ -1284,6 +1334,15 @@
 		}
 		var p = state.path || state.ws || '';
 		el.uploadPreview.textContent = 'Uploading to: /files/' + (p ? p + '/' : '');
+		if (el.uploadTargetUrl) {
+			var fName = (el.uploadFile && el.uploadFile.files && el.uploadFile.files[0]) ? el.uploadFile.files[0].name : '';
+			if (fName) {
+				el.uploadTargetUrl.value = '/files/' + (p ? p + '/' : '') + fName;
+			} else {
+				el.uploadTargetUrl.value = '';
+				el.uploadTargetUrl.placeholder = '/files/' + (p ? p + '/' : '') + 'photo.jpg';
+			}
+		}
 		if (el.btnDoUpload) el.btnDoUpload.disabled = state.online !== true;
 		if (el.linkFullStudio) {
 			var segList = segs(p);
@@ -1303,6 +1362,13 @@
 		});
 		el.uploadFile.addEventListener('keydown', function (e) {
 			if (e.key === 'Escape') { e.preventDefault(); closeUpload(true); }
+		});
+	}
+
+	if (el.btnBrowseFile) {
+		el.btnBrowseFile.addEventListener('click', function (e) {
+			e.preventDefault();
+			if (el.uploadFile) el.uploadFile.click();
 		});
 	}
 
@@ -1366,6 +1432,36 @@
 				return;
 			}
 			var f = el.uploadFile.files[0];
+			var ext = (f.name.split('.').pop() || '').toLowerCase();
+			var isImg = IMAGE_EXT.indexOf(ext) >= 0;
+			var altVal = (el.uploadAlt && el.uploadAlt.value) ? el.uploadAlt.value.trim() : '';
+
+			// Strict ADA WCAG 2.1 AA requirement (WCAG 1.1.1):
+			if (isImg && !altVal) {
+				showUploadError('WCAG 1.1.1 Requirement: Alternative Text (Image Description) is mandatory for all images. Please describe the image for screen readers.');
+				if (el.uploadAlt) {
+					el.uploadAlt.style.borderColor = 'var(--admin-danger, #ef4444)';
+					el.uploadAlt.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+					el.uploadAlt.focus();
+				}
+				return;
+			}
+
+			// Reject generic placeholder alt text
+			if (isImg) {
+				var lowerAlt = altVal.toLowerCase();
+				var generic = ['image', 'photo', 'picture', 'graphic', 'img', 'pic', 'file', 'screenshot'];
+				if (generic.indexOf(lowerAlt) >= 0 || lowerAlt.slice(-4) === '.jpg' || lowerAlt.slice(-4) === '.png' || lowerAlt.slice(-5) === '.webp') {
+					showUploadError('Generic alt text like "' + esc(altVal) + '" or filenames are not permitted. Please describe the visual content.');
+					if (el.uploadAlt) {
+						el.uploadAlt.style.borderColor = 'var(--admin-danger, #ef4444)';
+						el.uploadAlt.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+						el.uploadAlt.focus();
+					}
+					return;
+				}
+			}
+
 			var fd = new FormData();
 			fd.append('mediaFile', f);
 			var p = state.path || state.ws || '';
@@ -1376,12 +1472,18 @@
 			fd.append('subfolder', sub);
 			fd.append('path', p);
 			if (el.uploadTitle && el.uploadTitle.value.trim()) fd.append('title', el.uploadTitle.value.trim());
-			if (el.uploadAlt && el.uploadAlt.value.trim()) fd.append('altText', el.uploadAlt.value.trim());
+			if (altVal) fd.append('altText', altVal);
 			fd.append('format', 'json');
 
 			if (el.btnDoUpload) el.btnDoUpload.disabled = true;
-			if (el.btnDoUploadSpinner) el.btnDoUploadSpinner.hidden = false;
-			if (el.btnDoUploadIcon) el.btnDoUploadIcon.hidden = true;
+			if (el.btnDoUploadSpinner) {
+				el.btnDoUploadSpinner.hidden = false;
+				el.btnDoUploadSpinner.style.setProperty('display', 'inline-block', 'important');
+			}
+			if (el.btnDoUploadIcon) {
+				el.btnDoUploadIcon.hidden = true;
+				el.btnDoUploadIcon.style.setProperty('display', 'none', 'important');
+			}
 			if (el.btnDoUploadText) el.btnDoUploadText.textContent = 'Uploading\u2026';
 			showUploadError('');
 
@@ -1407,8 +1509,14 @@
 				}
 
 				if (el.btnDoUpload) el.btnDoUpload.disabled = false;
-				if (el.btnDoUploadSpinner) el.btnDoUploadSpinner.hidden = true;
-				if (el.btnDoUploadIcon) el.btnDoUploadIcon.hidden = false;
+				if (el.btnDoUploadSpinner) {
+					el.btnDoUploadSpinner.hidden = true;
+					el.btnDoUploadSpinner.style.setProperty('display', 'none', 'important');
+				}
+				if (el.btnDoUploadIcon) {
+					el.btnDoUploadIcon.hidden = false;
+					el.btnDoUploadIcon.style.removeProperty('display');
+				}
 				if (el.btnDoUploadText) el.btnDoUploadText.textContent = 'Upload Now';
 
 				if (res.status === 401) {
@@ -1444,8 +1552,14 @@
 				await load(state.path, uploadedName);
 			} catch (err) {
 				if (el.btnDoUpload) el.btnDoUpload.disabled = false;
-				if (el.btnDoUploadSpinner) el.btnDoUploadSpinner.hidden = true;
-				if (el.btnDoUploadIcon) el.btnDoUploadIcon.hidden = false;
+				if (el.btnDoUploadSpinner) {
+					el.btnDoUploadSpinner.hidden = true;
+					el.btnDoUploadSpinner.style.setProperty('display', 'none', 'important');
+				}
+				if (el.btnDoUploadIcon) {
+					el.btnDoUploadIcon.hidden = false;
+					el.btnDoUploadIcon.style.removeProperty('display');
+				}
 				if (el.btnDoUploadText) el.btnDoUploadText.textContent = 'Upload Now';
 				showUploadError('Upload failed: ' + (err.message || 'Network error'));
 			}
@@ -1530,6 +1644,194 @@
 	});
 
 	// ------------------------------------------------------------------
+	// Metadata & WCAG Accessibility Editor Modal
+	// ------------------------------------------------------------------
+	function openEditMetaModal(it) {
+		if (!it || !el.editMetaModal) return;
+		var fp = itemPath(it);
+		if (fp.toLowerCase().indexOf('shared images') >= 0) {
+			toast('Shared stock photos are read-only.', true);
+			return;
+		}
+		var isImg = fileKind(it.ext).cls === 'image';
+		if (el.editMetaId) el.editMetaId.value = it.id || '';
+		if (el.editMetaPath) el.editMetaPath.value = fp;
+		if (el.editMetaFilename) el.editMetaFilename.textContent = it.name;
+		if (el.editMetaFileinfo) el.editMetaFileinfo.textContent = fmtSize(it.size) + (it.width && it.height ? ' \u2022 ' + it.width + ' \u00d7 ' + it.height + ' px' : '');
+
+		if (el.editMetaThumb) {
+			if (isImg) {
+				el.editMetaThumb.innerHTML = '<img src="' + esc(webHref(fp)) + '" alt="" style="width:100%; height:100%; object-fit:cover;">';
+			} else {
+				el.editMetaThumb.innerHTML = svg('file', 't-file');
+			}
+		}
+
+		var isCompliant = (it.isWcagCompliant === true) || (!isImg) || Boolean(it.altText && it.altText.trim());
+		if (el.editMetaWcagBadge) {
+			if (isImg) {
+				if (isCompliant) {
+					el.editMetaWcagBadge.innerHTML = '<span style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; font-size:11px; font-weight:600; background:#dcfce7; color:#166534; border-radius:12px;">' + svg('check', '') + ' WCAG Compliant</span>';
+				} else {
+					el.editMetaWcagBadge.innerHTML = '<span style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; font-size:11px; font-weight:600; background:#fee2e2; color:#991b1b; border-radius:12px;">' + svg('alert', '') + ' Alt Text Missing (WCAG 1.1.1)</span>';
+				}
+			} else {
+				el.editMetaWcagBadge.innerHTML = '';
+			}
+		}
+
+		if (el.editMetaAlt) {
+			el.editMetaAlt.value = it.altText || '';
+			el.editMetaAlt.style.borderColor = '';
+			el.editMetaAlt.style.boxShadow = '';
+		}
+		if (el.editMetaAltChar) {
+			var len = (it.altText || '').length;
+			el.editMetaAltChar.textContent = len + ' / 150 rec.';
+			el.editMetaAltChar.style.color = len > 150 ? 'var(--admin-warning, #d97706)' : 'var(--admin-text-muted)';
+		}
+		if (el.editMetaTitle) el.editMetaTitle.value = it.title || '';
+		if (el.editMetaCaption) el.editMetaCaption.value = it.caption || '';
+		if (el.editMetaCredit) el.editMetaCredit.value = it.credit || '';
+		if (el.editMetaTags) el.editMetaTags.value = it.tags || '';
+
+		if (el.editMetaError) {
+			el.editMetaError.hidden = true;
+			el.editMetaError.textContent = '';
+		}
+
+		el.editMetaModal.hidden = false;
+		el.editMetaModal.style.display = 'flex';
+		if (el.editMetaAlt) el.editMetaAlt.focus();
+	}
+
+	function closeEditMetaModal() {
+		if (!el.editMetaModal) return;
+		el.editMetaModal.hidden = true;
+		el.editMetaModal.style.display = 'none';
+	}
+
+	if (el.btnCloseEditMeta) el.btnCloseEditMeta.addEventListener('click', closeEditMetaModal);
+	if (el.btnCancelEditMeta) el.btnCancelEditMeta.addEventListener('click', closeEditMetaModal);
+	if (el.editMetaModal) {
+		el.editMetaModal.addEventListener('click', function (e) {
+			if (e.target === el.editMetaModal) closeEditMetaModal();
+		});
+		el.editMetaModal.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') closeEditMetaModal();
+		});
+	}
+
+	if (el.editMetaAlt) {
+		el.editMetaAlt.addEventListener('input', function () {
+			var len = this.value.length;
+			if (el.editMetaAltChar) {
+				el.editMetaAltChar.textContent = len + ' / 150 rec.';
+				el.editMetaAltChar.style.color = len > 150 ? 'var(--admin-warning, #d97706)' : 'var(--admin-text-muted)';
+			}
+			if (this.value.trim().length > 0) {
+				this.style.borderColor = '';
+				this.style.boxShadow = '';
+				if (el.editMetaError) el.editMetaError.hidden = true;
+			}
+		});
+	}
+
+	if (el.editMetaForm) {
+		el.editMetaForm.addEventListener('submit', async function (e) {
+			e.preventDefault();
+			var it = selectedItem();
+			var isImg = it ? fileKind(it.ext).cls === 'image' : true;
+			var altVal = el.editMetaAlt ? el.editMetaAlt.value.trim() : '';
+
+			// Strict WCAG validation
+			if (isImg && !altVal) {
+				if (el.editMetaError) {
+					el.editMetaError.hidden = false;
+					el.editMetaError.textContent = 'WCAG 1.1.1 Requirement: Alternative Text is mandatory for all images under County ADA policy. Please describe the image.';
+				}
+				el.editMetaAlt.style.borderColor = 'var(--admin-danger, #ef4444)';
+				el.editMetaAlt.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+				el.editMetaAlt.focus();
+				return;
+			}
+
+			// Reject generic alt text
+			if (isImg) {
+				var lower = altVal.toLowerCase();
+				var generic = ['image', 'photo', 'picture', 'graphic', 'img', 'pic', 'file', 'screenshot'];
+				if (generic.indexOf(lower) >= 0 || lower.slice(-4) === '.jpg' || lower.slice(-4) === '.png' || lower.slice(-5) === '.webp') {
+					if (el.editMetaError) {
+						el.editMetaError.hidden = false;
+						el.editMetaError.textContent = 'Generic alt text like "' + esc(altVal) + '" or filenames are not permitted. Please describe the visual content.';
+					}
+					el.editMetaAlt.style.borderColor = 'var(--admin-danger, #ef4444)';
+					el.editMetaAlt.focus();
+					return;
+				}
+			}
+
+			if (el.btnSaveEditMeta) el.btnSaveEditMeta.disabled = true;
+
+			try {
+				var fd = new FormData();
+				if (el.editMetaId && el.editMetaId.value) fd.append('id', el.editMetaId.value);
+				if (el.editMetaPath && el.editMetaPath.value) fd.append('path', el.editMetaPath.value);
+				fd.append('altText', altVal);
+				if (el.editMetaTitle) fd.append('title', el.editMetaTitle.value.trim());
+				if (el.editMetaCaption) fd.append('caption', el.editMetaCaption.value.trim());
+				if (el.editMetaCredit) fd.append('credit', el.editMetaCredit.value.trim());
+				if (el.editMetaTags) fd.append('tags', el.editMetaTags.value.trim());
+
+				var res = await fetch('/api/Files.cfc?method=updateMeta', {
+					method: 'POST',
+					headers: { 'X-Requested-With': 'XMLHttpRequest' },
+					body: fd
+				});
+
+				var resData = await res.json().catch(function () { return null; });
+				if (el.btnSaveEditMeta) el.btnSaveEditMeta.disabled = false;
+
+				if (resData && (resData.ok === true || resData.success === true)) {
+					closeEditMetaModal();
+					toast('WCAG metadata saved successfully.');
+					if (it) {
+						it.altText = altVal;
+						it.title = el.editMetaTitle ? el.editMetaTitle.value.trim() : it.title;
+						it.caption = el.editMetaCaption ? el.editMetaCaption.value.trim() : it.caption;
+						it.credit = el.editMetaCredit ? el.editMetaCredit.value.trim() : it.credit;
+						it.tags = el.editMetaTags ? el.editMetaTags.value.trim() : it.tags;
+						it.isWcagCompliant = true;
+						renderDetails();
+					}
+				} else {
+					var errText = (resData && (resData.error || resData.message)) || 'Failed to save metadata.';
+					if (el.editMetaError) {
+						el.editMetaError.hidden = false;
+						el.editMetaError.textContent = errText;
+					}
+				}
+			} catch (err) {
+				if (el.btnSaveEditMeta) el.btnSaveEditMeta.disabled = false;
+				if (el.editMetaError) {
+					el.editMetaError.hidden = false;
+					el.editMetaError.textContent = 'Network error: ' + (err.message || 'could not reach server');
+				}
+			}
+		});
+	}
+
+	if (el.uploadAlt) {
+		el.uploadAlt.addEventListener('input', function () {
+			if (this.value.trim()) {
+				this.style.borderColor = '';
+				this.style.boxShadow = '';
+				showUploadError('');
+			}
+		});
+	}
+
+	// ------------------------------------------------------------------
 	// Boot
 	// ------------------------------------------------------------------
 	function boot() {
@@ -1550,6 +1852,15 @@
 		el.btnList.setAttribute('aria-pressed', state.view === 'list' ? 'true' : 'false');
 
 		state.path = currentHashPath();
+
+		if (el.btnDoUploadSpinner) {
+			el.btnDoUploadSpinner.hidden = true;
+			el.btnDoUploadSpinner.style.setProperty('display', 'none', 'important');
+		}
+		if (el.btnDoUploadIcon) {
+			el.btnDoUploadIcon.hidden = false;
+			el.btnDoUploadIcon.style.removeProperty('display');
+		}
 
 		renderItems();
 		renderDetails();

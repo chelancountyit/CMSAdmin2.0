@@ -147,4 +147,33 @@
 			</div>
 		</div>
 	</article>
+
+	<!--- 5. Front-End Startup & Template Styles (jbd-templates.css) --->
+	<article class="admin-card kb-guide-card">
+		<div class="card-body" style="padding:1.35rem; display:flex; align-items:center; justify-content:space-between; gap:1.25rem; flex-wrap:wrap;">
+			<div style="max-width:760px;">
+				<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+					<span class="badge badge-primary">Front-End Architecture</span>
+					<span class="badge badge-success">Bootstrap 5</span>
+					<span style="font-size:0.8rem; font-weight:600; color:var(--admin-text-muted);">CSS &bull; Layout Integration</span>
+				</div>
+				<h3 style="font-size:1.05rem; margin:0.3rem 0; color:var(--admin-text-main);">
+					Startup &amp; Front-End Styles (<code>jbd-templates.css</code>)
+				</h3>
+				<p style="margin:0; color:var(--admin-text-muted); line-height:1.55; font-size:0.9rem;">
+					Import and integration guide for <code>jbd-templates.css</code>. Includes CFWheels layout tags, direct HTML &lt;link&gt; snippets, and the full isolated stylesheet viewer for public front-end templates.
+				</p>
+			</div>
+			<div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+				<a href="<cfoutput>#urlFor(controller='documentation', action='startup')#</cfoutput>" class="btn btn-primary btn-sm">
+					<span>View Integration Guide</span>
+					<cfoutput>#svgIcon(name="arrow-right", size=14)#</cfoutput>
+				</a>
+				<a href="/stylesheets/jbd-templates.css" download="jbd-templates.css" class="btn btn-outline btn-sm">
+					<cfoutput>#svgIcon(name="download", size=14)#</cfoutput>
+					<span>Download .css</span>
+				</a>
+			</div>
+		</div>
+	</article>
 </section>

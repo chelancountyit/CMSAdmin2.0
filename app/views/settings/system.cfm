@@ -433,11 +433,11 @@
 					</a>
 				</li>
 				<li>
-					<a href="#urlFor(controller='settings', action='startup')#" style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0.75rem; border-radius:var(--radius-md); color:var(--admin-text-main); font-size:0.85rem; text-decoration:none; transition:background 0.15s ease;" onmouseover="this.style.background='var(--admin-bg)'" onmouseout="this.style.background='transparent'">
+					<a href="#urlFor(controller='documentation', action='startup')#" style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0.75rem; border-radius:var(--radius-md); color:var(--admin-text-main); font-size:0.85rem; text-decoration:none; transition:background 0.15s ease;" onmouseover="this.style.background='var(--admin-bg)'" onmouseout="this.style.background='transparent'">
 						<span style="display:flex; align-items:center; gap:0.5rem;">
-							#svgIcon(name="code", size=15)# Front-End (.css)
+							#svgIcon(name="book", size=15)# Docs: Front-End (.css)
 						</span>
-						<span style="color:var(--admin-text-muted); font-size:0.75rem;">Templates</span>
+						<span style="color:var(--admin-text-muted); font-size:0.75rem;">Docs</span>
 					</a>
 				</li>
 			</ul>

@@ -11,13 +11,11 @@
 <cfset local.needsAlt = variables.mediaStats.recordCount ? (variables.mediaStats.needs_alt_images[1] ?: 0) : 0>
 <cfset local.wcagPct = local.totalImages gt 0 ? Round((local.wcagCompliant / local.totalImages) * 100) : 100>
 
+<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=4.0">
+
 <style>
 	.upload-studio-container { max-width: 980px; margin: 0 auto; }
 	.upload-path-preview { background: #f8fafc; border: 1px solid var(--admin-border); border-radius: var(--radius-md); padding: 0.75rem 1rem; font-family: monospace; font-size: 0.85rem; color: var(--admin-text-main); display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
-	.upload-card-dropzone { border: 2px dashed var(--admin-border-input); border-radius: var(--radius-lg); padding: 3rem 2rem; text-align: center; background: #f8fafc; cursor: pointer; transition: all 0.2s ease; position: relative; }
-	.upload-card-dropzone:hover, .upload-card-dropzone.is-dragover { border-color: var(--admin-primary); background: var(--admin-primary-light); }
-	.upload-card-dropzone:focus-within { outline: 2px solid var(--admin-primary); outline-offset: 2px; }
-	.upload-icon-circle { width: 64px; height: 64px; border-radius: 50%; background: var(--admin-primary-light); color: var(--admin-primary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
 	.file-selected-badge { margin-top: 1rem; padding: 0.65rem 1rem; background: #ffffff; border: 1px solid var(--admin-success); border-radius: var(--radius-md); display: inline-flex; align-items: center; gap: 0.65rem; color: var(--admin-success); font-weight: 600; font-size: 0.9rem; }
 	.ada-tip-box { background: #eff6ff; border-left: 4px solid var(--admin-primary); padding: 0.85rem 1rem; border-radius: 0 var(--radius-md) var(--radius-md) 0; font-size: 0.825rem; color: #1e3a8a; line-height: 1.5; margin-top: 0.5rem; }
 	.hash-pill { display: inline-flex; align-items: center; gap: 0.35rem; font-family: monospace; font-size: 0.75rem; background: #f1f5f9; color: #475569; padding: 2px 7px; border-radius: 4px; border: 1px solid #cbd5e1; }
@@ -159,7 +157,7 @@
 			</div>
 		</div>
 
-		<!--- Drag-and-Drop File Upload Area --->
+		<!--- Drag-and-Drop File Upload Area (Matching CMSAdmin 2.0 Studio Design) --->
 		<div class="admin-card" style="margin-bottom:1.5rem;">
 			<div class="card-header">
 				<h2 class="card-title">
@@ -168,26 +166,44 @@
 				</h2>
 			</div>
 			<div class="card-body">
-				<div class="upload-card-dropzone" id="fileDropzone">
-					<div class="upload-icon-circle">
-						#svgIcon(name="upload", size=32)#
-					</div>
-					<h3 style="font-size:1.15rem; font-weight:700; color:var(--admin-text-main); margin-bottom:0.35rem;">
-						Choose a file or drag &amp; drop it here
-					</h3>
-					<p style="color:var(--admin-text-muted); font-size:0.875rem; max-width:520px; margin:0 auto 1rem auto;">
-						Supports standard images (JPG, PNG, WEBP, SVG), PDFs, Office Documents (DOCX, XLSX), and compressed ZIP packages up to 25 MB.
-						Executable files (.cfm, .cfc, .exe, .bat, .cmd) are strictly blocked.
-					</p>
-
-					<input type="file" id="mediaFileInputField" name="mediaFile" required style="position:absolute; inset:0; opacity:0; cursor:pointer;" onchange="handleFileChange(this)">
-
-					<div id="fileSelectionBox" style="display:none;">
-						<div class="file-selected-badge">
-							#svgIcon(name="check-circle", size=18)#
-							<span id="selectedFileName">filename.png</span>
-							<span id="selectedFileSize" style="font-weight:normal; opacity:0.8;">(0 KB)</span>
+				<!--- Hero Dropzone Card --->
+				<div class="media-upload-dropzone" id="fileDropzone" role="button" tabindex="0"
+				     style="border: 2px dashed ##0284c7; border-radius: 12px; padding: 2.25rem 1.5rem; text-align: center; background: ##f8fafc; cursor: pointer; transition: all 0.2s ease; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 140px; outline: none; margin-bottom: 1rem;"
+				     aria-label="Click to browse workspace media library or drag and drop files here" title="Click to browse workspace media library or drag and drop files here">
+					<div id="fileDropzonePrompt" class="media-dropzone-prompt" style="display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none;">
+						<div style="color: ##0284c7; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center;">
+							#svgIcon(name="image", size=36)#
 						</div>
+						<div class="media-dropzone-title" style="font-size: 1.05rem; font-weight: 700; color: ##0f172a; margin-bottom: 0.25rem; letter-spacing: -0.01em;">Choose Cover Image / File</div>
+						<div class="media-dropzone-sub" style="font-size: 0.825rem; color: ##64748b;">Click to browse workspace media library or drag and drop here</div>
+					</div>
+
+					<div id="fileSelectionBox" class="media-selected-card" hidden style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; background: ##ffffff; border: 1.5px solid ##0284c7; border-radius: 8px; max-width: 520px; width: 100%; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08); position: relative; z-index: 6;">
+						<div id="uploadSelectedThumb" class="media-selected-thumb" style="width: 54px; height: 54px; border-radius: 6px; object-fit: cover; background: ##f1f5f9; border: 1px solid ##cbd5e1; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;"></div>
+						<div class="media-selected-info" style="flex: 1; min-width: 0; text-align: left;">
+							<div id="selectedFileName" class="media-selected-name" style="font-size: 0.875rem; font-weight: 700; color: ##0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">filename.png</div>
+							<div id="selectedFileSize" class="media-selected-meta" style="font-size: 0.75rem; color: ##64748b; margin-top: 0.15rem;">(0 KB)</div>
+						</div>
+						<button type="button" id="btnRemoveSelectedFile" class="btn btn-outline btn-xs" title="Change or remove selected file" style="position: relative; z-index: 7;">
+							#svgIcon(name="x", size=12)#
+							<span>Change</span>
+						</button>
+					</div>
+
+					<input type="file" id="mediaFileInputField" name="mediaFile" class="media-file-native-input" tabindex="-1" aria-hidden="true" required onchange="handleFileChange(this)" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 5;">
+				</div>
+
+				<!--- Image URL & Browse Row (Directly below dropzone) --->
+				<div class="media-url-browse-row" style="margin-top: 0.25rem;">
+					<label for="destinationPathUrlInput" class="media-url-label" style="display: block; font-size: 0.85rem; font-weight: 600; color: ##334155; margin-bottom: 0.35rem;">
+						Image URL
+					</label>
+					<div class="media-url-input-group" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+						<input type="text" id="destinationPathUrlInput" class="form-control media-url-field" placeholder="/files/#encodeForHTMLAttribute(variables.defaultWs)#/#encodeForHTMLAttribute(variables.defaultFolder)#/photo.jpg" readonly title="Prospective URL destination on server" style="flex: 1; min-width: 240px; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; padding: 0.6rem 0.85rem !important; font-size: 0.875rem !important; background: ##ffffff !important; color: ##0f172a !important;">
+						<button type="button" id="btnBrowseFileStudio" class="btn media-btn-browse" title="Browse files on your computer" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; background: ##f1f5f9 !important; font-weight: 600; font-size: 0.875rem; color: ##0f172a !important; cursor: pointer; white-space: nowrap;">
+							#svgIcon(name="folder", size=15)#
+							<span>Browse</span>
+						</button>
 					</div>
 				</div>
 			</div>
@@ -203,12 +219,23 @@
 			</div>
 			<div class="card-body">
 				<div class="form-group" style="margin-bottom:1.25rem;">
-					<label for="uploadAlt" class="form-label" style="font-weight:600;">
-						Alternative Text (Image Description) <span style="font-weight:normal; color:var(--admin-text-muted);">(Required for images to satisfy WCAG 1.1.1)</span>
+					<label for="uploadAlt" class="form-label" style="font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+						<span>Alternative Text (Image Description) <span id="uploadAltRequiredIndicator" style="color:var(--admin-danger); font-weight:700;">* Required for Images (WCAG 1.1.1)</span></span>
+						<span style="font-size:0.75rem; color:var(--admin-primary); font-weight:600;">ADA Title II Mandatory</span>
 					</label>
-					<textarea id="uploadAlt" name="altText" class="form-control" rows="3" style="width:100%;" placeholder="Describe the contents and function of this image for blind and low-vision users using screen readers..."></textarea>
-					<div class="ada-tip-box">
-						<strong>WCAG 1.1.1 AA Requirement:</strong> All non-text content presented to citizens must provide an equivalent text alternative describing subjects, actions, and key graphical elements. Purely decorative images can be noted with a concise description or empty quotes.
+					<textarea id="uploadAlt" name="altText" class="form-control" rows="3" style="width:100%; transition:border-color 0.2s, box-shadow 0.2s;" placeholder="Describe the visual subjects, text, and context of this image for blind and low-vision users using screen readers..." oninput="updateAltCharCount(this.value)"></textarea>
+					<div id="uploadAltCharCount" style="text-align:right; font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.25rem;">0 / 150 rec.</div>
+					
+					<!--- Decorative Image Toggle Option (WCAG H67) --->
+					<div class="form-check" style="margin-top:0.65rem; display:flex; align-items:center; gap:0.5rem;">
+						<input type="checkbox" id="uploadDecorative" name="isDecorative" value="1" class="form-check-input" onchange="toggleDecorativeUpload(this.checked)" style="margin:0; width:16px; height:16px;">
+						<label for="uploadDecorative" class="form-check-label" style="font-size:0.825rem; color:var(--admin-text-main); font-weight:500; cursor:pointer;">
+							This image is purely decorative / presentation-only (satisfies WCAG 1.1.1 Technique H67 &mdash; screen readers will ignore it)
+						</label>
+					</div>
+
+					<div class="ada-tip-box" style="margin-top:0.75rem;">
+						<strong>WCAG 1.1.1 AA Mandate:</strong> Under County ADA policy, all images must provide an equivalent text alternative describing subjects, actions, and key graphical elements. If the image is purely decorative background styling, check the box above.
 					</div>
 				</div>
 
@@ -369,6 +396,15 @@
 </cfoutput>
 
 <script>
+	function getCurrentWebUrl(fileName) {
+		const wsEl = document.getElementById('selectWs');
+		const folderEl = document.getElementById('selectSubfolder');
+		const ws = wsEl ? wsEl.value : 'assessors';
+		const folder = folderEl ? folderEl.value : 'images';
+		const file = fileName || '';
+		return file ? `/files/${ws}/${folder}/${file}` : `/files/${ws}/${folder}/photo.jpg`;
+	}
+
 	function updatePathPreview() {
 		const wsEl = document.getElementById('selectWs');
 		const folderEl = document.getElementById('selectSubfolder');
@@ -378,38 +414,157 @@
 		if (destText) {
 			destText.textContent = `C:\\inetpub\\chelan-county\\files\\${ws}\\${folder}`;
 		}
+		const urlInput = document.getElementById('destinationPathUrlInput');
+		if (urlInput) {
+			const input = document.getElementById('mediaFileInputField');
+			const hasFile = input && input.files && input.files[0];
+			if (hasFile) {
+				urlInput.value = getCurrentWebUrl(input.files[0].name);
+			} else {
+				urlInput.placeholder = getCurrentWebUrl('');
+				urlInput.value = '';
+			}
+		}
 	}
 
 	function handleFileChange(input) {
+		const prompt = document.getElementById('fileDropzonePrompt');
 		const box = document.getElementById('fileSelectionBox');
+		const thumb = document.getElementById('uploadSelectedThumb');
 		const nameSpan = document.getElementById('selectedFileName');
 		const sizeSpan = document.getElementById('selectedFileSize');
 		const titleInput = document.getElementById('uploadTitle');
 		const altInput = document.getElementById('uploadAlt');
+		const urlInput = document.getElementById('destinationPathUrlInput');
 
 		if (input.files && input.files[0]) {
 			const f = input.files[0];
-			nameSpan.textContent = f.name;
+			if (prompt) prompt.hidden = true;
+			if (box) box.hidden = false;
+			if (nameSpan) nameSpan.textContent = f.name;
 			const szKb = (f.size / 1024).toFixed(1);
-			sizeSpan.textContent = `(${szKb} KB)`;
-			box.style.display = 'block';
+			if (sizeSpan) sizeSpan.textContent = `${szKb} KB`;
+
+			// Render thumbnail or placeholder icon
+			if (thumb) {
+				thumb.innerHTML = '';
+				const isImg = /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(f.name);
+				if (isImg && typeof FileReader !== 'undefined') {
+					const reader = new FileReader();
+					reader.onload = (e) => {
+						thumb.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width:100%; height:100%; object-fit:cover; border-radius:6px;">`;
+					};
+					reader.readAsDataURL(f);
+				} else {
+					thumb.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
+				}
+			}
+
+			// Update Image URL preview
+			if (urlInput) {
+				urlInput.value = getCurrentWebUrl(f.name);
+			}
 
 			// Auto populate title if blank
-			if (!titleInput.value) {
+			if (titleInput && !titleInput.value) {
 				const clean = f.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
 				titleInput.value = clean.charAt(0).toUpperCase() + clean.slice(1);
 			}
 
-			// Pre-fill prompt for alt text if image
+			// Pre-fill prompt for alt text if image & enforce required state
 			const isImg = /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(f.name);
-			if (isImg && !altInput.value) {
-				altInput.placeholder = `Describe "${f.name}" for screen readers to satisfy ADA WCAG AA...`;
+			const reqIndicator = document.getElementById('uploadAltRequiredIndicator');
+			if (altInput) {
+				if (isImg) {
+					altInput.required = true;
+					if (reqIndicator) reqIndicator.style.display = 'inline';
+					if (!altInput.value) {
+						altInput.placeholder = `Required: Describe "${f.name}" for screen readers to satisfy ADA WCAG AA (WCAG 1.1.1)...`;
+					}
+				} else {
+					altInput.required = false;
+					if (reqIndicator) reqIndicator.style.display = 'none';
+					altInput.placeholder = 'Optional description (not an image)...';
+				}
 			}
+		} else {
+			if (prompt) prompt.hidden = false;
+			if (box) box.hidden = true;
+			if (thumb) thumb.innerHTML = '';
+			if (urlInput) {
+				urlInput.value = '';
+				urlInput.placeholder = getCurrentWebUrl('');
+			}
+		}
+	}
+
+	function updateAltCharCount(val) {
+		const counter = document.getElementById('uploadAltCharCount');
+		const altInput = document.getElementById('uploadAlt');
+		if (counter) {
+			const len = (val || '').length;
+			counter.textContent = `${len} / 150 rec.`;
+			if (len > 150) {
+				counter.style.color = 'var(--admin-warning, ##d97706)';
+			} else {
+				counter.style.color = 'var(--admin-text-muted)';
+			}
+		}
+		if (altInput && (val || '').trim().length > 0) {
+			altInput.style.borderColor = '';
+			altInput.style.boxShadow = '';
+		}
+	}
+
+	function toggleDecorativeUpload(isDec) {
+		const altInput = document.getElementById('uploadAlt');
+		const reqIndicator = document.getElementById('uploadAltRequiredIndicator');
+		if (altInput) {
+			if (isDec) {
+				altInput.dataset.previousVal = altInput.value;
+				altInput.value = '';
+				altInput.disabled = true;
+				altInput.required = false;
+				altInput.style.opacity = '0.6';
+				altInput.placeholder = 'Image marked as purely decorative (WCAG H67). Alt text is not required for presentation-only elements.';
+				altInput.style.borderColor = '';
+				altInput.style.boxShadow = '';
+				if (reqIndicator) reqIndicator.style.display = 'none';
+			} else {
+				altInput.disabled = false;
+				altInput.required = true;
+				altInput.style.opacity = '1';
+				altInput.value = altInput.dataset.previousVal || '';
+				altInput.placeholder = 'Describe the visual subjects, text, and context of this image for blind and low-vision users using screen readers...';
+				if (reqIndicator) reqIndicator.style.display = 'inline';
+				altInput.focus();
+			}
+			updateAltCharCount(altInput.value);
 		}
 	}
 
 	document.addEventListener('DOMContentLoaded', () => {
 		const dropzone = document.getElementById('fileDropzone');
+		const fileInput = document.getElementById('mediaFileInputField');
+		const btnBrowse = document.getElementById('btnBrowseFileStudio');
+		const btnRemove = document.getElementById('btnRemoveSelectedFile');
+
+		if (btnBrowse && fileInput) {
+			btnBrowse.addEventListener('click', (e) => {
+				e.preventDefault();
+				fileInput.click();
+			});
+		}
+
+		if (btnRemove && fileInput) {
+			btnRemove.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				fileInput.value = '';
+				handleFileChange(fileInput);
+			});
+		}
+
 		if (dropzone) {
 			['dragenter', 'dragover'].forEach(name => {
 				dropzone.addEventListener(name, (e) => {
@@ -425,7 +580,66 @@
 					dropzone.classList.remove('is-dragover');
 				});
 			});
+
+			dropzone.addEventListener('keydown', (e) => {
+				if ((e.key === 'Enter' || e.key === ' ') && fileInput) {
+					e.preventDefault();
+					fileInput.click();
+				}
+			});
 		}
+
+		const uploadForm = document.getElementById('uploadFullForm');
+		if (uploadForm) {
+			uploadForm.addEventListener('submit', (e) => {
+				const fileInput = document.getElementById('mediaFileInputField');
+				const f = fileInput && fileInput.files && fileInput.files[0];
+				if (!f) {
+					e.preventDefault();
+					if (window.showToast) window.showToast('Please choose a file to upload.', 'warning');
+					return false;
+				}
+				const isImg = /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(f.name);
+				const altInput = document.getElementById('uploadAlt');
+				const decCheck = document.getElementById('uploadDecorative');
+				const isDec = decCheck && decCheck.checked;
+
+				if (isImg && !isDec) {
+					const altVal = altInput ? altInput.value.trim() : '';
+					if (!altVal) {
+						e.preventDefault();
+						altInput.style.borderColor = 'var(--admin-danger, ##ef4444)';
+						altInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+						altInput.focus();
+						if (window.showToast) {
+							window.showToast('WCAG 1.1.1 Requirement: Alternative Text (Image Description) is mandatory for all images.', 'error');
+						} else if (window.adminAlert) {
+							window.adminAlert({
+								title: 'WCAG 1.1.1 Requirement Missing',
+								message: 'Alternative Text is mandatory for all images under County ADA Title II policy. Please enter a description of the image for screen readers, or check decorative if presentation-only.',
+								type: 'warning'
+							});
+						}
+						return false;
+					}
+
+					// Generic alt check
+					const lowerAlt = altVal.toLowerCase();
+					const generic = ['image', 'photo', 'picture', 'graphic', 'img', 'pic', 'file', 'screenshot'];
+					if (generic.includes(lowerAlt) || lowerAlt.endsWith('.jpg') || lowerAlt.endsWith('.png') || lowerAlt.endsWith('.webp')) {
+						e.preventDefault();
+						altInput.style.borderColor = 'var(--admin-danger, ##ef4444)';
+						altInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+						altInput.focus();
+						if (window.showToast) {
+							window.showToast('Generic alt text like "' + altVal + '" or filenames are not permitted. Please describe the image content.', 'error');
+						}
+						return false;
+					}
+				}
+			});
+		}
+
 		updatePathPreview();
 	});
 </script>

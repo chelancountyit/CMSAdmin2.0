@@ -99,6 +99,9 @@ component extends="wheels.Controller" {
 		if (ListFindNoCase("workspaces,users,settings,sessions,main,documentation,up,scheduler", local.ctrl)) {
 			return;
 		}
+		if (local.act == "convertdocument") {
+			return;
+		}
 
 		// Check if a valid non-global workspace is currently selected in the top header
 		local.reqWs = (StructKeyExists(params, "ws") && Len(Trim(params.ws))) ? Trim(params.ws)

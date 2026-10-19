@@ -96,7 +96,8 @@ component extends="Controller" {
 			}
 
 			// Disk path check
-			local.targetDiskPath = "C:\inetpub\chelan-county\" & (StructKeyExists(local.w, "folderPath") ? local.w.folderPath : "files/" & local.w.id);
+			local.sPath = (StructKeyExists(local.w, "storage_path") && Len(local.w.storage_path)) ? local.w.storage_path : (StructKeyExists(local.w, "folderPath") ? local.w.folderPath : "files/" & local.w.id);
+			local.targetDiskPath = (Find(":", local.sPath) > 0) ? local.sPath : ("C:\inetpub\chelan-county\" & local.sPath);
 			local.w.diskExists = DirectoryExists(local.targetDiskPath);
 		}
 
@@ -128,6 +129,7 @@ component extends="Controller" {
 				if (StructKeyExists(local.w, "contact") && IsStruct(local.w.contact)) {
 					local.contactText = (StructKeyExists(local.w.contact, "first_name") ? local.w.contact.first_name : "") & " " & 
 					                    (StructKeyExists(local.w.contact, "last_name") ? local.w.contact.last_name : "") & " " & 
+					                    (StructKeyExists(local.w.contact, "job_title") ? local.w.contact.job_title : "") & " " & 
 					                    (StructKeyExists(local.w.contact, "email") ? local.w.contact.email : "") & " " & 
 					                    (StructKeyExists(local.w.contact, "phone") ? local.w.contact.phone : "") & " " & 
 					                    (StructKeyExists(local.w.contact, "city") ? local.w.contact.city : "") & " " & 
@@ -137,9 +139,13 @@ component extends="Controller" {
 					local.w.name & " " & 
 					local.w.id & " " & 
 					(StructKeyExists(local.w, "virtual_directory") ? local.w.virtual_directory : "") & " " & 
+					(StructKeyExists(local.w, "domain_name") ? local.w.domain_name : "") & " " & 
+					(StructKeyExists(local.w, "storage_path") ? local.w.storage_path : "") & " " & 
+					(StructKeyExists(local.w, "project_path") ? local.w.project_path : "") & " " & 
 					(StructKeyExists(local.w, "department") ? local.w.department : "") & " " & 
 					(StructKeyExists(local.w, "department_category") ? local.w.department_category : "") & " " & 
 					(StructKeyExists(local.w, "redirect_url") ? local.w.redirect_url : "") & " " & 
+					(StructKeyExists(local.w, "leadership_type") ? (local.w.leadership_type & (local.w.leadership_type eq "elected" ? " elected official" : " department head")) : "") & " " & 
 					local.contactText & " " & 
 					local.w.desc
 				);
@@ -187,12 +193,18 @@ component extends="Controller" {
 
 		variables.workspace = {
 			type: "dept",
+			leadership_type: "dept_head",
 			site_name: "",
 			virtual_directory: "",
+			storage_path: "",
+			domain_name: "www.chelancounty.gov",
+			project_path: "C:\inetpub\chelan-county",
 			color: "##7e22ce",
 			department: "",
 			department_category: "",
 			redirect_url: "",
+			contact_photo: "",
+			job_title: "",
 			contact_first_name: "",
 			contact_last_name: "",
 			contact_email: "",
@@ -248,9 +260,15 @@ component extends="Controller" {
 		local.department = StructKeyExists(params, "department") ? Trim(params.department) : local.siteName;
 		local.deptCategory = StructKeyExists(params, "department_category") ? Trim(params.department_category) : "";
 		local.redirectUrl = StructKeyExists(params, "redirect_url") ? Trim(params.redirect_url) : "";
+		local.domainName = StructKeyExists(params, "domain_name") && Len(Trim(params.domain_name)) ? Trim(params.domain_name) : "www.chelancounty.gov";
+		local.storagePath = StructKeyExists(params, "storage_path") && Len(Trim(params.storage_path)) ? Trim(params.storage_path) : ("files/" & local.cleanId);
+		local.projectPath = StructKeyExists(params, "project_path") && Len(Trim(params.project_path)) ? Trim(params.project_path) : "C:\inetpub\chelan-county";
+		local.leadershipType = (StructKeyExists(params, "leadership_type") && params.leadership_type eq "elected") ? "elected" : "dept_head";
 
 		// Contact details
 		local.email = StructKeyExists(params, "contact_email") ? Trim(params.contact_email) : "";
+		local.contactPhoto = StructKeyExists(params, "contact_photo") ? Trim(params.contact_photo) : "";
+		local.jobTitle = StructKeyExists(params, "job_title") ? Trim(params.job_title) : "";
 
 		// Workspace type / marker: Department vs Site / Portal
 		local.type = (StructKeyExists(params, "type") && params.type eq "site") ? "site" : "dept";
@@ -271,17 +289,25 @@ component extends="Controller" {
 			code: local.cleanId,
 			name: local.siteName,
 			type: local.type,
+			leadership_type: local.leadershipType,
+			job_title: local.jobTitle,
+			contact_photo: local.contactPhoto,
 			color: local.color,
 			badge: (Len(local.badge) > 12 ? Left(local.badge, 10) & ".." : local.badge),
 			badgeClass: local.badgeClass,
 			icon: local.icon,
 			desc: Len(local.deptCategory) ? (local.deptCategory & " - " & local.department) : (local.department & " Portal"),
-			folderPath: "files/" & local.cleanId,
+			folderPath: local.storagePath,
 			virtual_directory: local.cleanId,
+			storage_path: local.storagePath,
+			domain_name: local.domainName,
+			project_path: local.projectPath,
 			department: local.department,
 			department_category: local.deptCategory,
 			redirect_url: local.redirectUrl,
 			contact: {
+				photo: local.contactPhoto,
+				job_title: local.jobTitle,
 				first_name: StructKeyExists(params, "contact_first_name") ? Trim(params.contact_first_name) : "",
 				last_name: StructKeyExists(params, "contact_last_name") ? Trim(params.contact_last_name) : "",
 				email: local.email,
@@ -299,7 +325,7 @@ component extends="Controller" {
 
 		// Automatically create files/[cleanId] on disk with images, documents, and shared images junction
 		try {
-			local.baseWsDir = "C:\inetpub\chelan-county\files\" & local.cleanId;
+			local.baseWsDir = (Find(":", local.storagePath) > 0) ? local.storagePath : ("C:\inetpub\chelan-county\" & local.storagePath);
 			local.targetMediaDir = local.baseWsDir & "\images";
 			local.targetDocsDir = local.baseWsDir & "\documents";
 			if (!DirectoryExists(local.baseWsDir)) CreateObject("java", "java.io.File").init(local.baseWsDir).mkdirs();
@@ -319,11 +345,17 @@ component extends="Controller" {
 				badge_class: { value: local.badgeClass, cfsqltype: "cf_sql_varchar" },
 				icon: { value: local.icon, cfsqltype: "cf_sql_varchar" },
 				description: { value: local.newWs.desc, cfsqltype: "cf_sql_varchar" },
-				folder_path: { value: local.newWs.folderPath, cfsqltype: "cf_sql_varchar" },
+				folder_path: { value: local.storagePath, cfsqltype: "cf_sql_varchar" },
 				virtual_directory: { value: local.cleanId, cfsqltype: "cf_sql_varchar" },
 				redirect_url: { value: local.redirectUrl, cfsqltype: "cf_sql_varchar" },
 				department: { value: local.department, cfsqltype: "cf_sql_varchar" },
 				department_category: { value: local.deptCategory, cfsqltype: "cf_sql_varchar" },
+				storage_path: { value: local.storagePath, cfsqltype: "cf_sql_varchar" },
+				domain_name: { value: local.domainName, cfsqltype: "cf_sql_varchar" },
+				project_path: { value: local.projectPath, cfsqltype: "cf_sql_varchar" },
+				leadership_type: { value: local.leadershipType, cfsqltype: "cf_sql_varchar" },
+				contact_photo: { value: local.contactPhoto, cfsqltype: "cf_sql_varchar" },
+				job_title: { value: local.jobTitle, cfsqltype: "cf_sql_varchar" },
 				contact_first_name: { value: local.newWs.contact.first_name, cfsqltype: "cf_sql_varchar" },
 				contact_last_name: { value: local.newWs.contact.last_name, cfsqltype: "cf_sql_varchar" },
 				contact_email: { value: local.newWs.contact.email, cfsqltype: "cf_sql_varchar" },
@@ -359,6 +391,12 @@ component extends="Controller" {
 						redirect_url = :redirect_url,
 						department = :department,
 						department_category = :department_category,
+						storage_path = :storage_path,
+						domain_name = :domain_name,
+						project_path = :project_path,
+						leadership_type = :leadership_type,
+						contact_photo = :contact_photo,
+						job_title = :job_title,
 						contact_first_name = :contact_first_name,
 						contact_last_name = :contact_last_name,
 						contact_email = :contact_email,
@@ -381,11 +419,13 @@ component extends="Controller" {
 					INSERT INTO cms_workspaces (
 						code, name, alias, type, badge, badge_class, icon, description,
 						folder_path, virtual_directory, redirect_url, department, department_category,
+						storage_path, domain_name, project_path, leadership_type, contact_photo, job_title,
 						contact_first_name, contact_last_name, contact_email, contact_phone, contact_fax,
 						address, address2, city, state, zip, office_hours, is_active, is_system, sort_order, color
 					) VALUES (
 						:code, :name, :alias, :type, :badge, :badge_class, :icon, :description,
 						:folder_path, :virtual_directory, :redirect_url, :department, :department_category,
+						:storage_path, :domain_name, :project_path, :leadership_type, :contact_photo, :job_title,
 						:contact_first_name, :contact_last_name, :contact_email, :contact_phone, :contact_fax,
 						:address, :address2, :city, :state, :zip, :office_hours, 1, 0, 100, :color
 					)
@@ -426,6 +466,7 @@ component extends="Controller" {
 				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT id, code, name, alias, type, badge, badge_class, icon, description,
 				       folder_path, virtual_directory, redirect_url, department, department_category,
+				       storage_path, domain_name, project_path, leadership_type, job_title, contact_photo,
 				       contact_first_name, contact_last_name, contact_email, contact_phone, contact_fax,
 				       address, address2, city, state, zip, office_hours, is_active, is_system, sort_order, color
 				FROM cms_workspaces
@@ -440,6 +481,9 @@ component extends="Controller" {
 					name: local.row.name,
 					alias: Len(local.row.alias ?: "") ? local.row.alias : "",
 					type: local.row.type,
+					leadership_type: (StructKeyExists(local.row, "leadership_type") && Len(local.row.leadership_type ?: "")) ? local.row.leadership_type : "dept_head",
+					job_title: (StructKeyExists(local.row, "job_title") && Len(local.row.job_title ?: "")) ? local.row.job_title : "",
+					contact_photo: (StructKeyExists(local.row, "contact_photo") && Len(local.row.contact_photo ?: "")) ? local.row.contact_photo : "",
 					color: (StructKeyExists(local.row, "color") && Len(Trim(local.row.color))) ? Trim(local.row.color) : (local.row.type eq "dept" ? "##7e22ce" : (local.row.type eq "site" ? "##10b981" : "##0073aa")),
 					badge: local.row.badge,
 					badgeClass: local.row.badge_class,
@@ -447,11 +491,16 @@ component extends="Controller" {
 					desc: Len(local.row.description ?: "") ? local.row.description : "",
 					folderPath: local.row.folder_path,
 					virtual_directory: local.row.virtual_directory,
+					storage_path: (StructKeyExists(local.row, "storage_path") && Len(local.row.storage_path ?: "")) ? local.row.storage_path : (StructKeyExists(local.row, "folder_path") ? local.row.folder_path : ("files/" & local.row.code)),
+					domain_name: (StructKeyExists(local.row, "domain_name") && Len(local.row.domain_name ?: "")) ? local.row.domain_name : "www.chelancounty.gov",
+					project_path: (StructKeyExists(local.row, "project_path") && Len(local.row.project_path ?: "")) ? local.row.project_path : "C:\inetpub\chelan-county",
 					department: local.row.department,
 					department_category: local.row.department_category,
 					redirect_url: local.row.redirect_url,
 					is_system: (IsNumeric(local.row.is_system) && local.row.is_system eq 1),
 					contact: {
+						photo: (StructKeyExists(local.row, "contact_photo") && Len(local.row.contact_photo ?: "")) ? local.row.contact_photo : "",
+						job_title: (StructKeyExists(local.row, "job_title") && Len(local.row.job_title ?: "")) ? local.row.job_title : "",
 						first_name: Len(local.row.contact_first_name ?: "") ? local.row.contact_first_name : "",
 						last_name: Len(local.row.contact_last_name ?: "") ? local.row.contact_last_name : "",
 						email: Len(local.row.contact_email ?: "") ? local.row.contact_email : "",
@@ -503,13 +552,19 @@ component extends="Controller" {
 		variables.workspace = {
 			id: local.targetWs.id,
 			type: StructKeyExists(local.targetWs, "type") ? local.targetWs.type : "dept",
+			leadership_type: StructKeyExists(local.targetWs, "leadership_type") && Len(local.targetWs.leadership_type) ? local.targetWs.leadership_type : "dept_head",
 			site_name: local.targetWs.name,
 			virtual_directory: StructKeyExists(local.targetWs, "virtual_directory") ? local.targetWs.virtual_directory : local.targetWs.id,
+			storage_path: StructKeyExists(local.targetWs, "storage_path") ? local.targetWs.storage_path : (StructKeyExists(local.targetWs, "folderPath") ? local.targetWs.folderPath : ("files/" & local.targetWs.id)),
+			domain_name: StructKeyExists(local.targetWs, "domain_name") ? local.targetWs.domain_name : "www.chelancounty.gov",
+			project_path: StructKeyExists(local.targetWs, "project_path") ? local.targetWs.project_path : "C:\inetpub\chelan-county",
 			color: (StructKeyExists(local.targetWs, "color") && Len(Trim(local.targetWs.color))) ? Trim(local.targetWs.color) : (local.targetWs.type eq "dept" ? "##7e22ce" : (local.targetWs.type eq "site" ? "##10b981" : "##0073aa")),
 			department: StructKeyExists(local.targetWs, "department") ? local.targetWs.department : local.targetWs.name,
 			department_category: StructKeyExists(local.targetWs, "department_category") ? local.targetWs.department_category : "",
 			redirect_url: StructKeyExists(local.targetWs, "redirect_url") ? local.targetWs.redirect_url : "",
 			is_system: StructKeyExists(local.targetWs, "is_system") ? local.targetWs.is_system : (local.targetWs.id eq "global"),
+			contact_photo: StructKeyExists(local.targetWs, "contact_photo") ? local.targetWs.contact_photo : ((StructKeyExists(local.c, "photo") && Len(local.c.photo)) ? local.c.photo : ""),
+			job_title: StructKeyExists(local.targetWs, "job_title") ? local.targetWs.job_title : ((StructKeyExists(local.c, "job_title") && Len(local.c.job_title)) ? local.c.job_title : ""),
 			contact_first_name: StructKeyExists(local.c, "first_name") ? local.c.first_name : "",
 			contact_last_name: StructKeyExists(local.c, "last_name") ? local.c.last_name : "",
 			contact_email: StructKeyExists(local.c, "email") ? local.c.email : "",
@@ -564,6 +619,15 @@ component extends="Controller" {
 		local.department = StructKeyExists(params, "department") ? Trim(params.department) : (StructKeyExists(local.existing, "department") ? local.existing.department : local.siteName);
 		local.deptCategory = StructKeyExists(params, "department_category") ? Trim(params.department_category) : "";
 		local.redirectUrl = StructKeyExists(params, "redirect_url") ? Trim(params.redirect_url) : "";
+		local.domainName = StructKeyExists(params, "domain_name") && Len(Trim(params.domain_name)) ? Trim(params.domain_name) : (StructKeyExists(local.existing, "domain_name") ? local.existing.domain_name : "www.chelancounty.gov");
+		local.storagePath = StructKeyExists(params, "storage_path") && Len(Trim(params.storage_path)) ? Trim(params.storage_path) : (StructKeyExists(local.existing, "storage_path") ? local.existing.storage_path : ("files/" & local.cleanId));
+		local.projectPath = StructKeyExists(params, "project_path") && Len(Trim(params.project_path)) ? Trim(params.project_path) : (StructKeyExists(local.existing, "project_path") ? local.existing.project_path : "C:\inetpub\chelan-county");
+		local.leadershipType = (StructKeyExists(params, "leadership_type") && params.leadership_type eq "elected") ? "elected" : "dept_head";
+		local.existing.leadership_type = local.leadershipType;
+		local.jobTitle = StructKeyExists(params, "job_title") ? Trim(params.job_title) : (StructKeyExists(local.existing, "job_title") ? local.existing.job_title : (StructKeyExists(local.existing.contact, "job_title") ? local.existing.contact.job_title : ""));
+		local.existing.job_title = local.jobTitle;
+		local.contactPhoto = StructKeyExists(params, "contact_photo") ? Trim(params.contact_photo) : (StructKeyExists(local.existing, "contact_photo") ? local.existing.contact_photo : (StructKeyExists(local.existing.contact, "photo") ? local.existing.contact.photo : ""));
+		local.existing.contact_photo = local.contactPhoto;
 		local.email = StructKeyExists(params, "contact_email") ? Trim(params.contact_email) : "";
 
 		// Workspace type / marker: Department vs Site / Portal
@@ -585,12 +649,17 @@ component extends="Controller" {
 		local.existing.department = local.department;
 		local.existing.department_category = local.deptCategory;
 		local.existing.redirect_url = local.redirectUrl;
+		local.existing.domain_name = local.domainName;
+		local.existing.storage_path = local.storagePath;
+		local.existing.project_path = local.projectPath;
 		local.existing.virtual_directory = local.cleanId;
 		local.existing.badge = (Len(local.badge) > 12 ? Left(local.badge, 10) & ".." : local.badge);
 		local.existing.desc = Len(local.deptCategory) ? (local.deptCategory & " - " & local.department) : (local.department & " Portal");
-		local.existing.folderPath = "files/" & local.cleanId;
+		local.existing.folderPath = local.storagePath;
 
 		local.existing.contact = {
+			photo: local.contactPhoto,
+			job_title: local.jobTitle,
 			first_name: StructKeyExists(params, "contact_first_name") ? Trim(params.contact_first_name) : "",
 			last_name: StructKeyExists(params, "contact_last_name") ? Trim(params.contact_last_name) : "",
 			email: local.email,
@@ -606,7 +675,7 @@ component extends="Controller" {
 
 		// Ensure disk folder exists
 		try {
-			local.baseWsDir = "C:\inetpub\chelan-county\files\" & local.cleanId;
+			local.baseWsDir = (Find(":", local.storagePath) > 0) ? local.storagePath : ("C:\inetpub\chelan-county\" & local.storagePath);
 			local.targetMediaDir = local.baseWsDir & "\images";
 			local.targetDocsDir = local.baseWsDir & "\documents";
 			if (!DirectoryExists(local.baseWsDir)) CreateObject("java", "java.io.File").init(local.baseWsDir).mkdirs();
@@ -644,6 +713,12 @@ component extends="Controller" {
 					redirect_url = :redirect_url,
 					department = :department,
 					department_category = :department_category,
+					storage_path = :storage_path,
+					domain_name = :domain_name,
+					project_path = :project_path,
+					leadership_type = :leadership_type,
+					contact_photo = :contact_photo,
+					job_title = :job_title,
 					contact_first_name = :contact_first_name,
 					contact_last_name = :contact_last_name,
 					contact_email = :contact_email,
@@ -670,6 +745,12 @@ component extends="Controller" {
 				redirect_url: { value: local.redirectUrl, cfsqltype: "cf_sql_varchar" },
 				department: { value: local.department, cfsqltype: "cf_sql_varchar" },
 				department_category: { value: local.deptCategory, cfsqltype: "cf_sql_varchar" },
+				storage_path: { value: local.storagePath, cfsqltype: "cf_sql_varchar" },
+				domain_name: { value: local.domainName, cfsqltype: "cf_sql_varchar" },
+				project_path: { value: local.projectPath, cfsqltype: "cf_sql_varchar" },
+				leadership_type: { value: local.leadershipType, cfsqltype: "cf_sql_varchar" },
+				contact_photo: { value: local.contactPhoto, cfsqltype: "cf_sql_varchar" },
+				job_title: { value: local.jobTitle, cfsqltype: "cf_sql_varchar" },
 				contact_first_name: { value: local.existing.contact.first_name, cfsqltype: "cf_sql_varchar" },
 				contact_last_name: { value: local.existing.contact.last_name, cfsqltype: "cf_sql_varchar" },
 				contact_email: { value: local.existing.contact.email, cfsqltype: "cf_sql_varchar" },

@@ -630,7 +630,12 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			}
 
 			local.isImg = isBoolean(local.existing.is_image) && local.existing.is_image;
-			local.isWcag = (!local.isImg) || (len(local.altText) > 0);
+			local.isDecorative = (structKeyExists(form, "isDecorative") && (form.isDecorative eq 1 || form.isDecorative eq "true" || form.isDecorative eq "yes"))
+				|| (structKeyExists(arguments, "isDecorative") && (arguments.isDecorative eq 1 || arguments.isDecorative eq "true" || arguments.isDecorative eq "yes"));
+			if (local.isImg && !local.isDecorative && len(trim(local.altText)) eq 0) {
+				return fail("WCAG 1.1.1 Compliance Violation: Alternative Text (Image Description) is required for images.");
+			}
+			local.isWcag = (!local.isImg) || local.isDecorative || (len(local.altText) > 0);
 
 			queryExecute("
 				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;

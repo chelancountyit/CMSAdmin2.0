@@ -113,6 +113,13 @@
 	background: rgba(0, 115, 170, 0.04) !important;
 	box-shadow: 0 0 0 1px var(--admin-primary);
 }
+@media (max-width: 768px) {
+	.ws-contact-location-grid,
+	.ws-leadership-type-grid,
+	.ws-location-hours-grid {
+		grid-template-columns: 1fr !important;
+	}
+}
 </style>
 
 <form action="#urlFor(controller='workspaces', action='update')#" method="post" class="workspace-form">
@@ -120,8 +127,8 @@
 	<input type="hidden" name="id" value="#EncodeForHTMLAttribute(variables.workspace.id)#">
 
 	<div class="ws-form-grid">
-		<!--- PANEL 1 (6-col): SITE & DIRECTORY CONFIGURATION --->
-		<div class="admin-card col-6">
+		<!--- PANEL 1 (12-col): SITE & DIRECTORY CONFIGURATION --->
+		<div class="admin-card col-12">
 			<div class="card-header">
 				<div style="display:flex; align-items:center; gap:0.5rem;">
 					<div style="width:30px; height:30px; border-radius:var(--radius-sm); background:rgba(0,115,170,0.1); color:var(--admin-primary); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
@@ -170,12 +177,38 @@
 					<input type="text" id="site_name" name="site_name" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.site_name)#" required autocomplete="off">
 				</div>
 
-				<div>
-					<label for="virtual_directory" class="ws-form-label">Virtual Directory <span style="color:var(--admin-danger);">*</span></label>
-					<input type="text" id="virtual_directory" name="virtual_directory" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.virtual_directory)#" required autocomplete="off">
-					<small style="color:var(--admin-text-muted); font-size:0.75rem; display:block; margin-top:0.35rem;">
-						Storage path: <code>files/#EncodeForHTML(variables.workspace.virtual_directory)#</code>. Media &amp; documents folders are linked on disk.
-					</small>
+				<div class="ws-grid-2">
+					<div>
+						<label for="virtual_directory" class="ws-form-label">Virtual Directory <span style="color:var(--admin-danger);">*</span></label>
+						<input type="text" id="virtual_directory" name="virtual_directory" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.virtual_directory)#" required autocomplete="off">
+						<small style="color:var(--admin-text-muted); font-size:0.73rem; display:block; margin-top:0.25rem;">
+							IIS virtual folder mapping
+						</small>
+					</div>
+					<div>
+						<label for="domain_name" class="ws-form-label">Domain Name</label>
+						<input type="text" id="domain_name" name="domain_name" class="form-control" placeholder="e.g. www.chelancounty.gov" autocomplete="off" value="#EncodeForHTMLAttribute(variables.workspace.domain_name ?: 'www.chelancounty.gov')#">
+						<small style="color:var(--admin-text-muted); font-size:0.73rem; display:block; margin-top:0.25rem;">
+							Canonical web hostname
+						</small>
+					</div>
+				</div>
+
+				<div class="ws-grid-2">
+					<div>
+						<label for="storage_path" class="ws-form-label">Storage Path</label>
+						<input type="text" id="storage_path" name="storage_path" class="form-control" placeholder="files/[virtual-directory]" autocomplete="off" value="#EncodeForHTMLAttribute(variables.workspace.storage_path ?: ('files/' & variables.workspace.virtual_directory))#">
+						<small style="color:var(--admin-text-muted); font-size:0.73rem; display:block; margin-top:0.25rem;">
+							File repository path for media &amp; documents
+						</small>
+					</div>
+					<div>
+						<label for="project_path" class="ws-form-label">Project Path</label>
+						<input type="text" id="project_path" name="project_path" class="form-control" placeholder="C:\inetpub\chelan-county" autocomplete="off" value="#EncodeForHTMLAttribute(variables.workspace.project_path ?: 'C:\inetpub\chelan-county')#">
+						<small style="color:var(--admin-text-muted); font-size:0.73rem; display:block; margin-top:0.25rem;">
+							Server application codebase directory
+						</small>
+					</div>
 				</div>
 
 				<div class="ws-grid-2">
@@ -259,114 +292,193 @@
 			</div>
 		</div>
 
-		<!--- PANEL 2 (6-col): OFFICIAL CONTACT INFORMATION --->
-		<div class="admin-card col-6">
+		<!--- PANEL 2 (12-col): CONTACT INFORMATION, PHYSICAL LOCATION & OPERATING HOURS (MERGED) --->
+		<div class="admin-card col-12">
 			<div class="card-header">
 				<div style="display:flex; align-items:center; gap:0.5rem;">
 					<div style="width:30px; height:30px; border-radius:var(--radius-sm); background:rgba(126,34,206,0.1); color:var(--admin-purple, ##7e22ce); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
 						#svgIcon(name="user", size=16)#
 					</div>
 					<div>
-						<h2 style="font-size:0.95rem; font-weight:700; margin:0; color:var(--admin-text-main);">Contact Information</h2>
-						<div style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.1rem;">Primary department contact, administrative lead, and direct communications.</div>
+						<h2 style="font-size:0.95rem; font-weight:700; margin:0; color:var(--admin-text-main);">Contact Information, Location &amp; Operating Hours</h2>
+						<div style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.1rem;">Department leadership, primary contact, physical facility address, and public operating schedule.</div>
 					</div>
 				</div>
-				<span class="badge badge-purple" style="font-size:0.7rem; padding:0.2rem 0.5rem;">Communications</span>
+				<span class="badge badge-purple" style="font-size:0.7rem; padding:0.2rem 0.5rem;">Communications &amp; Facility</span>
 			</div>
 			<div class="card-body">
-				<div class="ws-grid-2">
-					<div>
-						<label for="contact_first_name" class="ws-form-label">First Name</label>
-						<input type="text" id="contact_first_name" name="contact_first_name" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_first_name)#" autocomplete="off">
-					</div>
-					<div>
-						<label for="contact_last_name" class="ws-form-label">Last Name</label>
-						<input type="text" id="contact_last_name" name="contact_last_name" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_last_name)#" autocomplete="off">
-					</div>
-				</div>
-
+				<!--- Leadership Classification: Elected Official vs Department Head --->
 				<div>
-					<label for="contact_email" class="ws-form-label">Email</label>
-					<input type="email" id="contact_email" name="contact_email" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_email)#" placeholder="e.g. contact@chelancounty.gov" autocomplete="off">
+					<label class="ws-form-label">Leadership Classification <span style="color:var(--admin-danger);">*</span></label>
+					<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;" class="ws-leadership-type-grid">
+						<label class="ws-type-selector-card" style="border:1.5px solid var(--admin-border); border-radius:var(--radius-sm); padding:0.75rem 0.85rem; display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer; background:var(--admin-surface); transition:all 0.15s ease;">
+							<input type="radio" name="leadership_type" value="dept_head" <cfif (variables.workspace.leadership_type ?: 'dept_head') neq "elected">checked</cfif> style="margin-top:0.25rem;">
+							<div>
+								<div style="font-weight:700; font-size:0.85rem; color:var(--admin-text-main); display:flex; align-items:center; gap:0.35rem;">
+									<span style="color:var(--admin-primary);">#svgIcon(name="briefcase", size=14)#</span>
+									<span>Department Head</span>
+								</div>
+								<div style="font-size:0.73rem; color:var(--admin-text-muted); margin-top:0.2rem; line-height:1.35;">
+									Appointed Director, Administrator, Division Chief, or Program Manager.
+								</div>
+							</div>
+						</label>
+						<label class="ws-type-selector-card" style="border:1.5px solid var(--admin-border); border-radius:var(--radius-sm); padding:0.75rem 0.85rem; display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer; background:var(--admin-surface); transition:all 0.15s ease;">
+							<input type="radio" name="leadership_type" value="elected" <cfif (variables.workspace.leadership_type ?: '') eq "elected">checked</cfif> style="margin-top:0.25rem;">
+							<div>
+								<div style="font-weight:700; font-size:0.85rem; color:var(--admin-text-main); display:flex; align-items:center; gap:0.35rem;">
+									<span style="color:##d97706;">#svgIcon(name="award", size=14)#</span>
+									<span>Elected Official</span>
+								</div>
+								<div style="font-size:0.73rem; color:var(--admin-text-muted); margin-top:0.2rem; line-height:1.35;">
+									Countywide elected official (Assessor, Auditor, Clerk, Commissioner, Coroner, Prosecutor, Sheriff, Treasurer).
+								</div>
+							</div>
+						</label>
+					</div>
 				</div>
 
-				<div class="ws-grid-2">
-					<div>
-						<label for="contact_phone" class="ws-form-label">Phone</label>
-						<input type="tel" id="contact_phone" name="contact_phone" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_phone)#" placeholder="e.g. 509-667-6800" autocomplete="off">
-					</div>
-					<div>
-						<label for="contact_fax" class="ws-form-label">Fax</label>
-						<input type="tel" id="contact_fax" name="contact_fax" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_fax)#" placeholder="e.g. 509-667-6860" autocomplete="off">
-					</div>
-				</div>
-			</div>
-		</div>
+				<!--- Side-by-Side: Contact Details (Left) and Location & Hours (Right) --->
+				<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:0.5rem; padding-top:1rem; border-top:1px solid var(--admin-border);" class="ws-contact-location-grid">
+					<!--- LEFT COLUMN: Contact Information --->
+					<div style="display:flex; flex-direction:column; gap:1rem;">
+						<div style="font-size:0.8rem; font-weight:700; color:var(--admin-text-subtle); text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:0.4rem;">
+							#svgIcon(name="user", size=13)#
+							<span>Department Leadership &amp; Official Contact</span>
+						</div>
 
-		<!--- PANEL 3 (6-col): PHYSICAL LOCATION & ADDRESS --->
-		<div class="admin-card col-6">
-			<div class="card-header">
-				<div style="display:flex; align-items:center; gap:0.5rem;">
-					<div style="width:30px; height:30px; border-radius:var(--radius-sm); background:rgba(16,185,129,0.1); color:var(--admin-success, ##10b981); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-						#svgIcon(name="map-pin", size=16)#
-					</div>
-					<div>
-						<h2 style="font-size:0.95rem; font-weight:700; margin:0; color:var(--admin-text-main);">Location &amp; Address</h2>
-						<div style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.1rem;">Municipal facility address, room details, and mailing coordinates.</div>
-					</div>
-				</div>
-				<span class="badge badge-success" style="font-size:0.7rem; padding:0.2rem 0.5rem;">Location</span>
-			</div>
-			<div class="card-body">
-				<div>
-					<label for="address" class="ws-form-label">Address</label>
-					<input type="text" id="address" name="address" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.address)#" placeholder="e.g. 350 Orondo Ave" autocomplete="off">
-					<input type="text" id="address2" name="address2" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.address2)#" placeholder="Suite, unit, floor, or building (optional)" style="margin-top:0.5rem;" autocomplete="off">
-				</div>
+						<!--- Leadership / Contact Profile Photo Selector (200x200) --->
+						<div style="background:var(--admin-surface-hover); border:1px solid var(--admin-border); border-radius:var(--radius-sm); padding:1.25rem; display:flex; flex-direction:column; align-items:center; gap:1rem;">
+							<div style="width:100%; display:flex; align-items:center; justify-content:space-between;">
+								<label for="contact_photo" class="ws-form-label" style="margin:0; font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:0.4rem;">
+									#svgIcon(name="image", size=14)#
+									<span>Profile Photo (200 &times; 200)</span>
+								</label>
+								<span class="badge badge-neutral" style="font-size:0.68rem; padding:0.12rem 0.45rem;">200 &times; 200 px</span>
+							</div>
 
-				<div class="ws-grid-3">
-					<div>
-						<label for="city" class="ws-form-label">City</label>
-						<input type="text" id="city" name="city" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.city)#" autocomplete="off">
-					</div>
-					<div>
-						<label for="state" class="ws-form-label">State</label>
-						<input type="text" id="state" name="state" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.state)#" autocomplete="off">
-					</div>
-					<div>
-						<label for="zip" class="ws-form-label">Zip</label>
-						<input type="text" id="zip" name="zip" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.zip)#" autocomplete="off">
-					</div>
-				</div>
-			</div>
-			<div class="card-footer" style="padding:1rem 1.25rem; background:var(--admin-bg); border-top:1px solid var(--admin-border); font-size:0.75rem; color:var(--admin-text-muted); display:flex; align-items:center; min-height:57px; box-sizing:border-box;">
-				<span>Municipal facility address &amp; mailing coordinates</span>
-			</div>
-		</div>
+							<!--- 200x200 Circular Avatar Preview with Hover Trigger --->
+							<div id="contactPhotoPreviewWrap"
+							     role="button"
+							     tabindex="0"
+							     aria-label="Click to browse workspace media library for leadership profile photo"
+							     onclick="openMediaPickerForContactPhoto()"
+							     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMediaPickerForContactPhoto();}"
+							     style="width:200px; height:200px; border-radius:50%; border:3px #(Len(Trim(variables.workspace.contact_photo ?: '')) ? 'solid' : 'dashed')# var(--admin-border); display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--admin-surface); cursor:pointer; flex-shrink:0; position:relative; transition:all 0.2s ease; box-shadow:var(--shadow-sm);"
+							     onmouseenter="this.style.borderColor='var(--admin-primary)'; this.style.transform='scale(1.02)';"
+							     onmouseleave="this.style.borderColor='var(--admin-border)'; this.style.transform='scale(1)';"
+							     title="Click to select or change 200x200 profile photo">
+								<img id="contactPhotoImg" 
+								     src="#EncodeForHTMLAttribute(variables.workspace.contact_photo ?: '')#" 
+								     alt="Profile photo preview" 
+								     style="width:100%; height:100%; object-fit:cover; display:#(Len(Trim(variables.workspace.contact_photo ?: '')) ? 'block' : 'none')#;" 
+								     onerror="this.style.display='none'; document.getElementById('contactPhotoPlaceholder').style.display='flex';" />
+								<div id="contactPhotoPlaceholder" style="color:var(--admin-text-muted); display:#(Len(Trim(variables.workspace.contact_photo ?: '')) ? 'none' : 'flex')#; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:1rem;">
+									<div style="width:48px; height:48px; border-radius:50%; background:var(--admin-surface-hover); display:flex; align-items:center; justify-content:center; margin-bottom:0.5rem; color:var(--admin-text-muted);">
+										#svgIcon(name="user", size=28)#
+									</div>
+									<span style="font-size:0.85rem; font-weight:700; color:var(--admin-text-main);">Choose Photo</span>
+									<span style="font-size:0.72rem; color:var(--admin-text-muted); margin-top:2px;">Click to browse 200 &times; 200</span>
+								</div>
+							</div>
 
-		<!--- PANEL 4 (6-col): OPERATING HOURS & SCHEDULE --->
-		<div class="admin-card col-6">
-			<div class="card-header">
-				<div style="display:flex; align-items:center; gap:0.5rem;">
-					<div style="width:30px; height:30px; border-radius:var(--radius-sm); background:rgba(245,158,11,0.1); color:var(--admin-warning, ##d97706); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-						#svgIcon(name="clock", size=16)#
-					</div>
-					<div>
-						<h2 style="font-size:0.95rem; font-weight:700; margin:0; color:var(--admin-text-main);">Operating Hours &amp; Schedule</h2>
-						<div style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.1rem;">Public office hours, walk-in availability, and scheduling details.</div>
-					</div>
-				</div>
-				<span class="badge badge-warning" style="font-size:0.7rem; padding:0.2rem 0.5rem;">Schedule</span>
-			</div>
-			<div class="card-body">
-				<div>
-					<label for="office_hours" class="ws-form-label">Office Hours</label>
-					<textarea id="office_hours" name="office_hours" class="form-control" rows="4" placeholder="Please enter Office Hours (e.g. Monday - Friday: 8:00 AM - 5:00 PM)">#EncodeForHTML(variables.workspace.office_hours)#</textarea>
-				</div>
+							<!--- Controls & Input --->
+							<div style="width:100%;">
+								<div style="display:flex; gap:0.4rem; align-items:center;">
+									<input type="text" id="contact_photo" name="contact_photo" class="form-control" style="font-size:0.82rem; height:36px;" value="#EncodeForHTMLAttribute(variables.workspace.contact_photo ?: '')#" placeholder="/files/[workspace]/images/photo.jpg" oninput="updateContactPhotoPreview(this.value)" autocomplete="off">
+									<button type="button" class="btn btn-outline-secondary btn-sm" onclick="openMediaPickerForContactPhoto()" title="Browse Media Library" style="display:inline-flex; align-items:center; gap:0.35rem; white-space:nowrap; height:36px; padding:0 0.85rem; font-weight:600;">
+										#svgIcon(name="folder", size=14)#
+										<span>Browse</span>
+									</button>
+									<button type="button" id="btnRemoveContactPhoto" class="btn btn-outline-danger btn-sm" onclick="removeContactPhoto()" title="Remove profile photo" style="display:#(Len(Trim(variables.workspace.contact_photo ?: '')) ? 'inline-flex' : 'none')#; align-items:center; gap:0.25rem; white-space:nowrap; height:36px; padding:0 0.65rem;">
+										#svgIcon(name="trash", size=13)#
+									</button>
+								</div>
+								<div style="font-size:0.73rem; color:var(--admin-text-muted); margin-top:0.35rem; display:flex; justify-content:space-between; align-items:center;">
+									<span>Recommended size: 200 &times; 200 px headshot portrait.</span>
+									<button type="button" onclick="openMediaPickerForContactPhoto()" style="background:none; border:none; color:var(--admin-primary); cursor:pointer; font-size:0.73rem; font-weight:600; padding:0; display:inline-flex; align-items:center; gap:0.25rem;">
+										<span>Media Library</span>
+										&rarr;
+									</button>
+								</div>
+							</div>
+						</div>
 
-				<div style="background:var(--admin-surface-hover); border:1px solid var(--admin-border); border-radius:var(--radius-sm); padding:0.75rem 0.85rem; font-size:0.76rem; color:var(--admin-text-muted); display:flex; align-items:flex-start; gap:0.5rem;">
-					<span style="color:var(--admin-primary); margin-top:1px;">#svgIcon(name="info", size=14)#</span>
-					<span>These operating hours will be displayed on the public department portal, staff directories, and municipal visitor guides.</span>
+						<!--- Job Title --->
+						<div>
+							<label for="job_title" class="ws-form-label">Job Title</label>
+							<input type="text" id="job_title" name="job_title" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.job_title ?: '')#" placeholder="e.g. County Assessor or Director of Community Development" autocomplete="off">
+							<small style="color:var(--admin-text-muted); font-size:0.73rem; display:block; margin-top:0.25rem;">
+								Official title or municipal role displayed on citizen directories and page headers
+							</small>
+						</div>
+
+						<div class="ws-grid-2">
+							<div>
+								<label for="contact_first_name" class="ws-form-label">First Name</label>
+								<input type="text" id="contact_first_name" name="contact_first_name" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_first_name)#" placeholder="e.g. Deanna" autocomplete="off">
+							</div>
+							<div>
+								<label for="contact_last_name" class="ws-form-label">Last Name</label>
+								<input type="text" id="contact_last_name" name="contact_last_name" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_last_name)#" placeholder="e.g. Walter" autocomplete="off">
+							</div>
+						</div>
+
+						<div>
+							<label for="contact_email" class="ws-form-label">Official Email</label>
+							<input type="email" id="contact_email" name="contact_email" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_email)#" placeholder="e.g. contact@chelancounty.gov" autocomplete="off">
+						</div>
+
+						<div class="ws-grid-2">
+							<div>
+								<label for="contact_phone" class="ws-form-label">Phone</label>
+								<input type="tel" id="contact_phone" name="contact_phone" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_phone)#" placeholder="e.g. 509-667-6800" autocomplete="off">
+							</div>
+							<div>
+								<label for="contact_fax" class="ws-form-label">Fax</label>
+								<input type="tel" id="contact_fax" name="contact_fax" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.contact_fax)#" placeholder="e.g. 509-667-6860" autocomplete="off">
+							</div>
+						</div>
+					</div>
+
+					<!--- RIGHT COLUMN: Physical Location & Operating Hours --->
+					<div style="display:flex; flex-direction:column; gap:1rem;">
+						<div style="font-size:0.8rem; font-weight:700; color:var(--admin-text-subtle); text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:0.4rem;">
+							#svgIcon(name="map-pin", size=13)#
+							<span>Facility Physical Address &amp; Operating Hours</span>
+						</div>
+
+						<div>
+							<label for="address" class="ws-form-label">Street Address</label>
+							<input type="text" id="address" name="address" class="form-control" placeholder="Please enter address (e.g. 350 Orondo Ave)" value="#EncodeForHTMLAttribute(variables.workspace.address)#" autocomplete="off">
+							<input type="text" id="address2" name="address2" class="form-control" placeholder="Suite, unit, floor, or building (optional)" value="#EncodeForHTMLAttribute(variables.workspace.address2)#" style="margin-top:0.5rem;" autocomplete="off">
+						</div>
+
+						<div class="ws-grid-3">
+							<div>
+								<label for="city" class="ws-form-label">City</label>
+								<input type="text" id="city" name="city" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.city)#" autocomplete="off">
+							</div>
+							<div>
+								<label for="state" class="ws-form-label">State</label>
+								<input type="text" id="state" name="state" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.state)#" autocomplete="off">
+							</div>
+							<div>
+								<label for="zip" class="ws-form-label">Zip</label>
+								<input type="text" id="zip" name="zip" class="form-control" value="#EncodeForHTMLAttribute(variables.workspace.zip)#" autocomplete="off">
+							</div>
+						</div>
+
+						<div>
+							<label for="office_hours" class="ws-form-label">Office Hours &amp; Schedule</label>
+							<textarea id="office_hours" name="office_hours" class="form-control" rows="3" placeholder="Please enter Office Hours (e.g. Monday - Friday: 8:00 AM - 5:00 PM)">#EncodeForHTML(variables.workspace.office_hours)#</textarea>
+						</div>
+
+						<div style="background:var(--admin-surface-hover); border:1px solid var(--admin-border); border-radius:var(--radius-sm); padding:0.65rem 0.8rem; font-size:0.76rem; color:var(--admin-text-muted); display:flex; align-items:flex-start; gap:0.5rem;">
+							<span style="color:var(--admin-primary); margin-top:1px;">#svgIcon(name="info", size=14)#</span>
+							<span>These leadership details, operating hours, and facility coordinates will be published on public portal headers, citizen directories, and staff listings.</span>
+						</div>
+					</div>
 				</div>
 			</div>
 			<div class="card-footer" style="padding:1rem 1.25rem; background:var(--admin-bg); border-top:1px solid var(--admin-border); display:flex; justify-content:space-between; align-items:center; min-height:57px; box-sizing:border-box;">
@@ -487,4 +599,158 @@ document.addEventListener("DOMContentLoaded", function() {
 	var initialVal = (hexInput && hexInput.value.trim()) ? hexInput.value.trim() : "0073AA";
 	applyColor("#" + initialVal);
 });
+</script>
+
+<!--- Media Picker Modal Overlay for Workspaces --->
+<cfoutput>
+<div class="admin-modal-backdrop" id="mediaPickerModalBackdrop" style="display:none; position:fixed; inset:0; z-index:99998; background:rgba(15,23,42,0.72) !important; backdrop-filter:blur(6px) !important; -webkit-backdrop-filter:blur(6px) !important; opacity:0; visibility:hidden; transition:opacity 0.2s ease, visibility 0.2s ease;" onclick="closeMediaPickerModal()"></div>
+<div class="admin-modal" id="mediaPickerModal" role="dialog" aria-modal="true" aria-labelledby="mediaPickerModalTitle" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:99999; width:94vw; max-width:1300px; height:85vh; background:var(--admin-surface); border-radius:var(--radius-lg); box-shadow:0 25px 65px rgba(15,23,42,0.35); border:1px solid var(--admin-border); overflow:hidden; flex-direction:column;">
+	<div class="modal-header" style="padding:1rem 1.25rem; border-bottom:1px solid var(--admin-border); display:flex; justify-content:space-between; align-items:center; background:var(--admin-bg, ##f8fafc);">
+		<h2 class="modal-title" id="mediaPickerModalTitle" style="margin:0; font-size:1.05rem; font-weight:700; display:flex; align-items:center; gap:0.5rem; color:var(--admin-text-main);">
+			#svgIcon(name="image", size=18)#
+			<span id="mediaPickerTitleText">Select Leadership Profile Photo</span>
+		</h2>
+		<div style="display:flex; align-items:center; gap:0.5rem;">
+			<button type="button" class="btn btn-outline-primary btn-sm" onclick="triggerMediaPickerUpload()" style="display:inline-flex; align-items:center; gap:0.35rem;" title="Upload new media asset to repository">
+				#svgIcon(name="upload", size=14)#
+				<span>Upload New File</span>
+			</button>
+			<button type="button" class="btn btn-secondary btn-sm" onclick="closeMediaPickerModal()" aria-label="Close Media Picker" id="btnCloseMediaPicker">
+				#svgIcon(name="x", size=16)#
+			</button>
+		</div>
+	</div>
+	<div style="flex:1; width:100%; height:calc(100% - 60px); position:relative;">
+		<iframe id="mediaPickerIframe" src="about:blank" style="width:100%; height:100%; border:none;" title="Media Asset Picker"></iframe>
+	</div>
+</div>
+</cfoutput>
+
+<script>
+window.updateContactPhotoPreview = function(url) {
+	url = (url || '').trim();
+	var img = document.getElementById('contactPhotoImg');
+	var placeholder = document.getElementById('contactPhotoPlaceholder');
+	var btnRemove = document.getElementById('btnRemoveContactPhoto');
+	var wrap = document.getElementById('contactPhotoPreviewWrap');
+	if (url.length > 0) {
+		if (img) {
+			img.src = url;
+			img.style.display = 'block';
+		}
+		if (placeholder) placeholder.style.display = 'none';
+		if (btnRemove) btnRemove.style.display = 'inline-flex';
+		if (wrap) wrap.style.borderStyle = 'solid';
+	} else {
+		if (img) {
+			img.src = '';
+			img.style.display = 'none';
+		}
+		if (placeholder) placeholder.style.display = 'flex';
+		if (btnRemove) btnRemove.style.display = 'none';
+		if (wrap) wrap.style.borderStyle = 'dashed';
+	}
+};
+
+window.removeContactPhoto = function() {
+	var input = document.getElementById('contact_photo');
+	if (input) input.value = '';
+	updateContactPhotoPreview('');
+	if (typeof window.showToast === 'function') {
+		window.showToast('Profile photo removed.', 'info');
+	}
+};
+
+window.openMediaPickerForContactPhoto = function() {
+	var vDir = (document.getElementById('virtual_directory') ? document.getElementById('virtual_directory').value.trim() : '') || 'global';
+	window.openMediaPicker('image', {
+		workspace: vDir,
+		folder: 'images',
+		title: 'Select Leadership Profile Photo',
+		onSelect: function(payload) {
+			if (!payload) return;
+			var url = payload.url || (payload.data && payload.data.webUrl) || '';
+			if (!url) return;
+			var input = document.getElementById('contact_photo');
+			if (input) input.value = url;
+			updateContactPhotoPreview(url);
+			if (typeof window.showToast === 'function') {
+				window.showToast('Profile photo selected successfully.', 'success');
+			}
+		}
+	});
+};
+
+window.openMediaPicker = function(mode, options) {
+	options = options || {};
+	var modal = document.getElementById("mediaPickerModal");
+	var backdrop = document.getElementById("mediaPickerModalBackdrop");
+	var iframe = document.getElementById("mediaPickerIframe");
+	var title = document.getElementById("mediaPickerTitleText");
+
+	if (title) {
+		title.textContent = options.title || 'Select Asset from Media Library';
+	}
+	var activeWs = options.workspace || (document.getElementById('virtual_directory') ? document.getElementById('virtual_directory').value.trim() : '') || 'global';
+	var pickerType = (mode === 'document') ? 'document' : 'image';
+	var folder = options.folder || 'images';
+
+	if (typeof options.onSelect === 'function') {
+		window._mediaPickerCustomCallback = options.onSelect;
+	} else {
+		window._mediaPickerCustomCallback = null;
+	}
+
+	if (iframe) {
+		iframe.src = '/media/picker?picker=' + encodeURIComponent(mode) + '&type=' + encodeURIComponent(pickerType) + '&folder=' + encodeURIComponent(folder) + '&ws=' + encodeURIComponent(activeWs) + '&callback=onMediaSelectedFromPicker';
+	}
+	if (modal) {
+		modal.style.display = 'flex';
+		modal.classList.add('open');
+	}
+	if (backdrop) {
+		backdrop.style.display = 'block';
+		backdrop.style.opacity = '1';
+		backdrop.style.visibility = 'visible';
+		backdrop.classList.add('open');
+	}
+};
+
+window.closeMediaPickerModal = function() {
+	var modal = document.getElementById("mediaPickerModal");
+	var backdrop = document.getElementById("mediaPickerModalBackdrop");
+	var iframe = document.getElementById("mediaPickerIframe");
+	if (modal) {
+		modal.style.display = 'none';
+		modal.classList.remove('open');
+	}
+	if (backdrop) {
+		backdrop.style.display = 'none';
+		backdrop.style.opacity = '0';
+		backdrop.style.visibility = 'hidden';
+		backdrop.classList.remove('open');
+	}
+	if (iframe) {
+		iframe.src = 'about:blank';
+	}
+	window._mediaPickerCustomCallback = null;
+};
+
+window.onMediaSelectedFromPicker = function(payload) {
+	var cb = window._mediaPickerCustomCallback;
+	closeMediaPickerModal();
+	if (typeof cb === 'function') {
+		cb(payload);
+	}
+};
+
+window.triggerMediaPickerUpload = function() {
+	try {
+		var iframe = document.getElementById("mediaPickerIframe");
+		if (iframe && iframe.contentDocument) {
+			var b = iframe.contentDocument.getElementById("btn-upload");
+			if (b) { b.click(); return; }
+		}
+	} catch (e) {}
+};
 </script>

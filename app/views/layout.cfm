@@ -25,7 +25,7 @@
 			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 
 			<!--- Our custom CMS Admin stylesheet inspired by Mashable Light --->
-			<link href="/stylesheets/admin-theme.css?v=3.0" media="all" rel="stylesheet" type="text/css">
+			<link href="/stylesheets/admin-theme.css?v=4.1" media="all" rel="stylesheet" type="text/css">
 			<link href="/stylesheets/jbdeditor.css?v=1.8" media="all" rel="stylesheet" type="text/css">
 			<link href="/stylesheets/jbd-templates.css?v=1.5" media="all" rel="stylesheet" type="text/css">
 			<cfif structKeyExists(params, "controller") and params.controller eq "forms">
@@ -646,7 +646,7 @@
 									</ul>
 								</li>
 
-								<li class="nav-item has-submenu <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'documentation' ? 'open active' : '')#</cfoutput>">
+								<li class="nav-item has-submenu <cfoutput>#(structKeyExists(params, 'controller') and (params.controller eq 'documentation' or (params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'startup')) ? 'open active' : '')#</cfoutput>">
 									<a href="javascript:void(0)" class="nav-link">
 										<span class="nav-link-main">
 											<span class="nav-icon"><cfoutput>#svgIcon(name="book", size=18)#</cfoutput></span>
@@ -666,6 +666,9 @@
 										</li>
 										<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'documentation' and structKeyExists(params, 'action') and params.action eq 'editor' ? 'active' : '')#</cfoutput>">
 											<a href="<cfoutput>#urlFor(controller='documentation', action='editor')#</cfoutput>" class="submenu-link">Rich Text Editor Guide &amp; Demo</a>
+										</li>
+										<li class="submenu-item <cfoutput>#((structKeyExists(params, 'controller') and params.controller eq 'documentation' and structKeyExists(params, 'action') and params.action eq 'startup') or (structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'startup')) ? 'active' : ''#</cfoutput>">
+											<a href="<cfoutput>#urlFor(controller='documentation', action='startup')#</cfoutput>" class="submenu-link">Startup &amp; Front-End (.css)</a>
 										</li>
 									</ul>
 								</li>
@@ -780,7 +783,7 @@
 										</a>
 									</li>
 
-									<li class="nav-item has-submenu <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' ? 'open active' : '')#</cfoutput>">
+									<li class="nav-item has-submenu <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and (not structKeyExists(params, 'action') or params.action neq 'startup') ? 'open active' : '')#</cfoutput>">
 										<a href="javascript:void(0)" class="nav-link">
 											<span class="nav-link-main">
 												<span class="nav-icon"><cfoutput>#svgIcon(name="settings", size=18)#</cfoutput></span>
@@ -793,7 +796,6 @@
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'seo' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='settings', action='seo')#</cfoutput>" class="submenu-link">Reading &amp; SEO</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'media' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='settings', action='media')#</cfoutput>" class="submenu-link">Media Sizes</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'system' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='settings', action='system')#</cfoutput>" class="submenu-link">System Info</a></li>
-											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'settings' and structKeyExists(params, 'action') and params.action eq 'startup' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='settings', action='startup')#</cfoutput>" class="submenu-link">Startup &amp; Front-End (.css)</a></li>
 										</ul>
 									</li>
 								</ul>

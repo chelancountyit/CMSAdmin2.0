@@ -59,6 +59,12 @@ BEGIN
         [redirect_url]        NVARCHAR(500) NULL,
         [department]          NVARCHAR(150) NULL,
         [department_category] NVARCHAR(100) NULL,
+        [storage_path]        NVARCHAR(255) NULL,
+        [domain_name]         NVARCHAR(255) NULL,
+        [project_path]        NVARCHAR(255) NULL,
+        [leadership_type]     NVARCHAR(20) NOT NULL CONSTRAINT [DF_cms_ws_lead_type] DEFAULT ('dept_head'),
+        [job_title]           NVARCHAR(150) NULL,
+        [contact_photo]       NVARCHAR(500) NULL,
         [contact_first_name]  NVARCHAR(100) NULL,
         [contact_last_name]   NVARCHAR(100) NULL,
         [contact_email]       NVARCHAR(255) NULL,
@@ -69,7 +75,7 @@ BEGIN
         [city]                NVARCHAR(100) NOT NULL CONSTRAINT [DF_cms_ws_city] DEFAULT ('Wenatchee'),
         [state]               NVARCHAR(50) NOT NULL CONSTRAINT [DF_cms_ws_state] DEFAULT ('WA'),
         [zip]                 NVARCHAR(20) NOT NULL CONSTRAINT [DF_cms_ws_zip] DEFAULT ('98801'),
-        [office_hours]        NVARCHAR(255) NULL,
+        [office_hours]        NVARCHAR(500) NULL,
         [is_active]           BIT NOT NULL CONSTRAINT [DF_cms_ws_active] DEFAULT (1),
         [is_system]           BIT NOT NULL CONSTRAINT [DF_cms_ws_system] DEFAULT (0),
         [sort_order]          INT NOT NULL CONSTRAINT [DF_cms_ws_sort] DEFAULT (0),
@@ -596,7 +602,7 @@ BEGIN
         [createdat]       DATETIME2(7) NOT NULL CONSTRAINT [DF_form_subval_createdat] DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT [PK_form_submission_values] PRIMARY KEY CLUSTERED ([id] ASC),
         CONSTRAINT [FK_form_subval_submission] FOREIGN KEY ([submission_id]) REFERENCES [dbo].[form_submissions] ([id]) ON DELETE CASCADE,
-        CONSTRAINT [FK_form_subval_field] FOREIGN KEY ([field_id]) REFERENCES [dbo].[form_fields] ([id]) ON DELETE SET NULL
+        CONSTRAINT [FK_form_subval_field] FOREIGN KEY ([field_id]) REFERENCES [dbo].[form_fields] ([id]) ON DELETE NO ACTION
     );
 
     CREATE NONCLUSTERED INDEX [IX_form_submission_values_lookup] ON [dbo].[form_submission_values] ([submission_id] ASC, [field_key] ASC);

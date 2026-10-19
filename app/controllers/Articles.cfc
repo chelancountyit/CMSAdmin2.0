@@ -3,7 +3,7 @@ component extends="Controller" {
 	function config() {
 		super.config();
 		filters(through="requireLogin", except="api");
-		protectsFromForgery(except="api,save,delete,toggleStatus,saveCategory,deleteCategory,saveTag,deleteTag");
+		protectsFromForgery(except="api,save,delete,toggleStatus,saveCategory,deleteCategory,saveTag,deleteTag,convertDocument");
 	}
 
 	/**
@@ -956,6 +956,69 @@ component extends="Controller" {
 					ALTER TABLE articles ADD unpublish_at DATETIME2 NULL;
 			", {}, { datasource: "ChelanCountyWebsite" });
 		} catch (any e) {}
+	}
+	/**
+	 * Convert Word (.docx) or PDF (.pdf) to WCAG AA HTML for Article Editor
+	 */
+	function convertDocument() {
+		local.result = {
+			"success" = false,
+			"message" = "",
+			"data" = {}
+		};
+
+		try {
+			if (!StructKeyExists(form, "documentFile") && !StructKeyExists(params, "documentFile")) {
+				local.result.message = "Please select or drop a Word (.docx) or PDF (.pdf) file to convert.";
+				renderText(text = SerializeJSON(local.result), contentType = "application/json", layout = false);
+				return;
+			}
+
+			local.ws = StructKeyExists(params, "workspace") && Len(Trim(params.workspace)) ? LCase(Trim(params.workspace)) : (variables.activeWorkspaceId ?: "default");
+			if (!Len(local.ws) || local.ws == "global" || local.ws == "all") {
+				local.ws = "shared";
+			}
+
+			local.tempUploadDir = GetTempDirectory() & "doc_uploads_" & CreateUUID();
+			if (!DirectoryExists(local.tempUploadDir)) {
+				DirectoryCreate(local.tempUploadDir);
+			}
+
+			local.uploadRes = fileUpload(local.tempUploadDir, "documentFile", " ", "makeUnique");
+			local.uploadedPath = local.tempUploadDir & "\" & local.uploadRes.serverFile;
+			local.origName = local.uploadRes.clientFile;
+			local.ext = LCase(local.uploadRes.serverFileExt);
+
+			if (!ListFindNoCase("docx,pdf", local.ext)) {
+				try { FileDelete(local.uploadedPath); } catch (any fe) {}
+				try { DirectoryDelete(local.tempUploadDir); } catch (any de) {}
+				local.result.message = "Invalid file type (." & local.ext & "). Only Microsoft Word (.docx) and Adobe PDF (.pdf) documents are supported.";
+				renderText(text = SerializeJSON(local.result), contentType = "application/json", layout = false);
+				return;
+			}
+
+			local.converter = CreateObject("component", "app.models.DocumentConverter");
+			local.conv = local.converter.convertDocument(local.uploadedPath, local.origName, local.ws);
+
+			try {
+				if (FileExists(local.uploadedPath)) FileDelete(local.uploadedPath);
+				if (DirectoryExists(local.tempUploadDir)) DirectoryDelete(local.tempUploadDir);
+			} catch (any cleanErr) {}
+
+			if (local.conv.success) {
+				local.result.success = true;
+				local.result.message = local.conv.message;
+				local.result.data = local.conv;
+			} else {
+				local.result.message = local.conv.message;
+				local.result.data = local.conv;
+			}
+		} catch (any ex) {
+			local.result.message = "Document conversion server error: " & ex.message & (Len(ex.detail) ? " (" & ex.detail & ")" : "");
+		}
+
+		cfheader(name="Content-Type", value="application/json; charset=utf-8");
+		renderText(text = SerializeJSON(local.result), layout = false);
 	}
 
 }

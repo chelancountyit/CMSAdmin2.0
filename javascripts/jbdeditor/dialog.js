@@ -579,28 +579,38 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
           className: 'jbd-btn-primary',
           onClick: (d, overlay) => {
             const urlInput = overlay.querySelector('#jbd-image-url');
-            const alt = overlay.querySelector('#jbd-image-alt').value.trim();
+            const altInput = overlay.querySelector('#jbd-image-alt');
+            const alt = altInput ? altInput.value.trim() : '';
             const caption = overlay.querySelector('#jbd-image-caption').value.trim();
             const align = overlay.querySelector('#jbd-image-align').value;
             const width = overlay.querySelector('#jbd-image-width').value.trim() || '100%';
 
-            const submit = (src) => {
-              if (src) {
-                onConfirm({ src, alt: alt || caption || 'Image', caption, align, width });
-              }
-              d.close(overlay);
-            };
-
-            if (urlInput.value.trim()) {
-              submit(urlInput.value.trim());
-            } else {
+            if (!urlInput.value.trim()) {
+              urlInput.focus();
               if (window.adminAlert) {
                 window.adminAlert({ title: 'Image URL Required', message: 'Please provide an image URL.', type: 'warning' });
-              } else {
-                alert('Please provide an image URL.');
+              } else if (window.showToast) {
+                window.showToast('Please provide an image URL.', 'warning');
               }
+              return;
             }
-          }
+
+            if (!alt) {
+              if (altInput) {
+                altInput.focus();
+                altInput.style.borderColor = 'var(--admin-danger, #ef4444)';
+                altInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+              }
+              if (window.adminAlert) {
+                window.adminAlert({ title: 'WCAG 1.1.1 Required', message: 'Alternative Text is mandatory for all images under County ADA Title II policy. Please describe the image for screen readers before inserting.', type: 'warning' });
+              } else if (window.showToast) {
+                window.showToast('Alternative Text is mandatory for all images (WCAG 1.1.1).', 'warning');
+              }
+              return;
+            }
+
+            onConfirm({ src: urlInput.value.trim(), alt, caption, align, width });
+            d.close(overlay);
         }
       ]
     });

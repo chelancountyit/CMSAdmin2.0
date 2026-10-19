@@ -10,8 +10,8 @@ public void function ensureMasterWorkspacesTablePopulated() {
 		queryExecute("
 			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 			IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'global')
-				INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, is_active, is_system, sort_order)
-				VALUES ('global', 'All Workspaces', '', 'global', 'Global', 'badge-neutral', 'grid', 'County-wide unified view across all municipal divisions and portals', 'files/shared', 'shared', '', 'County-wide', 'County Administration', 1, 1, 0);
+				INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, storage_path, domain_name, project_path, leadership_type, is_active, is_system, sort_order)
+				VALUES ('global', 'All Workspaces', '', 'global', 'Global', 'badge-neutral', 'grid', 'County-wide unified view across all municipal divisions and portals', 'files/shared', 'shared', '', 'County-wide', 'County Administration', 'files/shared', 'www.chelancounty.gov', 'C:\inetpub\chelan-county', 'dept_head', 1, 1, 0);
 		", {}, { datasource: "ChelanCountyWebsite" });
 	} catch (any e) {
 		// Log or suppress schema verification errors
@@ -36,6 +36,7 @@ public array function getMasterWorkspaces() {
 				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT id, code, name, alias, type, badge, badge_class, icon, description,
 				       folder_path, virtual_directory, redirect_url, department, department_category,
+				       storage_path, domain_name, project_path, leadership_type, job_title, contact_photo,
 				       contact_first_name, contact_last_name, contact_email, contact_phone, contact_fax,
 				       address, address2, city, state, zip, office_hours, is_active, is_system, sort_order, color
 				FROM cms_workspaces
@@ -50,6 +51,9 @@ public array function getMasterWorkspaces() {
 					name: row.name,
 					alias: len(row.alias ?: "") ? row.alias : "",
 					type: row.type,
+					leadership_type: (structKeyExists(row, "leadership_type") && len(row.leadership_type ?: "")) ? row.leadership_type : "dept_head",
+					job_title: (structKeyExists(row, "job_title") && len(row.job_title ?: "")) ? row.job_title : "",
+					contact_photo: (structKeyExists(row, "contact_photo") && len(row.contact_photo ?: "")) ? row.contact_photo : "",
 					color: (structKeyExists(row, "color") && len(trim(row.color))) ? trim(row.color) : (row.type eq "dept" ? "##7e22ce" : (row.type eq "site" ? "##10b981" : "##0073aa")),
 					badge: row.badge,
 					badgeClass: row.badge_class,
@@ -58,11 +62,16 @@ public array function getMasterWorkspaces() {
 					subtitle: len(row.description ?: "") ? row.description : (row.name & " Portal"),
 					folderPath: row.folder_path,
 					virtual_directory: row.virtual_directory,
+					storage_path: (structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path,
+					domain_name: (structKeyExists(row, "domain_name") && len(row.domain_name ?: "")) ? row.domain_name : "www.chelancounty.gov",
+					project_path: (structKeyExists(row, "project_path") && len(row.project_path ?: "")) ? row.project_path : "C:\inetpub\chelan-county",
 					department: len(row.department ?: "") ? row.department : row.name,
 					department_category: len(row.department_category ?: "") ? row.department_category : "",
 					redirect_url: len(row.redirect_url ?: "") ? row.redirect_url : "",
 					is_system: (isNumeric(row.is_system) && row.is_system == 1) ? true : false,
 					contact: {
+						photo: (structKeyExists(row, "contact_photo") && len(row.contact_photo ?: "")) ? row.contact_photo : "",
+						job_title: (structKeyExists(row, "job_title") && len(row.job_title ?: "")) ? row.job_title : "",
 						first_name: len(row.contact_first_name ?: "") ? row.contact_first_name : "",
 						last_name: len(row.contact_last_name ?: "") ? row.contact_last_name : "",
 						email: len(row.contact_email ?: "") ? row.contact_email : "",
@@ -100,7 +109,11 @@ public array function getMasterWorkspaces() {
 				department_category: "County Administration",
 				redirect_url: "",
 				is_system: true,
+				job_title: "",
+				contact_photo: "",
 				contact: {
+					photo: "",
+					job_title: "",
 					first_name: "County",
 					last_name: "Administration",
 					email: "info@chelancounty.gov",

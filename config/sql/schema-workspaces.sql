@@ -43,6 +43,12 @@ BEGIN
         -- Departmental Categorization
         [department] NVARCHAR(150) NULL,                 -- e.g. 'Assessor', 'Human Resources', 'Public Works'
         [department_category] NVARCHAR(100) NULL,        -- e.g. 'Finance and Records', 'Internal Services', 'County Administration'
+        [storage_path] NVARCHAR(255) NULL,               -- Dedicated file repository path (e.g. 'files/assessor')
+        [domain_name] NVARCHAR(255) NULL,                -- Canonical website hostname (e.g. 'www.chelancounty.gov')
+        [project_path] NVARCHAR(255) NULL,               -- Server codebase directory (e.g. 'C:\inetpub\chelan-county')
+        [leadership_type] NVARCHAR(20) NOT NULL CONSTRAINT [DF_cms_ws_lead_type] DEFAULT ('dept_head'), -- 'elected' or 'dept_head'
+        [job_title] NVARCHAR(150) NULL,                  -- e.g. 'County Assessor'
+        [contact_photo] NVARCHAR(500) NULL,              -- Avatar image path
         
         -- Official Contact Information
         [contact_first_name] NVARCHAR(100) NULL,

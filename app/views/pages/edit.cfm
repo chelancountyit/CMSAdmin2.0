@@ -315,6 +315,152 @@
 		animation: a11yHighlightPulse 1.2s ease-in-out 3;
 		border-radius: 4px;
 	}
+
+	/* ----------------------------------------------------
+	   Feature 2.6: Document to WCAG AA Converter Studio
+	   ---------------------------------------------------- */
+	.pg-doc-drop-zone-wrap {
+		position: relative;
+	}
+	.pg-doc-drop-overlay {
+		position: absolute;
+		inset: 0;
+		z-index: 50;
+		background: rgba(255, 255, 255, 0.96);
+		backdrop-filter: blur(4px);
+		border: 2.5px dashed var(--admin-primary, ##0284c7);
+		border-radius: var(--radius-md, 0.5rem);
+		display: none;
+		align-items: center;
+		justify-content: center;
+		padding: 1.5rem;
+		text-align: center;
+		transition: all 0.2s ease;
+		pointer-events: none;
+	}
+	.pg-doc-drop-overlay.is-active {
+		display: flex;
+	}
+	.pg-doc-drop-inner {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.45rem;
+		max-width: 440px;
+	}
+	.pg-doc-drop-icon {
+		width: 52px;
+		height: 52px;
+		border-radius: 50%;
+		background: rgba(2, 132, 199, 0.12);
+		color: var(--admin-primary, ##0284c7);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		animation: docDropBounce 1s infinite alternate ease-in-out;
+		margin-bottom: 0.25rem;
+	}
+	@keyframes docDropBounce {
+		from { transform: translateY(0); }
+		to { transform: translateY(-6px); }
+	}
+	.pg-doc-drop-title {
+		font-size: 1.05rem;
+		font-weight: 700;
+		color: var(--admin-text-main, ##0f172a);
+	}
+	.pg-doc-drop-sub {
+		font-size: 0.8rem;
+		color: var(--admin-text-muted, ##64748b);
+		line-height: 1.35;
+	}
+	##pgDocConvertModalBackdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 99990;
+		background: rgba(15, 23, 42, 0.72);
+		backdrop-filter: blur(6px);
+		-webkit-backdrop-filter: blur(6px);
+	}
+	##pgDocConvertModal {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 99992;
+		width: min(94vw, 860px);
+		max-height: min(90vh, 880px);
+		background: var(--admin-surface, ##ffffff);
+		border-radius: var(--radius-lg, 0.75rem);
+		box-shadow: 0 25px 70px rgba(15, 23, 42, 0.4);
+		border: 1px solid var(--admin-border, ##cbd5e1);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	.doc-dropzone-box {
+		border: 2px dashed var(--admin-border, ##cbd5e1);
+		border-radius: var(--radius-md, 0.5rem);
+		padding: 1.75rem 1.25rem;
+		text-align: center;
+		cursor: pointer;
+		background: var(--admin-bg, ##f8fafc);
+		transition: all 0.2s ease;
+	}
+	.doc-dropzone-box:hover, .doc-dropzone-box.is-dragover {
+		border-color: var(--admin-primary, ##0284c7);
+		background: rgba(2, 132, 199, 0.04);
+	}
+	.doc-kpi-card {
+		padding: 0.75rem 0.9rem;
+		border-radius: var(--radius-md, 0.5rem);
+		background: var(--admin-surface, ##ffffff);
+		border: 1px solid var(--admin-border, ##cbd5e1);
+		text-align: center;
+	}
+	.doc-kpi-value {
+		font-size: 1.35rem;
+		font-weight: 700;
+		color: var(--admin-text-main, ##0f172a);
+	}
+	.doc-kpi-label {
+		font-size: 0.72rem;
+		color: var(--admin-text-muted, ##64748b);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		font-weight: 600;
+	}
+	##docPreviewVisual table {
+		width: 100%;
+		border-collapse: collapse;
+		margin: 1rem 0;
+	}
+	##docPreviewVisual th, ##docPreviewVisual td {
+		border: 1px solid var(--admin-border, ##cbd5e1);
+		padding: 0.5rem 0.75rem;
+		text-align: left;
+	}
+	##docPreviewVisual th {
+		background: var(--admin-bg, ##f8fafc);
+		font-weight: 700;
+	}
+	##docPreviewVisual img {
+		max-width: 100%;
+		height: auto;
+		display: block;
+		margin: 0.75rem 0;
+	}
+	##docPreviewVisual hr {
+		border: none;
+		border-top: 1px solid var(--admin-border, ##cbd5e1);
+		margin: 1.25rem 0;
+	}
+	##docPreviewVisual blockquote {
+		margin: 1rem 0;
+		padding: 0.5rem 1rem;
+		border-left: 3px solid var(--admin-primary, ##0284c7);
+		background: rgba(2, 132, 199, 0.04);
+	}
 </style>
 
 <div class="page-header">
@@ -394,6 +540,10 @@
 					<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; flex-wrap:wrap; gap:0.5rem;">
 						<label for="pgContent" class="form-label" style="margin-bottom:0;">Page Content</label>
 						<div style="display:flex; align-items:center; gap:0.35rem;">
+							<button type="button" class="btn btn-outline-primary btn-xs" id="btnEditorImportDoc" title="Import Word (.docx) or PDF and convert to WCAG AA HTML">
+								#svgIcon(name="file-text", size=13)#
+								<span>Import Word / PDF</span>
+							</button>
 							<button type="button" class="btn btn-outline btn-xs" id="btnEditorInsertCTA" title="Embed Call to Action card or grid into content">
 								#svgIcon(name="cta", size=13)#
 								<span>Embed Call to Action</span>
@@ -478,8 +628,19 @@
 						</div>
 					</div>
 
-					<textarea id="pgContent" name="content" class="form-control pg-editor" data-jbd-editor data-jbd-toolbar="basic" data-jbd-inline-toolbar="true" data-jbd-height="400px" data-jbd-placeholder="Type page content, add headings, media, tables, and block templates..." aria-describedby="pgContentHelp"><cfif isNew><cfelseif Len(Trim(page.content ?: ''))>#EncodeForHTML(page.content)#<cfelseif Len(Trim(page.body ?: ''))>#EncodeForHTML(page.body)#<cfelse><h2>#EncodeForHTML(page.title)#</h2>
+					<div id="pgEditorDropContainer" class="pg-doc-drop-zone-wrap">
+						<div id="pgDocDropOverlay" class="pg-doc-drop-overlay" style="display:none;" aria-hidden="true">
+							<div class="pg-doc-drop-inner">
+								<div class="pg-doc-drop-icon">
+									#svgIcon(name="file-text", size=28)#
+								</div>
+								<strong class="pg-doc-drop-title">Drop Word (.docx) or PDF document here</strong>
+								<span class="pg-doc-drop-sub">CMSAdmin will extract headings, tables, lists, and images into WCAG 2.1 AA HTML</span>
+							</div>
+						</div>
+						<textarea id="pgContent" name="content" class="form-control pg-editor" data-jbd-editor data-jbd-toolbar="basic" data-jbd-inline-toolbar="true" data-jbd-height="400px" data-jbd-placeholder="Type page content, add headings, media, tables, and block templates..." aria-describedby="pgContentHelp"><cfif isNew><cfelseif Len(Trim(page.content ?: ''))>#EncodeForHTML(page.content)#<cfelseif Len(Trim(page.body ?: ''))>#EncodeForHTML(page.body)#<cfelse><h2>#EncodeForHTML(page.title)#</h2>
 <p>#EncodeForHTML(page.summary)#</p></cfif></textarea>
+					</div>
 					<div id="pgContentHelp" class="pg-help">Accessible Rich Text Editor (WCAG 2.2 AA). Shortcuts: <kbd>Alt+F10</kbd> focus toolbar &middot; <kbd>&larr;/&rarr;</kbd> navigate &middot; <kbd>Esc</kbd> exit dialogs.</div>
 				</div>
 			</div>
@@ -5628,4 +5789,558 @@ if (typeof window.finishTopProgress === "function") window.finishTopProgress();
 		</div>
 	</div>
 </div>
+
+<!--- =========================================================================
+   Feature 2.6: Document to WCAG AA Converter Studio Modal & Drop Integration
+   ========================================================================= --->
+<div class="admin-modal-backdrop" id="pgDocConvertModalBackdrop" style="display:none;" onclick="closeDocConvertModal()"></div>
+<div class="admin-modal" id="pgDocConvertModal" role="dialog" aria-modal="true" aria-labelledby="docConvertModalTitle" style="display:none;">
+	<div class="modal-header" style="padding:1rem 1.25rem; border-bottom:1px solid var(--admin-border-subtle); display:flex; justify-content:space-between; align-items:flex-start; background:var(--admin-bg);">
+		<div>
+			<h2 class="modal-title" id="docConvertModalTitle" style="margin:0; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:0.5rem; color:var(--admin-text-main);">
+				<cfoutput>#svgIcon(name="file-text", size=18)#</cfoutput>
+				<span>Document to WCAG AA Converter Studio</span>
+			</h2>
+			<div style="font-size:0.8rem; color:var(--admin-text-muted); margin-top:0.25rem;">
+				Automatically extract headings, tables, lists, and images from Word (.docx) or PDF (.pdf) into accessible HTML.
+			</div>
+		</div>
+		<button type="button" class="btn btn-ghost btn-xs btn-icon-only" onclick="closeDocConvertModal()" aria-label="Close dialog">
+			<cfoutput>#svgIcon(name="x", size=16)#</cfoutput>
+		</button>
+	</div>
+
+	<div class="modal-body" style="padding:1.25rem; overflow-y:auto; flex:1; max-height:calc(88vh - 140px); display:flex; flex-direction:column; gap:1.25rem;">
+		<!--- Upload / Dropzone Card --->
+		<div id="docConvertUploadArea">
+			<div class="doc-dropzone-box" id="docModalDropzone" onclick="document.getElementById('pgDocFileInput').click();">
+				<div style="width:48px; height:48px; border-radius:50%; background:rgba(2, 132, 199, 0.1); color:var(--admin-primary); margin:0 auto 0.75rem auto; display:flex; align-items:center; justify-content:center;">
+					<cfoutput>#svgIcon(name="upload", size=24)#</cfoutput>
+				</div>
+				<strong style="display:block; font-size:1rem; color:var(--admin-text-main); margin-bottom:0.25rem;">Choose a Document or Drag &amp; Drop Here</strong>
+				<span style="display:block; font-size:0.82rem; color:var(--admin-text-muted); margin-bottom:0.85rem;">
+					Supports <strong>Microsoft Word (.docx)</strong> and <strong>Adobe PDF (.pdf)</strong> up to 35 MB
+				</span>
+				<div style="display:flex; justify-content:center; gap:0.5rem;">
+					<span class="badge badge-primary" style="font-size:0.72rem; letter-spacing:0.04em;">.DOCX (Word 2007+)</span>
+					<span class="badge badge-info" style="font-size:0.72rem; letter-spacing:0.04em;">.PDF (Adobe PDF)</span>
+				</div>
+				<input type="file" id="pgDocFileInput" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none;" onchange="handleDocFileSelected(this.files)">
+			</div>
+
+			<!--- Selected File Info Pill (Initially Hidden) --->
+			<div id="docSelectedFileInfo" style="display:none; margin-top:0.75rem; padding:0.75rem 1rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg); align-items:center; justify-content:space-between; gap:1rem;">
+				<div style="display:flex; align-items:center; gap:0.65rem; min-width:0; flex:1;">
+					<span style="color:var(--admin-primary); display:flex; align-items:center;"><cfoutput>#svgIcon(name="file-text", size=20)#</cfoutput></span>
+					<div style="min-width:0; flex:1;">
+						<strong id="docSelectedFileName" style="display:block; font-size:0.88rem; color:var(--admin-text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></strong>
+						<span id="docSelectedFileSize" style="font-size:0.75rem; color:var(--admin-text-muted);"></span>
+					</div>
+				</div>
+				<button type="button" class="btn btn-outline btn-xs" onclick="resetDocSelection()">Change File</button>
+			</div>
+		</div>
+
+		<!--- Import Options Card --->
+		<div class="card" id="docImportOptionsCard" style="padding:1rem 1.1rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-surface);">
+			<strong style="font-size:0.85rem; color:var(--admin-text-main); display:block; margin-bottom:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">
+				Import &amp; Accessibility Options
+			</strong>
+			<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1rem;">
+				<div>
+					<label class="form-label" style="font-size:0.8rem; font-weight:600; margin-bottom:0.35rem;">Destination Mode</label>
+					<div style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.82rem;">
+						<label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;">
+							<input type="radio" name="docDestMode" value="replace" checked style="accent-color:var(--admin-primary);">
+							<span><strong>Replace Page Content</strong> (Recommended)</span>
+						</label>
+						<label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;">
+							<input type="radio" name="docDestMode" value="append" style="accent-color:var(--admin-primary);">
+							<span>Append to bottom of existing content</span>
+						</label>
+						<label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;">
+							<input type="radio" name="docDestMode" value="insert" style="accent-color:var(--admin-primary);">
+							<span>Insert at current cursor position</span>
+						</label>
+					</div>
+				</div>
+				<div>
+					<label class="form-label" style="font-size:0.8rem; font-weight:600; margin-bottom:0.35rem;">Metadata &amp; Media</label>
+					<div style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.82rem;">
+						<label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;">
+							<input type="checkbox" id="docOptAutoTitle" checked style="accent-color:var(--admin-primary);">
+							<span>Update Page Title if Heading 1 / Title found</span>
+						</label>
+						<label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;">
+							<input type="checkbox" id="docOptAutoSummary" checked style="accent-color:var(--admin-primary);">
+							<span>Update Summary from introductory text</span>
+						</label>
+						<label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;">
+							<input type="checkbox" id="docOptExtractImages" checked style="accent-color:var(--admin-primary);">
+							<span>Extract &amp; save photos/charts to Media Library</span>
+						</label>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!--- Conversion Progress Stepper (Initially Hidden) --->
+		<div id="docConvertProgress" style="display:none; padding:1.75rem 1.25rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg); text-align:center;">
+			<div style="width:40px; height:40px; border-radius:50%; border:3px solid var(--admin-border); border-top-color:var(--admin-primary); margin:0 auto 0.75rem auto; animation:spin 0.8s linear infinite;"></div>
+			<strong id="docProgressStepMsg" style="display:block; font-size:0.95rem; color:var(--admin-text-main); margin-bottom:0.25rem;">Extracting and converting document...</strong>
+			<span style="font-size:0.8rem; color:var(--admin-text-muted);">Adobe ColdFusion 2025 is parsing structure, images, and generating WCAG AA HTML.</span>
+		</div>
+
+		<!--- Results & Preview Container (Initially Hidden) --->
+		<div id="docConvertResults" style="display:none; flex-direction:column; gap:1rem;">
+			<!--- KPI Row --->
+			<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:0.6rem;">
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="kpiDocWords">0</div>
+					<div class="doc-kpi-label">Words</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="kpiDocHeadings">0</div>
+					<div class="doc-kpi-label">Headings</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="kpiDocParagraphs">0</div>
+					<div class="doc-kpi-label">Paragraphs</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="kpiDocLists">0</div>
+					<div class="doc-kpi-label">Lists</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="kpiDocTables">0</div>
+					<div class="doc-kpi-label">Tables</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="kpiDocImages">0</div>
+					<div class="doc-kpi-label">Images</div>
+				</div>
+			</div>
+
+			<!--- WCAG Compliance Highlights Callout --->
+			<div style="padding:0.75rem 1rem; border-radius:var(--radius-md); background:rgba(34, 197, 94, 0.08); border:1.5px solid rgba(34, 197, 94, 0.3); color:##166534; font-size:0.82rem; line-height:1.45;">
+				<div style="display:flex; align-items:center; gap:0.4rem; font-weight:700; margin-bottom:0.25rem;">
+					<cfoutput>#svgIcon(name="check-circle", size=15)#</cfoutput>
+					<span>WCAG 2.1 AA Compliance Guarantees Applied</span>
+				</div>
+				<ul id="docWcagHighlightsList" style="margin:0.25rem 0 0; padding-left:1.25rem; font-size:0.8rem;"></ul>
+			</div>
+
+			<!--- Preview Area --->
+			<div style="border:1px solid var(--admin-border); border-radius:var(--radius-md); overflow:hidden; background:var(--admin-surface);">
+				<div style="padding:0.5rem 0.85rem; border-bottom:1px solid var(--admin-border-subtle); display:flex; justify-content:space-between; align-items:center; background:var(--admin-bg);">
+					<span style="font-size:0.8rem; font-weight:700; color:var(--admin-text-main);">Converted HTML Output</span>
+					<div class="pg-attr-tabs" role="tablist">
+						<button type="button" class="pg-attr-tab is-active" id="docTabVisual" onclick="setDocPreviewTab('visual')">Visual Preview</button>
+						<button type="button" class="pg-attr-tab" id="docTabCode" onclick="setDocPreviewTab('code')">HTML Source</button>
+					</div>
+				</div>
+				<div id="docPreviewVisual" style="padding:1.25rem; max-height:280px; overflow-y:auto; line-height:1.6; font-size:0.92rem; background:##ffffff;"></div>
+				<pre id="docPreviewCode" style="display:none; margin:0; padding:1.25rem; max-height:280px; overflow-y:auto; font-family:ui-monospace, monospace; font-size:0.8rem; background:var(--admin-bg); color:var(--admin-text-main); white-space:pre-wrap; word-break:break-all;"></pre>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal-footer" style="padding:0.85rem 1.25rem; border-top:1px solid var(--admin-border-subtle); display:flex; justify-content:space-between; align-items:center; background:var(--admin-bg);">
+		<div style="display:flex; gap:0.5rem;">
+			<button type="button" class="btn btn-outline btn-sm" onclick="closeDocConvertModal()">Cancel</button>
+			<button type="button" class="btn btn-ghost btn-sm" id="btnDocConvertReset" style="display:none;" onclick="resetDocSelection()">Convert Another Document</button>
+		</div>
+		<div style="display:flex; gap:0.5rem;">
+			<button type="button" class="btn btn-primary btn-sm" id="btnDocConvertStart" onclick="startDocumentConversion()" disabled>
+				<cfoutput>#svgIcon(name="refresh-cw", size=14)#</cfoutput>
+				<span>Convert Document</span>
+			</button>
+			<button type="button" class="btn btn-success btn-sm" id="btnDocConvertPaste" style="display:none; font-weight:700;" onclick="pasteDocToEditor()">
+				<cfoutput>#svgIcon(name="check", size=14)#</cfoutput>
+				<span>Paste to Page Content</span>
+			</button>
+		</div>
+	</div>
+</div>
+
+<script>
+(function() {
+	var _selectedDocFile = null;
+	var _lastConvertedData = null;
+	var _dragCounter = 0;
+
+	// Elements
+	var modal = document.getElementById("pgDocConvertModal");
+	var backdrop = document.getElementById("pgDocConvertModalBackdrop");
+	var overlay = document.getElementById("pgDocDropOverlay");
+	var editorContainer = document.getElementById("pgEditorDropContainer");
+	var btnTrigger = document.getElementById("btnEditorImportDoc");
+
+	if (btnTrigger) {
+		btnTrigger.addEventListener("click", function(e) {
+			if (e) e.preventDefault();
+			openDocConvertModal();
+		});
+	}
+
+	// ----------------------------------------------------
+	// Drag and Drop Listeners for Page Content Area & Window
+	// ----------------------------------------------------
+	if (editorContainer && overlay) {
+		window.addEventListener("dragenter", function(e) {
+			_dragCounter++;
+			if (hasDocFiles(e.dataTransfer)) {
+				overlay.style.display = "flex";
+				overlay.classList.add("is-active");
+			}
+		});
+
+		window.addEventListener("dragleave", function(e) {
+			_dragCounter--;
+			if (_dragCounter <= 0) {
+				_dragCounter = 0;
+				overlay.style.display = "none";
+				overlay.classList.remove("is-active");
+			}
+		});
+
+		window.addEventListener("dragover", function(e) {
+			if (hasDocFiles(e.dataTransfer)) {
+				e.preventDefault();
+				overlay.style.display = "flex";
+				overlay.classList.add("is-active");
+			}
+		});
+
+		window.addEventListener("drop", function(e) {
+			_dragCounter = 0;
+			overlay.style.display = "none";
+			overlay.classList.remove("is-active");
+
+			if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+				var file = e.dataTransfer.files[0];
+				var name = file.name || "";
+				var ext = name.split(".").pop().toLowerCase();
+				if (ext === "docx" || ext === "pdf") {
+					e.preventDefault();
+					openDocConvertModal(file);
+				}
+			}
+		});
+	}
+
+	function hasDocFiles(dt) {
+		if (!dt || !dt.types) return false;
+		for (var i = 0; i < dt.types.length; i++) {
+			if (dt.types[i] === "Files") return true;
+		}
+		return false;
+	}
+
+	// ----------------------------------------------------
+	// Modal Controls
+	// ----------------------------------------------------
+	window.openDocConvertModal = function(file) {
+		if (modal && backdrop) {
+			backdrop.style.display = "block";
+			modal.style.display = "flex";
+			document.body.style.overflow = "hidden";
+			if (file) {
+				handleDocFileSelected([file]);
+				// Auto-start conversion on drag-drop
+				setTimeout(startDocumentConversion, 120);
+			}
+		}
+	};
+
+	window.closeDocConvertModal = function() {
+		if (modal && backdrop) {
+			modal.style.display = "none";
+			backdrop.style.display = "none";
+			document.body.style.overflow = "";
+		}
+	};
+
+	window.handleDocFileSelected = function(files) {
+		if (!files || files.length === 0) return;
+		var file = files[0];
+		var ext = (file.name || "").split(".").pop().toLowerCase();
+		if (ext !== "docx" && ext !== "pdf") {
+			if (window.adminAlert) {
+				window.adminAlert("Please select a Microsoft Word (.docx) or Adobe PDF (.pdf) file.", "Unsupported Format");
+			} else {
+				alert("Please select a .docx or .pdf file.");
+			}
+			return;
+		}
+
+		_selectedDocFile = file;
+		var infoEl = document.getElementById("docSelectedFileInfo");
+		var nameEl = document.getElementById("docSelectedFileName");
+		var sizeEl = document.getElementById("docSelectedFileSize");
+		var startBtn = document.getElementById("btnDocConvertStart");
+
+		if (nameEl) nameEl.textContent = file.name;
+		if (sizeEl) {
+			var sizeKB = Math.round(file.size / 1024);
+			var sizeStr = sizeKB > 1024 ? (Math.round(sizeKB / 102.4) / 10 + " MB") : (sizeKB + " KB");
+			sizeEl.textContent = sizeStr + " • " + ext.toUpperCase() + " Document";
+		}
+		if (infoEl) infoEl.style.display = "flex";
+		if (startBtn) startBtn.disabled = false;
+	};
+
+	window.resetDocSelection = function() {
+		_selectedDocFile = null;
+		_lastConvertedData = null;
+		var input = document.getElementById("pgDocFileInput");
+		if (input) input.value = "";
+		var infoEl = document.getElementById("docSelectedFileInfo");
+		if (infoEl) infoEl.style.display = "none";
+
+		var startBtn = document.getElementById("btnDocConvertStart");
+		if (startBtn) {
+			startBtn.style.display = "inline-flex";
+			startBtn.disabled = true;
+		}
+		var pasteBtn = document.getElementById("btnDocConvertPaste");
+		if (pasteBtn) pasteBtn.style.display = "none";
+		var resetBtn = document.getElementById("btnDocConvertReset");
+		if (resetBtn) resetBtn.style.display = "none";
+
+		var uploadArea = document.getElementById("docConvertUploadArea");
+		if (uploadArea) uploadArea.style.display = "block";
+		var optionsCard = document.getElementById("docImportOptionsCard");
+		if (optionsCard) optionsCard.style.display = "block";
+		var progressCard = document.getElementById("docConvertProgress");
+		if (progressCard) progressCard.style.display = "none";
+		var resultsCard = document.getElementById("docConvertResults");
+		if (resultsCard) resultsCard.style.display = "none";
+	};
+
+	window.startDocumentConversion = function() {
+		if (!_selectedDocFile) return;
+
+		var uploadArea = document.getElementById("docConvertUploadArea");
+		var optionsCard = document.getElementById("docImportOptionsCard");
+		var progressCard = document.getElementById("docConvertProgress");
+		var resultsCard = document.getElementById("docConvertResults");
+		var startBtn = document.getElementById("btnDocConvertStart");
+		var pasteBtn = document.getElementById("btnDocConvertPaste");
+		var resetBtn = document.getElementById("btnDocConvertReset");
+
+		if (uploadArea) uploadArea.style.display = "none";
+		if (optionsCard) optionsCard.style.display = "none";
+		if (progressCard) progressCard.style.display = "block";
+		if (resultsCard) resultsCard.style.display = "none";
+		if (startBtn) startBtn.style.display = "none";
+
+		var formData = new FormData();
+		formData.append("documentFile", _selectedDocFile);
+		
+		// Active workspace
+		var ws = "";
+		var wsPill = document.querySelector("[data-workspace-slug]");
+		if (wsPill) ws = wsPill.getAttribute("data-workspace-slug");
+		if (!ws) ws = "shared";
+		formData.append("workspace", ws);
+
+		fetch("/pages/convert-document", {
+			method: "POST",
+			headers: {
+				"X-Requested-With": "XMLHttpRequest"
+			},
+			body: formData
+		})
+		.then(function(res) {
+			if (!res.ok) throw new Error("Server responded with HTTP " + res.status);
+			return res.json();
+		})
+		.then(function(json) {
+			if (progressCard) progressCard.style.display = "none";
+
+			if (json.success && json.data) {
+				_lastConvertedData = json.data;
+				renderDocResults(json.data);
+				if (resultsCard) resultsCard.style.display = "flex";
+				if (pasteBtn) pasteBtn.style.display = "inline-flex";
+				if (resetBtn) resetBtn.style.display = "inline-flex";
+				if (window.showToast) {
+					window.showToast("Document converted successfully to WCAG AA HTML!", "success");
+				}
+			} else {
+				if (uploadArea) uploadArea.style.display = "block";
+				if (optionsCard) optionsCard.style.display = "block";
+				if (startBtn) {
+					startBtn.style.display = "inline-flex";
+					startBtn.disabled = false;
+				}
+				var msg = json.message || "An error occurred during document conversion.";
+				if (window.adminAlert) {
+					window.adminAlert(msg, "Conversion Notice");
+				} else {
+					alert(msg);
+				}
+			}
+		})
+		.catch(function(err) {
+			if (progressCard) progressCard.style.display = "none";
+			if (uploadArea) uploadArea.style.display = "block";
+			if (optionsCard) optionsCard.style.display = "block";
+			if (startBtn) {
+				startBtn.style.display = "inline-flex";
+				startBtn.disabled = false;
+			}
+			var errMsg = "Failed to communicate with document converter service: " + (err.message || err);
+			if (window.adminAlert) {
+				window.adminAlert(errMsg, "Conversion Failure");
+			} else {
+				alert(errMsg);
+			}
+		});
+	};
+
+	function renderDocResults(data) {
+		var stats = data.stats || {};
+		var kpiWords = document.getElementById("kpiDocWords");
+		var kpiHeadings = document.getElementById("kpiDocHeadings");
+		var kpiParas = document.getElementById("kpiDocParagraphs");
+		var kpiLists = document.getElementById("kpiDocLists");
+		var kpiTables = document.getElementById("kpiDocTables");
+		var kpiImages = document.getElementById("kpiDocImages");
+
+		if (kpiWords) kpiWords.textContent = stats.wordCount || 0;
+		if (kpiHeadings) kpiHeadings.textContent = stats.headingsCount || 0;
+		if (kpiParas) kpiParas.textContent = stats.paragraphsCount || 0;
+		if (kpiLists) kpiLists.textContent = stats.listsCount || 0;
+		if (kpiTables) kpiTables.textContent = stats.tablesCount || 0;
+		if (kpiImages) kpiImages.textContent = stats.imagesCount || (data.images ? data.images.length : 0);
+
+		// WCAG Highlights
+		var hlList = document.getElementById("docWcagHighlightsList");
+		if (hlList) {
+			hlList.innerHTML = "";
+			var hls = data.wcagHighlights || [];
+			if (hls.length === 0) {
+				hls.push("WCAG 1.3.1: Clean semantic markup generated.");
+			}
+			hls.forEach(function(item) {
+				var li = document.createElement("li");
+				li.textContent = item;
+				hlList.appendChild(li);
+			});
+		}
+
+		// Previews
+		var visPreview = document.getElementById("docPreviewVisual");
+		var codePreview = document.getElementById("docPreviewCode");
+		if (visPreview) visPreview.innerHTML = data.html || "<p class='text-muted'>No text content extracted.</p>";
+		if (codePreview) codePreview.textContent = data.html || "";
+		setDocPreviewTab("visual");
+	}
+
+	window.setDocPreviewTab = function(mode) {
+		var tabVis = document.getElementById("docTabVisual");
+		var tabCode = document.getElementById("docTabCode");
+		var paneVis = document.getElementById("docPreviewVisual");
+		var paneCode = document.getElementById("docPreviewCode");
+
+		if (mode === "visual") {
+			if (tabVis) tabVis.classList.add("is-active");
+			if (tabCode) tabCode.classList.remove("is-active");
+			if (paneVis) paneVis.style.display = "block";
+			if (paneCode) paneCode.style.display = "none";
+		} else {
+			if (tabCode) tabCode.classList.add("is-active");
+			if (tabVis) tabVis.classList.remove("is-active");
+			if (paneCode) paneCode.style.display = "block";
+			if (paneVis) paneVis.style.display = "none";
+		}
+	};
+
+	// ----------------------------------------------------
+	// Paste to Page Content & Synchronize
+	// ----------------------------------------------------
+	window.pasteDocToEditor = function() {
+		if (!_lastConvertedData || !_lastConvertedData.html) return;
+
+		var modeRadio = document.querySelector("input[name='docDestMode']:checked");
+		var mode = modeRadio ? modeRadio.value : "replace";
+
+		var htmlToInsert = _lastConvertedData.html;
+		var ed = (typeof JBDEditor !== "undefined") ? JBDEditor.get("#pgContent") : null;
+		var ta = document.getElementById("pgContent");
+
+		if (mode === "replace") {
+			if (ed && typeof ed.setHTML === "function") {
+				ed.setHTML(htmlToInsert);
+				if (typeof ed.syncToTarget === "function") ed.syncToTarget();
+			} else if (ta) {
+				ta.value = htmlToInsert;
+			}
+		} else if (mode === "append") {
+			var currentHtml = "";
+			if (ed && typeof ed.getHTML === "function") {
+				currentHtml = ed.getHTML();
+			} else if (ta) {
+				currentHtml = ta.value;
+			}
+			var combined = currentHtml.trim() ? (currentHtml + "\n\n" + htmlToInsert) : htmlToInsert;
+			if (ed && typeof ed.setHTML === "function") {
+				ed.setHTML(combined);
+				if (typeof ed.syncToTarget === "function") ed.syncToTarget();
+			} else if (ta) {
+				ta.value = combined;
+			}
+		} else if (mode === "insert") {
+			if (typeof insertSnippetAtCursor === "function") {
+				insertSnippetAtCursor("pgContent", htmlToInsert);
+			} else if (ed && typeof ed.insertHTML === "function") {
+				ed.insertHTML(htmlToInsert);
+			} else if (ta) {
+				ta.value += "\n" + htmlToInsert;
+			}
+		}
+
+		// Auto-populate Title if requested
+		var optTitle = document.getElementById("docOptAutoTitle");
+		if (optTitle && optTitle.checked && _lastConvertedData.title) {
+			var titleInput = document.getElementById("pgTitle");
+			if (titleInput && (!titleInput.value.trim() || mode === "replace")) {
+				titleInput.value = _lastConvertedData.title;
+				titleInput.dispatchEvent(new Event("input"));
+			}
+		}
+
+		// Auto-populate Summary if requested
+		var optSummary = document.getElementById("docOptAutoSummary");
+		if (optSummary && optSummary.checked && _lastConvertedData.summary) {
+			var summaryInput = document.getElementById("pgSummary");
+			var metaDescInput = document.getElementById("pgMetaDesc");
+			if (summaryInput && (!summaryInput.value.trim() || mode === "replace")) {
+				summaryInput.value = _lastConvertedData.summary;
+				summaryInput.dispatchEvent(new Event("input"));
+			}
+			if (metaDescInput && (!metaDescInput.value.trim() || mode === "replace")) {
+				metaDescInput.value = _lastConvertedData.summary.substring(0, 160);
+				metaDescInput.dispatchEvent(new Event("input"));
+			}
+		}
+
+		// Re-trigger In-Editor ADA Pre-Flight Linter immediately
+		setTimeout(function() {
+			if (window.PageA11yLinter && typeof window.PageA11yLinter.scan === "function") {
+				window.PageA11yLinter.scan();
+			}
+		}, 150);
+
+		if (window.showToast) {
+			window.showToast("Document converted and pasted into Page Content with WCAG AA compliance!", "success");
+		}
+
+		closeDocConvertModal();
+	};
+
+})();
+</script>
 

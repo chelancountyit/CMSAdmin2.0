@@ -303,6 +303,9 @@
 						<cfset local.contactState = (StructKeyExists(local.w, "contact") and IsStruct(local.w.contact) and StructKeyExists(local.w.contact, "state") and Len(local.w.contact.state)) ? local.w.contact.state : "WA">
 						<cfset local.contactZip = (StructKeyExists(local.w, "contact") and IsStruct(local.w.contact) and StructKeyExists(local.w.contact, "zip") and Len(local.w.contact.zip)) ? local.w.contact.zip : "98801">
 						<cfset local.contactHours = (StructKeyExists(local.w, "contact") and IsStruct(local.w.contact) and StructKeyExists(local.w.contact, "office_hours")) ? local.w.contact.office_hours : "">
+						<cfset local.leadershipType = (StructKeyExists(local.w, "leadership_type") and Len(local.w.leadership_type)) ? local.w.leadership_type : "dept_head">
+						<cfset local.jobTitle = (StructKeyExists(local.w, "job_title") and Len(local.w.job_title)) ? local.w.job_title : ((StructKeyExists(local.w, "contact") and IsStruct(local.w.contact) and StructKeyExists(local.w.contact, "job_title") and Len(local.w.contact.job_title)) ? local.w.contact.job_title : "")>
+						<cfset local.contactPhoto = (StructKeyExists(local.w, "contact_photo") and Len(local.w.contact_photo)) ? local.w.contact_photo : ((StructKeyExists(local.w, "contact") and IsStruct(local.w.contact) and StructKeyExists(local.w.contact, "photo") and Len(local.w.contact.photo)) ? local.w.contact.photo : "")>
 						
 						<cfset local.deptName = StructKeyExists(local.w, "department") and Len(local.w.department) ? local.w.department : local.w.name>
 						<cfset local.deptCat = StructKeyExists(local.w, "department_category") and Len(local.w.department_category) ? local.w.department_category : "">
@@ -397,33 +400,62 @@
 
 							<!--- 4. Contact Information --->
 							<td style="padding:0.85rem 1rem; vertical-align:top;">
-								<cfif Len(local.contactFullName)>
-									<div style="font-weight:600; color:var(--admin-text-main); font-size:0.82rem; display:flex; align-items:center; gap:0.35rem;">
-										#svgIcon(name="user", size=12)#
-										<span>#EncodeForHTML(local.contactFullName)#</span>
-									</div>
-								<cfelse>
-									<div style="color:var(--admin-text-muted); font-size:0.78rem; font-style:italic;">No contact designated</div>
-								</cfif>
+								<div style="display:flex; align-items:flex-start; gap:0.55rem;">
+									<cfif Len(local.contactPhoto)>
+										<img src="#EncodeForHTMLAttribute(local.contactPhoto)#" alt="#EncodeForHTMLAttribute(local.contactFullName)#" style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1.5px solid var(--admin-border); flex-shrink:0; margin-top:2px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+										<div style="width:34px; height:34px; border-radius:50%; background:var(--admin-surface-hover); border:1.5px solid var(--admin-border); display:none; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; color:var(--admin-text-muted);">
+											#svgIcon(name="user", size=15)#
+										</div>
+									<cfelse>
+										<div style="width:34px; height:34px; border-radius:50%; background:var(--admin-surface-hover); border:1.5px solid var(--admin-border); display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; color:var(--admin-text-muted);">
+											#svgIcon(name="user", size=15)#
+										</div>
+									</cfif>
+									<div style="flex:1; min-width:0;">
+										<div style="display:flex; align-items:center; gap:0.35rem; margin-bottom:0.25rem;">
+											<cfif local.leadershipType eq "elected">
+												<span class="badge" style="background:rgba(217,119,6,0.12); color:##b45309; border:1px solid rgba(217,119,6,0.25); font-size:0.65rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:9999px; display:inline-flex; align-items:center; gap:0.25rem;" title="Elected Official Leadership">
+													#svgIcon(name="award", size=10)# Elected
+												</span>
+											<cfelse>
+												<span class="badge" style="background:rgba(37,99,235,0.08); color:##1d4ed8; border:1px solid rgba(37,99,235,0.2); font-size:0.65rem; font-weight:600; padding:0.1rem 0.4rem; border-radius:9999px; display:inline-flex; align-items:center; gap:0.25rem;" title="Department Head Leadership">
+													#svgIcon(name="briefcase", size=10)# Dept Head
+												</span>
+											</cfif>
+										</div>
+										<cfif Len(local.contactFullName)>
+											<div style="font-weight:700; color:var(--admin-text-main); font-size:0.82rem; line-height:1.25;">
+												#EncodeForHTML(local.contactFullName)#
+											</div>
+											<cfif Len(local.jobTitle)>
+												<div style="font-size:0.73rem; color:var(--admin-text-muted); margin-top:0.15rem; font-weight:500;">
+													#EncodeForHTML(local.jobTitle)#
+												</div>
+											</cfif>
+										<cfelse>
+											<div style="color:var(--admin-text-muted); font-size:0.78rem; font-style:italic;">No contact designated</div>
+										</cfif>
 
-								<cfif Len(local.contactEmail)>
-									<div style="margin-top:0.25rem; font-size:0.76rem;">
-										<a href="mailto:#EncodeForHTMLAttribute(local.contactEmail)#" style="color:var(--admin-primary); text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem;">
-											#svgIcon(name="mail", size=11)#
-											<span>#EncodeForHTML(local.contactEmail)#</span>
-										</a>
-									</div>
-								</cfif>
+										<cfif Len(local.contactEmail)>
+											<div style="margin-top:0.25rem; font-size:0.75rem;">
+												<a href="mailto:#EncodeForHTMLAttribute(local.contactEmail)#" style="color:var(--admin-primary); text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem;">
+													#svgIcon(name="mail", size=11)#
+													<span>#EncodeForHTML(local.contactEmail)#</span>
+												</a>
+											</div>
+										</cfif>
 
-								<cfif Len(local.contactPhone)>
-									<div style="margin-top:0.15rem; font-size:0.75rem; color:var(--admin-text-muted); display:inline-flex; align-items:center; gap:0.3rem;">
-										#svgIcon(name="phone", size=11)#
-										<a href="tel:#EncodeForHTMLAttribute(local.contactPhone)#" style="color:var(--admin-text-muted); text-decoration:none;">#EncodeForHTML(local.contactPhone)#</a>
-										<cfif Len(local.contactFax)>
-											<span style="font-size:0.7rem;">(Fax: #EncodeForHTML(local.contactFax)#)</span>
+										<cfif Len(local.contactPhone)>
+											<div style="margin-top:0.15rem; font-size:0.74rem; color:var(--admin-text-muted); display:inline-flex; align-items:center; gap:0.25rem;">
+												#svgIcon(name="phone", size=11)#
+												<a href="tel:#EncodeForHTMLAttribute(local.contactPhone)#" style="color:var(--admin-text-muted); text-decoration:none;">#EncodeForHTML(local.contactPhone)#</a>
+												<cfif Len(local.contactFax)>
+													<span style="font-size:0.7rem;">(Fax: #EncodeForHTML(local.contactFax)#)</span>
+												</cfif>
+											</div>
 										</cfif>
 									</div>
-								</cfif>
+								</div>
 							</td>
 
 							<!--- 5. Office Location & Hours --->
@@ -552,6 +584,10 @@
 												</span>
 											</div>
 											<div class="ws-detail-row">
+												<span class="ws-detail-label">Domain Name:</span>
+												<span class="ws-detail-val"><code>#EncodeForHTML(local.w.domain_name ?: 'www.chelancounty.gov')#</code></span>
+											</div>
+											<div class="ws-detail-row">
 												<span class="ws-detail-label">Custom Redirect URL:</span>
 												<span class="ws-detail-val">
 													<cfif Len(local.redirectUrl)>
@@ -565,8 +601,12 @@
 												</span>
 											</div>
 											<div class="ws-detail-row" style="margin-top:0.75rem; padding-top:0.5rem; border-top:1px solid var(--admin-border);">
-												<span class="ws-detail-label">Storage Root:</span>
-												<span class="ws-detail-val"><code>files/#EncodeForHTML(local.virtualDir)#</code></span>
+												<span class="ws-detail-label">Storage Path:</span>
+												<span class="ws-detail-val"><code>#EncodeForHTML(local.w.storage_path ?: ('files/' & local.virtualDir))#</code></span>
+											</div>
+											<div class="ws-detail-row">
+												<span class="ws-detail-label">Project Path:</span>
+												<span class="ws-detail-val"><code>#EncodeForHTML(local.w.project_path ?: 'C:\inetpub\chelan-county')#</code></span>
 											</div>
 											<div class="ws-detail-row">
 												<span class="ws-detail-label">Media &amp; Docs:</span>
@@ -579,6 +619,39 @@
 											<div class="ws-detail-card-title">
 												#svgIcon(name="user", size=14)#
 												<span>Contact Information</span>
+											</div>
+											<cfif Len(local.contactPhoto)>
+												<div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid var(--admin-border);">
+													<img src="#EncodeForHTMLAttribute(local.contactPhoto)#" alt="Profile" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid var(--admin-border); box-shadow:var(--shadow-sm);" onerror="this.style.display='none';" />
+													<div style="flex:1; min-width:0;">
+														<div style="font-weight:700; font-size:0.88rem; color:var(--admin-text-main);">
+															#Len(local.contactFullName) ? EncodeForHTML(local.contactFullName) : 'Official Contact'#
+														</div>
+														<cfif Len(local.jobTitle)>
+															<div style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.1rem;">
+																#EncodeForHTML(local.jobTitle)#
+															</div>
+														</cfif>
+													</div>
+												</div>
+											</cfif>
+											<div class="ws-detail-row">
+												<span class="ws-detail-label">Leadership:</span>
+												<span class="ws-detail-val">
+													<cfif local.leadershipType eq "elected">
+														<span class="badge" style="background:rgba(217,119,6,0.12); color:##b45309; border:1px solid rgba(217,119,6,0.25); font-size:0.7rem; font-weight:700; padding:0.12rem 0.5rem; border-radius:9999px; display:inline-flex; align-items:center; gap:0.25rem;">
+															#svgIcon(name="award", size=11)# Elected Official
+														</span>
+													<cfelse>
+														<span class="badge" style="background:rgba(37,99,235,0.08); color:##1d4ed8; border:1px solid rgba(37,99,235,0.2); font-size:0.7rem; font-weight:600; padding:0.12rem 0.5rem; border-radius:9999px; display:inline-flex; align-items:center; gap:0.25rem;">
+															#svgIcon(name="briefcase", size=11)# Department Head
+														</span>
+													</cfif>
+												</span>
+											</div>
+											<div class="ws-detail-row">
+												<span class="ws-detail-label">Job Title:</span>
+												<span class="ws-detail-val">#Len(local.jobTitle) ? EncodeForHTML(local.jobTitle) : '<em style="color:var(--admin-text-muted);">None</em>'#</span>
 											</div>
 											<div class="ws-detail-row">
 												<span class="ws-detail-label">First Name:</span>
@@ -611,6 +684,19 @@
 											<div class="ws-detail-row">
 												<span class="ws-detail-label">Fax:</span>
 												<span class="ws-detail-val">#Len(local.contactFax) ? EncodeForHTML(local.contactFax) : '<em style="color:var(--admin-text-muted);">None</em>'#</span>
+											</div>
+											<div class="ws-detail-row">
+												<span class="ws-detail-label">Photo:</span>
+												<span class="ws-detail-val">
+													<cfif Len(local.contactPhoto)>
+														<a href="#EncodeForHTMLAttribute(local.contactPhoto)#" target="_blank" rel="noopener noreferrer" style="color:var(--admin-primary); display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem;">
+															#svgIcon(name="image", size=11)#
+															<span>#EncodeForHTML(GetFileFromPath(local.contactPhoto))#</span>
+														</a>
+													<cfelse>
+														<span style="color:var(--admin-text-muted); font-style:italic;">None configured</span>
+													</cfif>
+												</span>
 											</div>
 											<div class="ws-detail-row" style="margin-top:0.75rem; padding-top:0.5rem; border-top:1px solid var(--admin-border);">
 												<span class="ws-detail-label">Assigned Staff:</span>

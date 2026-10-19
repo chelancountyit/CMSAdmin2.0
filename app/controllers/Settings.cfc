@@ -284,15 +284,10 @@ component extends="Controller" {
 	}
 
 	/**
-	 * Startup & Front-End Styles
+	 * Startup & Front-End Styles (Moved to Documentation)
 	 */
 	function startup() {
-		pageTitle = "Startup & Front-End Styles (jbd-templates.css)";
-		var cssPath = expandPath("/stylesheets/jbd-templates.css");
-		jbdTemplateCssContent = "";
-		if (fileExists(cssPath)) {
-			jbdTemplateCssContent = fileRead(cssPath);
-		}
+		redirectTo(controller="documentation", action="startup");
 	}
 
 	// -------------------------------------------------------------------------

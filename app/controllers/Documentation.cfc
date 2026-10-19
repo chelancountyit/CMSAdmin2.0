@@ -22,4 +22,13 @@ component extends="Controller" {
 		variables.pageTitle = "Rich Text Editor (JBDEditor) Guide & Demo";
 	}
 
+	function startup() {
+		variables.pageTitle = "Startup & Front-End Styles (jbd-templates.css)";
+		var cssPath = expandPath("/stylesheets/jbd-templates.css");
+		variables.jbdTemplateCssContent = "";
+		if (fileExists(cssPath)) {
+			variables.jbdTemplateCssContent = fileRead(cssPath);
+		}
+	}
+
 }

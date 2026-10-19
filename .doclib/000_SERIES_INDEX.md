@@ -21,6 +21,7 @@
 | **009** | [009_DEVELOPMENT_STANDARDS_AND_RULES.md](file:///c:/inetpub/CMSAdmin2.0/.doclib/009_DEVELOPMENT_STANDARDS_AND_RULES.md) | Non-Negotiable Invariants: Zero CDN, No Native Dialogs, CSRF & UI Guidelines |
 | **010** | [010_SCHEDULED_PUBLISHING_AND_EXPIRATION_WORKER.md](file:///c:/inetpub/CMSAdmin2.0/.doclib/010_SCHEDULED_PUBLISHING_AND_EXPIRATION_WORKER.md) | Automated Publishing & Expiration Worker, Dual Triggers, Queue Telemetry & REST API |
 | **011** | [011_RFP_AND_SOLICITATIONS_MANAGER.md](file:///c:/inetpub/CMSAdmin2.0/.doclib/011_RFP_AND_SOLICITATIONS_MANAGER.md) | RFP & Solicitations Management Module, Sequenced Addenda, Planholders & Bids |
+| **012** | [012_DOCUMENT_CONVERTER_WCAG_AA.md](file:///c:/inetpub/CMSAdmin2.0/.doclib/012_DOCUMENT_CONVERTER_WCAG_AA.md) | Document to WCAG 2.1 AA HTML Converter Studio (Word .docx & PDF .pdf Extraction) |
 
 ---
 

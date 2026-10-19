@@ -2,7 +2,7 @@ component extends="Controller" {
 
 	function config() {
 		super.config();
-		protectsFromForgery(except="save,createModal,saveSubpage,deleteSubpage,saveFolderExplorer,deleteFolderExplorer,saveHowDoIItem,deleteHowDoIItem,reorderHowDoIItems,saveHowDoICategory,deleteHowDoICategory,prefillHowDoICategories,restoreRevision,snapshotRevision,saveCallToAction,deleteCallToAction,reorderCallToActions");
+		protectsFromForgery(except="save,createModal,saveSubpage,deleteSubpage,saveFolderExplorer,deleteFolderExplorer,saveHowDoIItem,deleteHowDoIItem,reorderHowDoIItems,saveHowDoICategory,deleteHowDoICategory,prefillHowDoICategories,restoreRevision,snapshotRevision,saveCallToAction,deleteCallToAction,reorderCallToActions,convertDocument");
 	}
 
 	/**
@@ -3232,6 +3232,76 @@ component extends="Controller" {
 			}
 		} catch (any e) {}
 		return local.cats;
+	}
+
+	/**
+	 * Convert Word (.docx) or PDF (.pdf) to WCAG 2.1 AA HTML
+	 */
+	function convertDocument() {
+		local.result = {
+			"success" = false,
+			"message" = "",
+			"data" = {}
+		};
+
+		try {
+			// Verify file upload
+			if (!StructKeyExists(form, "documentFile") && !StructKeyExists(params, "documentFile")) {
+				local.result.message = "Please select or drop a Word (.docx) or PDF (.pdf) file to convert.";
+				renderText(text = SerializeJSON(local.result), contentType = "application/json", layout = false);
+				return;
+			}
+
+			// Destination workspace
+			local.ws = StructKeyExists(params, "workspace") && Len(Trim(params.workspace)) ? LCase(Trim(params.workspace)) : activeWorkspaceId();
+			if (!Len(local.ws) || local.ws == "global" || local.ws == "all") {
+				local.ws = "shared";
+			}
+
+			// Temp upload dir
+			local.tempUploadDir = GetTempDirectory() & "doc_uploads_" & CreateUUID();
+			if (!DirectoryExists(local.tempUploadDir)) {
+				DirectoryCreate(local.tempUploadDir);
+			}
+
+			local.uploadRes = fileUpload(local.tempUploadDir, "documentFile", " ", "makeUnique");
+			local.uploadedPath = local.tempUploadDir & "\" & local.uploadRes.serverFile;
+			local.origName = local.uploadRes.clientFile;
+			local.ext = LCase(local.uploadRes.serverFileExt);
+
+			// Security check: only docx and pdf
+			if (!ListFindNoCase("docx,pdf", local.ext)) {
+				try { FileDelete(local.uploadedPath); } catch (any fe) {}
+				try { DirectoryDelete(local.tempUploadDir); } catch (any de) {}
+				local.result.message = "Invalid file type (." & local.ext & "). Only Microsoft Word (.docx) and Adobe PDF (.pdf) documents are supported.";
+				renderText(text = SerializeJSON(local.result), contentType = "application/json", layout = false);
+				return;
+			}
+
+			// Process conversion
+			local.converter = CreateObject("component", "app.models.DocumentConverter");
+			local.conv = local.converter.convertDocument(local.uploadedPath, local.origName, local.ws);
+
+			// Clean up upload temp file
+			try {
+				if (FileExists(local.uploadedPath)) FileDelete(local.uploadedPath);
+				if (DirectoryExists(local.tempUploadDir)) DirectoryDelete(local.tempUploadDir);
+			} catch (any cleanErr) {}
+
+			if (local.conv.success) {
+				local.result.success = true;
+				local.result.message = local.conv.message;
+				local.result.data = local.conv;
+			} else {
+				local.result.message = local.conv.message;
+				local.result.data = local.conv;
+			}
+		} catch (any ex) {
+			local.result.message = "Document conversion server error: " & ex.message & (Len(ex.detail) ? " (" & ex.detail & ")" : "");
+		}
+
+		cfheader(name="Content-Type", value="application/json; charset=utf-8");
+		renderText(text = SerializeJSON(local.result), layout = false);
 	}
 
 }

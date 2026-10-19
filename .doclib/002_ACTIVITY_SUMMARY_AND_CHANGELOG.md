@@ -12,6 +12,124 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 18, 2026 — Mandatory ADA Title II & WCAG 2.1 AA Requirements Enforcement for Images
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/controllers/Media.cfc`, `api/Files.cfc`, `app/views/media/upload.cfm`, `app/views/media/index.cfm`, `app/views/media/picker.cfm`, `javascripts/filexplorer/explorer.js`, `javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `vendor/jbdeditor/src/dialog.js`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Strict Server-Side WCAG 1.1.1 Validation (`Media.cfc:processUpload()`, `Media.cfc:updateMeta()`, `api/Files.cfc:updateMeta()`):**
+     - Enforced mandatory Alternative Text (`alt_text`) for all image file uploads (`.jpg, .jpeg, .png, .gif, .webp, .svg, .bmp, .ico`).
+     - Uploads missing alternative text (and not explicitly flagged as decorative) are rejected with a clear compliance error (`"ADA WCAG 2.1 AA Compliance Violation: Alternative Text (Image Description) is required for all images under County policy (WCAG 1.1.1)..."`), with temporary disk files deleted immediately.
+     - Rejected generic single-word placeholder alt text (*"image"*, *"photo"*, *"picture"*, *"graphic"*, *"screenshot"*) and raw filenames (*"photo.jpg"*).
+     - Guarded `updateMeta()` in both `Media.cfc` and `api/Files.cfc` so authors cannot wipe or blank out alternative text on existing images.
+  2. **Dedicated Upload Studio Validation (`app/views/media/upload.cfm`):**
+     - Updated Alternative Text field with a bold red `* Required for Images (WCAG 1.1.1)` badge, ADA Title II indicator, and character guidance (`0 / 150 rec.`).
+     - Added an accessible "Mark as decorative image" toggle (WCAG Technique H67) that dims and exempts alt text for presentation-only elements.
+     - Intercepted form submit: blocks submission, highlights input with red focus border, and presents accessible error prompt if image is uploaded without alt text.
+  3. **Quick Dropzone & Media Explorer Integration (`media/index.cfm`, `media/picker.cfm`, `explorer.js`):**
+     - Enhanced quick upload panel in both standalone Explorer and Picker iframe: dynamically detects image files and enforces required Alt Text (`el.uploadAlt.required = true`).
+     - Client-side submit validation intercepts missing or generic alt text, highlights the input with red danger styling, focuses the field, and halts upload.
+     - Added `data-act="edit-meta"` action in the Details inspector sidebar: renders an **"Enter WCAG Alt Text"** button (with red alert styling for non-compliant images) and a WCAG 1.1.1 missing banner.
+     - Added **Edit Image WCAG & Metadata Modal** (`#mediaEditMetaModal`): allows authors to update alternative text, title, caption, photographer attribution, and tags directly from the file explorer with live persistence to `dbo.media_assets`.
+  4. **Rich Text Editor Image Insertion (`jbdeditor.js`, `jbdeditor/dialog.js`, `vendor/jbdeditor/src/dialog.js`):**
+     - Enforced mandatory Alt Text in the "Insert Image" dialog. Authors cannot insert inline `<img>` tags into story content without providing descriptive alt text.
+     - Eliminated native browser `alert()` in favor of `window.adminAlert()` and `window.showToast()`.
+
+### Session: October 18, 2026 — Database Schema Completeness Audit & `form_submission_values` Constraint Resolution
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** SQL Server Database `ChelanCountyWebsite`, DDL Scripts (`config/sql/schema-complete.sql`, `config/sql/schema-form-builder.sql`, `config/sql/schema-workspaces.sql`), Documentation (`.doclib/008_DATABASE_SCHEMA_AND_SQL_SERVER_STANDARDS.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Missing Table Identified & Resolved (`dbo.form_submission_values`):**
+     - Discovered that `dbo.form_submission_values` was absent from SQL Server `ChelanCountyWebsite` because its initial DDL contained cascading foreign keys (`ON DELETE CASCADE`) to both `dbo.forms` (indirectly via `dbo.form_submissions` and `dbo.form_fields`), triggering SQL Server Error `Msg 1785` (cycles or multiple cascade paths).
+     - Altered `FK_form_subval_field` to `ON DELETE NO ACTION` while retaining `ON DELETE CASCADE` on `FK_form_subval_submission`.
+     - Executed the corrected DDL on `localhost` database `ChelanCountyWebsite`, creating `dbo.form_submission_values` and its composite nonclustered index `IX_form_submission_values_lookup` (`[submission_id], [field_id]`).
+  2. **Comprehensive 34-Table Schema Inventory & Verification:**
+     - Verified all 34 required CMS tables are 100% present with zero missing tables:
+       - **Core & Admin (5):** `cms_roles`, `cms_users`, `cms_workspaces`, `cms_user_workspaces`, `cms_settings`.
+       - **Pages & Revision History (5):** `pages`, `page_revisions`, `page_FolderExplorer`, `page_SubPage`, `page_call_to_actions`.
+       - **Articles & Public Information (3):** `articles`, `article_categories`, `article_tags`.
+       - **Online Forms & Submissions (6):** `forms`, `form_fields`, `form_submissions`, `form_submission_values`, `form_departments`, `form_audit_logs`.
+       - **Media Assets (1):** `media_assets`.
+       - **Calendar & Events (2):** `calendar_events`, `calendar_event_categories`.
+       - **How Do I Service Directory (2):** `how_do_i_items`, `how_do_i_categories`.
+       - **Recruitment & Jobs (2):** `job_listings`, `job_applications`.
+       - **Emergency Alerts (1):** `emergency_alerts`.
+       - **RFPs & Solicitations (4):** `rfp_solicitations`, `rfp_addenda`, `rfp_bids`, `rfp_planholders`.
+       - **Navigation & Press (3):** `navigation_menus`, `navigation_menu_items`, `press_releases`.
+  3. **Filtered Indexes & Foreign Key Auditing:**
+     - Confirmed all 24 filtered nonclustered indexes (`WHERE deletedat IS NULL`) are intact and functional.
+     - Confirmed 15 active foreign key constraints with zero orphaned child records.
+     - Identified legacy/superseded tables (`job_postings` superseded by `job_listings`, `page_CtaCard` superseded by `page_call_to_actions`).
+  4. **DDL Script & Repository Synchronization:**
+     - Updated `config/sql/schema-form-builder.sql` and `config/sql/schema-complete.sql` to incorporate the `ON DELETE NO ACTION` resolution for `form_submission_values`.
+     - Updated `config/sql/schema-workspaces.sql` and `config/sql/schema-complete.sql` with new workspace columns: `storage_path`, `domain_name`, `project_path`, `leadership_type`, `job_title`, and `contact_photo`.
+     - Updated [`.doclib/008_DATABASE_SCHEMA_AND_SQL_SERVER_STANDARDS.md`](file:///c:/inetpub/CMSAdmin2.0/.doclib/008_DATABASE_SCHEMA_AND_SQL_SERVER_STANDARDS.md) to document the complete table inventory and cascade path resolution.
+### Session: October 18, 2026 — Workspace Management: Leadership Classification, Job Title & Profile Photo Selection
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/models/`, `app/controllers/Workspaces.cfc`, `app/global/functions.cfm`, `app/views/workspaces/index.cfm`, `app/views/workspaces/new.cfm`, `app/views/workspaces/edit.cfm`, `dbo.cms_workspaces`, `.doclib/008_DATABASE_SCHEMA_AND_SQL_SERVER_STANDARDS.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Database Schema Enhancements (`dbo.cms_workspaces`):**
+     - Added `leadership_type NVARCHAR(20) NULL DEFAULT 'dept_head'`, `job_title NVARCHAR(150) NULL`, and `contact_photo NVARCHAR(500) NULL` to table `dbo.cms_workspaces`.
+     - Preserved filtered nonclustered index safety (`WHERE deletedat IS NULL`) by prefixing all queries with `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;`.
+     - Seeded benchmark record for `assessor`: `leadership_type = 'elected'`, `job_title = 'County Assessor'`, and `contact_photo = '/files/assessor/images/aswang.jpg'`.
+  2. **Controller & Helper Function Integration (`Workspaces.cfc`, `functions.cfm`):**
+     - Updated `functions.cfm:getMasterWorkspaces()` to query `job_title` and `contact_photo`, mapping them into workspace struct properties `job_title`, `contact_photo`, `contact.job_title`, and `contact.photo`.
+     - Updated `Workspaces.cfc`:
+       - `new()`: initialized default empty values for `leadership_type`, `job_title`, and `contact_photo`.
+       - `create()`: extracted `local.jobTitle` and `local.contactPhoto`, persisted them into `INSERT INTO cms_workspaces` with `cf_sql_varchar` parameter typing.
+       - `edit()`: queried and passed `job_title` and `contact_photo` into the edit form state.
+       - `update()`: extracted form inputs and persisted `job_title = :job_title, contact_photo = :contact_photo` in `UPDATE cms_workspaces`.
+       - `index()`: added `job_title` to the global text search filter haystack.
+  3. **Workspace Create & Edit Forms (`workspaces/new.cfm`, `workspaces/edit.cfm`):**
+     - **Consolidated Column 2 ("Contact, Physical Location & Hours"):** Seamlessly merged Physical Location, Address, and Operating Hours with Leadership & Contact Information into a single logical configuration section.
+     - **Leadership Classification Radio Cards:** Added interactive toggle for "Elected Official" vs "Department Head" with status badges, SVG icons, and descriptions.
+     - **Profile Photo Selector & 200 &times; 200 Avatar Preview:** Added a dedicated 200&times;200px circular avatar card with subtle shadow, hover scale effect, `[Browse Media Library]` button opening the modal media picker (`/media/picker?picker=image`), direct URL text input with live preview, and a remove photo button.
+     - **Job Title Field:** Added an explicit input field for Job Title (e.g., "County Assessor", "Director of Community Development") directly between the photo preview and First/Last Name inputs.
+     - **Embedded Media Picker Modal (`#mediaPickerModal`):** Added modal dialog markup wrapped in `<cfoutput>` (rendering the `#svgIcon()` headers properly as inline SVGs) and JavaScript handlers (`openMediaPickerForContactPhoto`, `onMediaSelectedFromPicker`, `updateContactPhotoPreview`, `removeContactPhoto`) allowing instant photo selection from workspace media archives.
+  4. **Workspace Directory & Drawer UI (`workspaces/index.cfm`):**
+     - **Table Directory:** Updated the Contact column to render a 34x34px circular avatar photo next to the contact name, job title, and leadership badge ("Elected Official" / "Department Head").
+     - **Expandable Details Drawer:** Updated Card 2 to display the avatar image with contact name, job title, leadership badge, and a clickable photo link.
+
+### Session: October 18, 2026 — Media Library: Upload UI Modernization (Studio Cover Image Dropzone & Image URL Browse Row)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** Media Module (`stylesheets/filexplorer/explorer.css`, `javascripts/filexplorer/explorer.js`, `app/views/media/index.cfm`, `app/views/media/picker.cfm`, `app/views/media/upload.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Unified Design Language Across All Upload Interfaces:**
+     - Redesigned the file upload experience across the Main Media Library (`media/index.cfm`), Media Picker Modal (`media/picker.cfm`), and the Full Upload Studio (`media/upload.cfm`) to match the user's provided design specification (featured cover image pattern).
+  2. **Hero Dropzone Card:**
+     - Styled `.media-upload-dropzone` with rounded container (`border-radius: 12px`), blue dashed border (`border: 2px dashed #0284c7`), centered SVG image icon (frame with sun and mountain peak), bold heading `"Choose Cover Image / File"`, and descriptive subtitle `"Click to browse workspace media library or drag and drop here"`.
+     - Supports full drag-and-drop file ingestion and direct click via transparent full-cover native file input overlay (`.media-file-native-input`).
+     - Selected file state displays an interactive badge card (`.media-selected-card`) with thumbnail preview for images (via `FileReader` API), file size, file name, and an accessible `"Change"` button.
+  3. **Image URL & File Browse Control Row:**
+     - Positioned directly below the dropzone box with label `"Image URL"`.
+     - Input field displays the prospective or selected server destination path (e.g. `/files/pio/images/photo.jpg`), dynamically updating whenever the selected workspace, folder, or file changes.
+     - Neutral `[📁 Browse]` button triggers the native file selection dialog.
+     - Primary `[Upload Now]` action button (with animated loading spinner state) and `[Cancel]` button for intuitive dismissal.
+  4. **Bugfix & Template Compliance:**
+     - Escaped SVG icon `stroke="##0284c7"` across `<cfoutput>` blocks in `index.cfm` and `picker.cfm` to eliminate `[coldfusion.util.RuntimeWrapper] 0284c7 is not a valid identifier name` runtime error.
+     - Verified all three views (`/media/index`, `/media/upload`, `/media/picker`) return HTTP 200 with clean compilation under active authenticated session.
+
+### Session: October 18, 2026 — Pure Adobe ColdFusion Document to WCAG 2.1 AA HTML Converter Studio (.docx & .pdf) & Articles Module Integration
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/models/DocumentConverter.cfc`, `app/controllers/Pages.cfc`, `app/controllers/Articles.cfc`, `app/views/pages/edit.cfm`, `app/views/articles/edit.cfm`, `config/routes.cfm`, `.doclib/000_SERIES_INDEX.md`, `.doclib/012_DOCUMENT_CONVERTER_WCAG_AA.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Pure Semantic HTML Tags Without Classes or Inline Styles:**
+     - Enforced strictly tag-pure standard HTML output (`<h2>`, `<h3>`, `<p>`, `<blockquote>`, `<ul>`, `<ol>`, `<li>`, `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th scope="col">`, `<td>`, `<strong>`, `<em>`, `<u>`, `<s>`, `<sup>`, `<sub>`, `<mark>`, `<a>`, `<img>`, `<hr>`, `<br>`) without CSS classes or inline styles, so converted documents visually mirror the input while inheriting the native site/editor theme.
+  2. **Intelligent PDF Semantic Extraction Engine (`app/models/DocumentConverter.cfc`):**
+     - Resolved raw text flattening where single-page PDF dumps previously resulted in monolithic blocks or broken line-by-line fragments.
+     - **Typography & Kerning Normalization:** Automatically strips stray spaces before punctuation (`word , word .` &rarr; `word, word.`), corrects parenthesis spacing, normalizes em dashes, hyphenated words (`sign - in` &rarr; `sign-in`), and cleans running headers/footers (`Page X of Y`).
+     - **Sentence Stitching & Paragraph Reflow:** Dynamically buffers and reflows continuous sentences across visual page breaks, generating well-proportioned, accessible `<p>` tags (2–3 sentences, ~250–450 characters) instead of fragmented lines.
+     - **Table Matrix Heuristic:** Detects tabular blocks, permission matrices, and multi-column rows from PDF text, reconstructing clean HTML `<table><thead><tr><th scope="col">...</th></tr></thead><tbody><tr><td>...</td></tr></tbody></table>` structures.
+     - **Numbered & Bullet List Reconstruction:** Detects sequential step patterns (`1. ... 2. ... 3. ...`) and bullet markers, converting them into structured `<ol><li>` and `<ul><li>` elements.
+     - **Heading Hierarchy:** Downshifts primary headings to `<h2>` and subheadings to `<h3>`, preserving `<h1>` for page/article titles.
+  3. **Articles & Public Information Module Integration (`Articles.cfc`, `articles/edit.cfm`, `config/routes.cfm`):**
+     - Added `convertDocument()` action to `app/controllers/Articles.cfc`, exempt from CSRF in `protectsFromForgery()`.
+     - Registered `/articles/convert-document` route in `config/routes.cfm`.
+     - Added **"Import Word / PDF"** toolbar button (`#btnArticleImportDoc`) to the Story Content header in `app/views/articles/edit.cfm`.
+     - Wrapped `#articleContent` with interactive drag-and-drop overlay (`#articleEditorDropContainer`, `#articleDocDropOverlay`) that triggers on `.docx` or `.pdf` file drags.
+     - Added Document to WCAG AA Converter Studio Modal (`#articleDocConvertModal`) supporting dual Visual vs Code preview, metadata auto-population for Headline and Story Excerpt, and immediate triggering of `window.ArticleA11yLinter.scan()` on paste.
+  4. **Documentation Series Update (`.doclib/000_SERIES_INDEX.md`, `.doclib/012_DOCUMENT_CONVERTER_WCAG_AA.md`):**
+     - Updated Series 012 manual to document PDF typography normalization, table heuristic reconstruction, and multi-module editor integration.
+
 ### Session: October 17, 2026 — Seeding & Self-Healing Prefill for Standard Chelan County "How Do I" Categories
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 (`app/controllers/Pages.cfc`, `app/views/pages/howDoI.cfm`, `config/sql/schema-how-do-i.sql`, `TODO.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
@@ -714,6 +832,161 @@ This log maintains a chronological, permanent record of engineering milestones, 
   5. **Cache-Busting:**
      - Bumped `explorer.css` and `explorer.js` cache-buster query strings to `v=3.2` across `index.cfm` and `picker.cfm`.
 - **Verification:** Verified syntax with `node -c`, confirmed zero template compilation errors, and verified all inputs and headers match `admin-theme.css`.
+
+---
+
+### Milestone 18: Relocation of Startup & Front-End (.css) into Documentation Group
+- **Files Modified:**
+  - `app/views/layout.cfm`
+  - `app/controllers/Documentation.cfc`
+  - `app/controllers/Settings.cfc`
+  - `config/routes.cfm`
+  - `app/views/documentation/startup.cfm`
+  - `app/views/documentation/index.cfm`
+  - `app/views/settings/startup.cfm`
+  - `app/views/settings/general.cfm`
+  - `app/views/settings/media.cfm`
+  - `app/views/settings/seo.cfm`
+  - `app/views/settings/system.cfm`
+- **Scope & Changes:**
+  1. **Documentation Controller & Action (`Documentation.cfc`):**
+     - Added `startup()` action reading `/stylesheets/jbd-templates.css` and setting `pageTitle`.
+     - In `Settings.cfc`, updated `startup()` to redirect to `documentation##startup` for backward compatibility.
+  2. **Route Definitions (`config/routes.cfm`):**
+     - Registered `documentationStartup` (`documentation/startup`) and `documentationFrontEndCss` (`documentation/front-end-css`).
+  3. **Sidebar Navigation Realignment (`app/views/layout.cfm`):**
+     - Moved `Startup & Front-End (.css)` into the **Documentation** sidebar navigation submenu.
+     - Removed `Startup & Front-End (.css)` from the **Settings** sidebar navigation submenu.
+     - Updated menu state detection so the Documentation group expands when viewing the startup guide.
+  4. **Documentation Hub Integration (`documentation/index.cfm` & `documentation/startup.cfm`):**
+     - Created `app/views/documentation/startup.cfm` with standardized `.page-header` and breadcrumb navigation (`Home / Documentation / Startup & Front-End (.css)`).
+     - Added a 5th guide card in `documentation/index.cfm` linking directly to the Front-End Template Integration Guide and raw `.css` download.
+  5. **Settings Overview Sidebars:**
+     - Updated navigation cards in `general.cfm`, `media.cfm`, `seo.cfm`, and `system.cfm` to route to `documentation##startup`.
+- **Verification:** Reloaded CFWheels (`/?reload=true&password=chelancms`), verified `/documentation/startup` responds cleanly, and verified zero runtime errors in `wheels-errors.log`.
+
+---
+
+### Milestone 19: Intelligent Document Converter Engine (PDF & Word to WCAG 2.1 AA HTML)
+- **Files Created / Modified:**
+  - `app/models/DocumentConverter.cfc`
+  - `app/controllers/Pages.cfc`
+  - `app/controllers/Articles.cfc`
+  - `app/views/pages/edit.cfm`
+  - `app/views/articles/edit.cfm`
+  - `config/routes.cfm`
+  - `.doclib/012_DOCUMENT_CONVERTER_WCAG_AA.md`
+- **Scope & Changes:**
+  1. **Core Document Conversion Model (`DocumentConverter.cfc`):**
+     - Built native Adobe ColdFusion 2025 document conversion pipeline converting both `.docx` (via `<cfzip>` XML extraction) and `.pdf` (via `<cfpdf>` text and raster image extraction) into pure semantic WCAG 2.1 AA HTML.
+     - **Strict Styling Invariant:** Zero classes, zero inline styles emitted in the HTML output. Output consists strictly of semantic elements (`<h2>`, `<h3>`, `<p>`, `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th scope="col">`, `<td>`, `<ol>`, `<ul>`, `<li>`, `<blockquote>`, `<strong>`, `<em>`, `<a>`, `<figure>`, `<figcaption>`).
+     - **Intelligent PDF Heuristic Reflow:** Implemented `cleanAndStitchPdfPages()` to scrub running headers/footers, heal split hyphens, heal URLs/paths, and normalize punctuation spacing.
+     - **Multi-Table Reconstruction:** Implemented `parseAllPdfTables()` to dynamically reconstruct complex 2-column, 3-column, and 5-column tabular data into fully accessible `<table>` markup with semantic `<thead>` and `<th scope="col">` column headers.
+     - **Dynamic Section Heading Detection:** Implemented `tagPdfHeadings()` replacing static string lists with a universal catalog and structural section markers (`Section \d+`, `\d+\.\d+`), downshifting hierarchy to start at `<h2>`.
+     - **Sentence & List Reflow:** Implemented `reflowSentencesIntoParagraphs()` to reflow monolithic PDF text blocks into well-proportioned `<p>` tags (2-3 sentences), auto-extract numbered lists (`<ol><li>`), highlight lead-in callouts (`<strong>Note:</strong>`), and auto-linkify raw URLs and email addresses.
+     - **Word (.docx) Enhancements:** Added heuristic to recognize standalone unstyled bold lines as headings, downshifting Word Heading 1 -> `<h2>`, Heading 2 -> `<h3>`.
+  2. **Page & Article Editor Studio Integration (`pages/edit.cfm`, `articles/edit.cfm`):**
+     - Added toolbar buttons (`#btnEditorImportDoc`, `#btnArticleImportDoc`) and animated frosted drag-and-drop overlays.
+     - Created full-featured modal dialogs (`#pgDocConvertModal`, `#articleDocConvertModal`) with real-time visual and HTML code previews, insertion modes (Replace, Insert at cursor, Append), and Title/Summary auto-sync.
+     - Integrated real-time accessibility auditing via `PageA11yLinter.scan()` and `ArticleA11yLinter.scan()` immediately upon insertion.
+  3. **Benchmark Verification:**
+     - `CMSAdmin 2.0 Documentation.pdf` (931 KB): 19 Headings (was 0), 57 Paragraphs, 7 Semantic Tables (was 0), 4 Lists, 3,729 words in ~685 ms.
+     - `CMSAdmin 2.0 User Guide.pdf` (489 KB): 10 Headings, 120 Paragraphs, 2 Tables, 16 Lists, 3,813 words in ~546 ms.
+   4. **Automated End-to-End Test Suite Execution (`run_full_test_suite.cfm`):**
+      - Created automated test harness executing 54 assertions across 5 suites:
+        - **Suite 1:** Complex 17-page `CMSAdmin 2.0 Documentation.pdf` architecture manual (19 headings, 7 tables, 57 paragraphs, 4 lists, 3,729 words in 340ms; 0 classes, 0 inline styles; WCAG 1.3.1 compliance).
+        - **Suite 2:** 14-page `CMSAdmin 2.0 User Guide.pdf` end-user guide (10 headings, 2 tables, 16 lists, 120 paragraphs, 3,813 words in 341ms; 0 classes, 0 inline styles; table headers with `scope="col"`).
+        - **Suite 3:** Synthetic `.docx` OpenXML package (Heading 1 downshift to `<h2>`, Heading 2 to `<h3>`, unstyled bold heuristic to `<h2>`, nested bullet lists, tables with `<thead><th scope="col">`, clean hyperlinks).
+        - **Suite 4:** HTTP controller endpoints (`POST /pages/convert-document` and `POST /articles/convert-document`) with session authentication, cookie handling, and `Content-Type: application/json;charset=utf-8` response verification.
+        - **Suite 5:** Security and unsupported file rejection (`.cfm` script rejection with security warning).
+      - **Result:** **54 / 54 tests PASSED (100.0% Green)** on Adobe ColdFusion 2025 / IIS 10.
+- **Verification:** Verified via live `curl` against IIS on `cmsadmin.chelancounty.gov`, verified zero external CDNs, verified no browser dialog popups.
+
+---
+
+### Milestone 19: Media Library Upload UI Redesign & Upload Spinner Display Isolation
+- **Files Modified:**
+  - `app/views/media/index.cfm`
+  - `app/views/media/picker.cfm`
+  - `app/views/media/upload.cfm`
+  - `stylesheets/filexplorer/explorer.css`
+  - `stylesheets/admin-theme.css`
+  - `app/views/layout.cfm`
+  - `javascripts/filexplorer/explorer.js`
+- **Issue:**
+  1. The user requested redesigning the Media Library upload dropzone to match the modern featured image dropzone specification (dashed blue border, centered blue image icon, bold title "Choose Cover Image / File", helper subtext, and an "Image URL" input row directly below with a `[Browse]` button and `[Upload Now]` action).
+  2. The user reported that an unwanted spinning icon was continuously visible next to the "Upload Now" button in its idle state.
+- **Root Cause & Technical Resolution:**
+  1. **Upload Dropzone & URL Input Row Design (`index.cfm`, `picker.cfm`, `upload.cfm`, `explorer.css`, `admin-theme.css`):**
+     - Redesigned the upload container with `.media-upload-dropzone`: 2px dashed `#0284c7` border, rounded 12px corners, `#f8fafc` background, `#svgIcon(name="image", size=36)#`, and accessible click/drag-and-drop triggers.
+     - Positioned the `.media-url-browse-row` immediately underneath the dropzone featuring the prospective URL input (`#upload-target-url-input`), the `[Browse]` button (`#btn-browse-file`), and the primary submit button (`#btn-do-upload`).
+     - Added `.media-selected-card` file selection badge with live image thumbnail, file size, format metadata, and "Change" action.
+  2. **Upload Button Spinner Isolation & Specificity Resolution:**
+     - **Root Cause:** In the button markup, `<svg id="btn-do-upload-spinner" class="fx-spinner" viewBox="0 0 24 24" hidden>` had the HTML `hidden` attribute. However, CSS flex container styling on the button and CSS rules for `.btn svg` had higher specificity than user-agent `[hidden]`, causing the SVG to render as a visible flex child. Furthermore, the inline `style` attribute had width/height dimensions but lacked `display: none !important;`. Because `.fx-spinner` runs `animation: fx-spin 0.8s linear infinite;`, the spinner was visibly rotating alongside the static upload arrow icon while idle.
+     - **Resolution:**
+       - Added explicit `style="display:none !important;"` directly on the `<svg id="btn-do-upload-spinner">` markup in `media/index.cfm` and `media/picker.cfm`.
+       - Added explicit global specificity overrides in both `stylesheets/filexplorer/explorer.css` and `stylesheets/admin-theme.css`:
+         ```css
+         [hidden],
+         #btn-do-upload-spinner[hidden],
+         .fx-spinner[hidden],
+         svg[hidden] {
+           display: none !important;
+         }
+         ```
+       - Updated `javascripts/filexplorer/explorer.js` in `boot()`, `resetFileSelection()`, and upload request handling to strictly toggle `style.setProperty('display', 'none', 'important')` and `style.setProperty('display', 'inline-block', 'important')`, ensuring the spinner is only displayed during active network upload streams.
+     - Bumped cachebuster parameters to `admin-theme.css?v=4.1`, `explorer.css?v=4.1`, and `explorer.js?v=4.1` across `layout.cfm`, `index.cfm`, and `picker.cfm`.
+- **Verification:**
+  - Automated test script `scratch/test_media_ui.ps1` verified that all endpoints (`/media/index`, `/media/upload`, `/media/picker`) return HTTP 200 OK with session authentication, proper dropzone rendering, prospective URL row, and guaranteed hidden spinner display in idle state.
+
+---
+
+### Milestone 20: Workspace Provisioning Schema Extension & Location/Schedule Panel Unification
+- **Files Modified:**
+  - `app/controllers/Workspaces.cfc`
+  - `app/views/workspaces/new.cfm`
+  - `app/views/workspaces/edit.cfm`
+  - `app/views/workspaces/index.cfm`
+  - `app/global/functions.cfm`
+  - `.doclib/008_DATABASE_SCHEMA_AND_SQL_SERVER_STANDARDS.md`
+  - `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`
+- **User Requirements:**
+  1. "on create workspace, we need to add stoarage path, domain name, project path"
+  2. "on create workspace, merge physical location and address with Operating Hours and Schedule"
+- **Technical Implementation:**
+  1. **SQL Server Database Migration (`dbo.cms_workspaces`):**
+     - Executed `ALTER TABLE dbo.cms_workspaces` with `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` adding:
+       - `storage_path NVARCHAR(255) NULL` (dedicated file repository path, e.g. `files/assessor`)
+       - `domain_name NVARCHAR(255) NULL` (canonical web hostname, e.g. `www.chelancounty.gov`)
+       - `project_path NVARCHAR(255) NULL` (server application codebase directory, e.g. `C:\inetpub\chelan-county`)
+     - Backfilled existing workspaces (`global`, `assessor`, etc.) with default values.
+  2. **Global Helper Functions (`app/global/functions.cfm`):**
+     - Updated `ensureMasterWorkspacesTablePopulated()` to include default `storage_path`, `domain_name`, and `project_path` upon database initialization.
+     - Updated `getMasterWorkspaces()` SQL query to select and map `storage_path`, `domain_name`, and `project_path` into workspace structs with in-memory caching.
+  3. **Workspaces Controller (`app/controllers/Workspaces.cfc`):**
+     - `index()`: Updated disk path verification to check `local.w.storage_path` (supporting both relative paths and absolute drive paths), and extended search filter haystack across `domain_name`, `storage_path`, and `project_path`.
+     - `new()`: Populated defaults for `storage_path` (`""`), `domain_name` (`"www.chelancounty.gov"`), and `project_path` (`"C:\inetpub\chelan-county"`).
+     - `create()`: Extracted and sanitized `domain_name`, `storage_path`, and `project_path`; updated directory auto-creation to respect `local.storagePath`; added typed query parameters to both `INSERT` and `UPDATE` SQL queries.
+     - `edit()`: Selected and populated `storage_path`, `domain_name`, and `project_path` into `variables.workspace`.
+     - `update()`: Extracted parameters, updated directory provisioning on disk, and persisted all fields to `dbo.cms_workspaces`.
+  4. **Creation & Edit Views (`workspaces/new.cfm`, `workspaces/edit.cfm`):**
+     - **Panel 1 (Site & Directory Configuration):** Added inputs for `domain_name`, `storage_path`, and `project_path` alongside `virtual_directory` in clean 2-column grids with informative helper subtext. Added live auto-suggest synchronization in `new.cfm` so typing Site Name suggests both virtual directory slug and default storage path (`files/[slug]`).
+     - **Unified Location & Hours Panel (Merged Panel 3 & 4):** Merged the previously separate "Physical Location & Address" and "Operating Hours & Schedule" into a single full-width 12-column card (`.ws-location-hours-grid`) containing:
+       - Left column: Facility Physical Address (Street Address, Address 2, City, State, Zip).
+       - Right column: Operating Hours & Schedule textarea and helper note.
+       - Card footer: Full action buttons (`[Cancel]` and `[Create Workspace]` / `[Save Workspace Changes]`).
+  5. **Directory View (`workspaces/index.cfm`):**
+     - Updated expandable detail drawers to display **Domain Name**, **Storage Path**, and **Project Path** alongside IIS virtual directory mappings.
+- **Verification:**
+  - Automated PowerShell test scripts verified end-to-end functionality against live IIS server (`cmsadmin.chelancounty.gov`):
+    - Authenticated `GET /workspaces/new` verified presence of all new inputs and merged 12-column panel.
+    - Authenticated `GET /workspaces/edit?id=assessor` verified accurate pre-population of fields.
+    - Authenticated `POST /workspaces/create` successfully provisioned `test-auto-dept` with custom storage path, domain name, and project path verified directly in SQL Server.
+    - Authenticated `POST /workspaces/update` confirmed persistence of modifications.
+    - Authenticated deletion and cleanup verified soft delete and removed temporary test entries.
+
+
+
 
 
 

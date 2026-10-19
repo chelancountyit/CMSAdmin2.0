@@ -234,9 +234,152 @@
 		50% { outline: 3px solid #f59e0b; box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.3); }
 		100% { outline: 3px solid #ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
 	}
-	.jbd-a11y-pulse {
-		animation: a11yHighlightPulse 1.2s ease-in-out 3;
-		border-radius: 4px;
+	/* Document Converter Drop Zone & Modal styles */
+	.pg-doc-drop-zone-wrap {
+		position: relative;
+	}
+	.pg-doc-drop-overlay {
+		position: absolute;
+		inset: 0;
+		background: rgba(2, 132, 199, 0.08);
+		backdrop-filter: blur(4px);
+		-webkit-backdrop-filter: blur(4px);
+		border: 2px dashed var(--admin-primary, ##0284c7);
+		border-radius: var(--radius-md, 0.5rem);
+		z-index: 100;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		pointer-events: none;
+		transition: all 0.2s ease;
+	}
+	.pg-doc-drop-overlay.is-active {
+		background: rgba(2, 132, 199, 0.16);
+		border-color: ##0369a1;
+	}
+	.pg-doc-drop-inner {
+		text-align: center;
+		padding: 1.5rem;
+		background: rgba(255, 255, 255, 0.95);
+		border-radius: var(--radius-md, 0.5rem);
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+		border: 1px solid var(--admin-border-subtle, ##e2e8f0);
+		max-width: 420px;
+	}
+	.pg-doc-drop-icon {
+		width: 52px;
+		height: 52px;
+		border-radius: 50%;
+		background: rgba(2, 132, 199, 0.12);
+		color: var(--admin-primary, ##0284c7);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		animation: docDropBounce 1s infinite alternate ease-in-out;
+		margin: 0 auto 0.25rem auto;
+	}
+	@keyframes docDropBounce {
+		from { transform: translateY(0); }
+		to { transform: translateY(-6px); }
+	}
+	.pg-doc-drop-title {
+		font-size: 1.05rem;
+		font-weight: 700;
+		color: var(--admin-text-main, ##0f172a);
+		display: block;
+	}
+	.pg-doc-drop-sub {
+		font-size: 0.8rem;
+		color: var(--admin-text-muted, ##64748b);
+		line-height: 1.35;
+		display: block;
+	}
+	##articleDocConvertModalBackdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 99990;
+		background: rgba(15, 23, 42, 0.72);
+		backdrop-filter: blur(6px);
+		-webkit-backdrop-filter: blur(6px);
+	}
+	##articleDocConvertModal {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 99992;
+		width: min(94vw, 860px);
+		max-height: min(90vh, 880px);
+		background: var(--admin-surface, ##ffffff);
+		border-radius: var(--radius-lg, 0.75rem);
+		box-shadow: 0 25px 70px rgba(15, 23, 42, 0.4);
+		border: 1px solid var(--admin-border, ##cbd5e1);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	.doc-dropzone-box {
+		border: 2px dashed var(--admin-border, ##cbd5e1);
+		border-radius: var(--radius-md, 0.5rem);
+		padding: 1.75rem 1.25rem;
+		text-align: center;
+		cursor: pointer;
+		background: var(--admin-bg, ##f8fafc);
+		transition: all 0.2s ease;
+	}
+	.doc-dropzone-box:hover, .doc-dropzone-box.is-dragover {
+		border-color: var(--admin-primary, ##0284c7);
+		background: rgba(2, 132, 199, 0.04);
+	}
+	.doc-kpi-card {
+		padding: 0.75rem 0.9rem;
+		border-radius: var(--radius-md, 0.5rem);
+		background: var(--admin-surface, ##ffffff);
+		border: 1px solid var(--admin-border, ##cbd5e1);
+		text-align: center;
+	}
+	.doc-kpi-value {
+		font-size: 1.35rem;
+		font-weight: 700;
+		color: var(--admin-text-main, ##0f172a);
+	}
+	.doc-kpi-label {
+		font-size: 0.72rem;
+		color: var(--admin-text-muted, ##64748b);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		font-weight: 600;
+	}
+	##docPreviewVisual table {
+		width: 100%;
+		border-collapse: collapse;
+		margin: 1rem 0;
+	}
+	##docPreviewVisual th, ##docPreviewVisual td {
+		border: 1px solid var(--admin-border, ##cbd5e1);
+		padding: 0.5rem 0.75rem;
+		text-align: left;
+	}
+	##docPreviewVisual th {
+		background: var(--admin-bg, ##f8fafc);
+		font-weight: 700;
+	}
+	##docPreviewVisual img {
+		max-width: 100%;
+		height: auto;
+		display: block;
+		margin: 0.75rem 0;
+	}
+	##docPreviewVisual hr {
+		border: none;
+		border-top: 1px solid var(--admin-border, ##cbd5e1);
+		margin: 1.25rem 0;
+	}
+	##docPreviewVisual blockquote {
+		margin: 1rem 0;
+		padding: 0.5rem 1rem;
+		border-left: 3px solid var(--admin-primary, ##0284c7);
+		background: rgba(2, 132, 199, 0.04);
 	}
 </style>
 
@@ -316,13 +459,19 @@
 
 			<!--- Content Body with JBDEditor --->
 			<div class="admin-card" style="padding:1.25rem;">
-				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.5rem;">
 					<label for="articleContent" style="display:block; font-weight:600; font-size:0.9rem; margin:0; color:var(--admin-text-main);">
 						Full Story Content <span style="color:var(--admin-danger, ##ef4444);">*</span>
 					</label>
-					<span style="font-size:0.75rem; color:var(--admin-text-muted);">
-						Accessible JBDEditor &bull; WCAG 2.1 AA Compliant
-					</span>
+					<div style="display:flex; gap:0.5rem; align-items:center;">
+						<button type="button" class="btn btn-outline btn-xs" id="btnArticleImportDoc" title="Import Microsoft Word (.docx) or Adobe PDF (.pdf) as semantic WCAG AA HTML">
+							#svgIcon(name="file-text", size=13)#
+							<span>Import Word / PDF</span>
+						</button>
+						<span style="font-size:0.75rem; color:var(--admin-text-muted);">
+							Accessible JBDEditor &bull; WCAG 2.1 AA Compliant
+						</span>
+					</div>
 				</div>
 
 				<!--- Automated ADA WCAG Pre-Flight Linter Bar --->
@@ -398,7 +547,18 @@
 					</div>
 				</div>
 
-				<textarea id="articleContent" name="content_html" data-jbd-editor data-jbd-toolbar="basic" data-jbd-inline-toolbar="true" data-jbd-height="420px" data-jbd-placeholder="Type or paste formatted article text here...">#EncodeForHTML(article.content_html ?: "")#</textarea>
+				<div id="articleEditorDropContainer" class="pg-doc-drop-zone-wrap">
+					<div id="articleDocDropOverlay" class="pg-doc-drop-overlay" style="display:none;" aria-hidden="true">
+						<div class="pg-doc-drop-inner">
+							<div class="pg-doc-drop-icon">
+								#svgIcon(name="file-text", size=28)#
+							</div>
+							<strong class="pg-doc-drop-title">Drop Word (.docx) or PDF document here</strong>
+							<span class="pg-doc-drop-sub">CMSAdmin will extract headings, tables, lists, and images into WCAG 2.1 AA HTML</span>
+						</div>
+					</div>
+					<textarea id="articleContent" name="content_html" data-jbd-editor data-jbd-toolbar="basic" data-jbd-inline-toolbar="true" data-jbd-height="420px" data-jbd-placeholder="Type or paste formatted article text here...">#EncodeForHTML(article.content_html ?: "")#</textarea>
+				</div>
 			</div>
 
 			<!--- SEO & Search Engine Metadata --->
@@ -705,6 +865,160 @@
 	</div>
 	<div style="flex:1; width:100%; height:calc(100% - 60px); position:relative;">
 		<iframe id="mediaPickerIframe" src="about:blank" style="width:100%; height:100%; border:none;" title="Media Asset Picker"></iframe>
+	</div>
+</div>
+
+<!--- Document to WCAG AA Converter Studio Modal for Articles --->
+<div class="admin-modal-backdrop" id="articleDocConvertModalBackdrop" style="display:none;" onclick="closeArticleDocConvertModal()"></div>
+<div class="admin-modal" id="articleDocConvertModal" role="dialog" aria-modal="true" aria-labelledby="articleDocConvertModalTitle" style="display:none;">
+	<div class="modal-header" style="padding:1rem 1.25rem; border-bottom:1px solid var(--admin-border-subtle); display:flex; justify-content:space-between; align-items:flex-start; background:var(--admin-bg);">
+		<div>
+			<h2 class="modal-title" id="articleDocConvertModalTitle" style="margin:0; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:0.5rem; color:var(--admin-text-main);">
+				#svgIcon(name="file-text", size=18)#
+				<span>Document to WCAG AA Converter Studio</span>
+			</h2>
+			<div style="font-size:0.8rem; color:var(--admin-text-muted); margin-top:0.25rem;">
+				Automatically extract headings, tables, lists, and images from Word (.docx) or PDF (.pdf) into accessible HTML.
+			</div>
+		</div>
+		<button type="button" class="btn btn-ghost btn-xs btn-icon-only" onclick="closeArticleDocConvertModal()" aria-label="Close dialog">
+			#svgIcon(name="x", size=16)#
+		</button>
+	</div>
+
+	<div class="modal-body" style="padding:1.25rem; overflow-y:auto; flex:1; max-height:calc(88vh - 140px); display:flex; flex-direction:column; gap:1.25rem;">
+		<!--- Upload / Dropzone Card --->
+		<div id="articleDocConvertUploadArea">
+			<div class="doc-dropzone-box" id="articleDocModalDropzone" onclick="document.getElementById('articleDocFileInput').click();">
+				<div style="width:48px; height:48px; border-radius:50%; background:rgba(2, 132, 199, 0.1); color:var(--admin-primary); margin:0 auto 0.75rem auto; display:flex; align-items:center; justify-content:center;">
+					#svgIcon(name="upload", size=24)#
+				</div>
+				<strong style="display:block; font-size:1rem; color:var(--admin-text-main); margin-bottom:0.25rem;">Choose a Document or Drag &amp; Drop Here</strong>
+				<span style="display:block; font-size:0.82rem; color:var(--admin-text-muted); margin-bottom:0.85rem;">
+					Supports <strong>Microsoft Word (.docx)</strong> and <strong>Adobe PDF (.pdf)</strong> up to 35 MB
+				</span>
+				<div style="display:flex; justify-content:center; gap:0.5rem;">
+					<span class="badge badge-primary" style="font-size:0.72rem; letter-spacing:0.04em;">.DOCX (Word 2007+)</span>
+					<span class="badge badge-info" style="font-size:0.72rem; letter-spacing:0.04em;">.PDF (Adobe PDF)</span>
+				</div>
+				<input type="file" id="articleDocFileInput" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none;" onchange="handleArticleDocFileSelected(this.files)">
+			</div>
+
+			<!--- Selected File Info Pill --->
+			<div id="articleDocSelectedFileInfo" style="display:none; margin-top:0.75rem; padding:0.75rem 1rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg); align-items:center; justify-content:space-between; gap:1rem;">
+				<div style="display:flex; align-items:center; gap:0.65rem; min-width:0; flex:1;">
+					<span style="color:var(--admin-primary); display:flex; align-items:center;">#svgIcon(name="file-text", size=20)#</span>
+					<div style="min-width:0; flex:1;">
+						<strong id="articleDocSelectedFileName" style="display:block; font-size:0.88rem; color:var(--admin-text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></strong>
+						<span id="articleDocSelectedFileSize" style="font-size:0.75rem; color:var(--admin-text-muted);"></span>
+					</div>
+				</div>
+				<button type="button" class="btn btn-outline btn-xs" onclick="resetArticleDocSelection()">Change File</button>
+			</div>
+		</div>
+
+		<!--- Import Options Card --->
+		<div class="card" id="articleDocImportOptionsCard" style="padding:1rem 1.1rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-surface);">
+			<strong style="font-size:0.85rem; color:var(--admin-text-main); display:block; margin-bottom:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">
+				Import &amp; Accessibility Options
+			</strong>
+			<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1rem;">
+				<div>
+					<label for="articleDocInsertMode" class="form-label" style="font-size:0.82rem; font-weight:600; margin-bottom:0.25rem;">Content Destination Mode</label>
+					<select id="articleDocInsertMode" class="form-control form-control-sm" style="width:100%;">
+						<option value="replace" selected>Replace entire Story Content</option>
+						<option value="insert">Insert at current cursor position</option>
+						<option value="append">Append to end of Story Content</option>
+					</select>
+				</div>
+				<div style="display:flex; flex-direction:column; gap:0.5rem; justify-content:center;">
+					<label style="display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; cursor:pointer;">
+						<input type="checkbox" id="chkArticleDocSyncTitle" checked>
+						<span>Auto-populate Headline from document</span>
+					</label>
+					<label style="display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; cursor:pointer;">
+						<input type="checkbox" id="chkArticleDocSyncSummary" checked>
+						<span>Auto-populate Story Excerpt from document</span>
+					</label>
+				</div>
+			</div>
+		</div>
+
+		<!--- Processing State Spinner --->
+		<div id="articleDocConvertProgress" style="display:none; padding:2rem; text-align:center;">
+			<div class="spinner spinner-primary" style="width:36px; height:36px; margin:0 auto 1rem auto;"></div>
+			<strong style="display:block; font-size:0.95rem; color:var(--admin-text-main);" id="articleDocProgressTitle">Parsing Document Structure...</strong>
+			<span style="font-size:0.8rem; color:var(--admin-text-muted);" id="articleDocProgressSub">Extracting semantic headings, data tables, and embedded graphics</span>
+		</div>
+
+		<!--- Results Preview Area --->
+		<div id="articleDocConvertResultsArea" style="display:none; flex-direction:column; gap:1rem;">
+			<!--- KPI Summary Grid --->
+			<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:0.75rem;">
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="articleDocStatHeadings">0</div>
+					<div class="doc-kpi-label">Headings</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="articleDocStatParagraphs">0</div>
+					<div class="doc-kpi-label">Paragraphs</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="articleDocStatTables">0</div>
+					<div class="doc-kpi-label">Tables</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="articleDocStatLists">0</div>
+					<div class="doc-kpi-label">Lists</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="articleDocStatImages">0</div>
+					<div class="doc-kpi-label">Figures</div>
+				</div>
+				<div class="doc-kpi-card">
+					<div class="doc-kpi-value" id="articleDocStatWords">0</div>
+					<div class="doc-kpi-label">Words</div>
+				</div>
+			</div>
+
+			<!--- WCAG Highlights Alert --->
+			<div class="alert alert-success" id="articleDocWcagBanner" style="display:flex; align-items:flex-start; gap:0.65rem; padding:0.75rem 1rem; margin:0; font-size:0.82rem;">
+				<span style="display:flex; align-items:center; margin-top:2px;">#svgIcon(name="check-circle", size=16)#</span>
+				<div id="articleDocWcagList" style="flex:1;">
+					<strong>WCAG 2.1 AA Compliant Extraction:</strong> Headings structured hierarchically, tables generated with col headers, images cataloged in Media Library.
+				</div>
+			</div>
+
+			<!--- Preview Tabs: Visual vs HTML Source --->
+			<div style="border:1px solid var(--admin-border); border-radius:var(--radius-md); overflow:hidden; background:var(--admin-surface);">
+				<div style="display:flex; justify-content:space-between; align-items:center; background:var(--admin-bg); padding:0.4rem 0.75rem; border-bottom:1px solid var(--admin-border);">
+					<div style="display:flex; gap:0.35rem;">
+						<button type="button" class="btn btn-xs btn-primary" id="btnArticleDocTabVisual" onclick="switchArticleDocPreviewTab('visual')">Visual Render</button>
+						<button type="button" class="btn btn-xs btn-outline" id="btnArticleDocTabCode" onclick="switchArticleDocPreviewTab('code')">HTML Source</button>
+					</div>
+					<span style="font-size:0.75rem; color:var(--admin-text-muted);">Interactive Preview</span>
+				</div>
+				<div id="articleDocPreviewVisual" style="padding:1.25rem; max-height:360px; overflow-y:auto; font-size:0.9rem; line-height:1.6; background:##ffffff; color:##0f172a;"></div>
+				<textarea id="articleDocPreviewCode" readonly style="display:none; width:100%; height:360px; font-family:monospace; font-size:0.8rem; padding:1rem; border:none; resize:none; background:##1e293b; color:##f8fafc; outline:none; box-sizing:border-box;"></textarea>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal-footer" style="padding:0.85rem 1.25rem; border-top:1px solid var(--admin-border-subtle); display:flex; justify-content:space-between; align-items:center; background:var(--admin-bg);">
+		<div style="display:flex; gap:0.5rem;">
+			<button type="button" class="btn btn-outline btn-sm" onclick="closeArticleDocConvertModal()">Cancel</button>
+			<button type="button" class="btn btn-ghost btn-sm" id="btnArticleDocConvertReset" style="display:none;" onclick="resetArticleDocSelection()">Convert Another Document</button>
+		</div>
+		<div style="display:flex; gap:0.5rem;">
+			<button type="button" class="btn btn-primary btn-sm" id="btnArticleDocConvertStart" onclick="startArticleDocumentConversion()" disabled>
+				#svgIcon(name="refresh-cw", size=14)#
+				<span>Convert Document</span>
+			</button>
+			<button type="button" class="btn btn-success btn-sm" id="btnArticleDocConvertPaste" style="display:none; font-weight:700;" onclick="pasteArticleDocToEditor()">
+				#svgIcon(name="check", size=14)#
+				<span>Paste to Story Content</span>
+			</button>
+		</div>
 	</div>
 </div>
 </cfoutput>
@@ -2529,5 +2843,344 @@ if (document.readyState === 'loading') {
 } else {
 	updateAdaComplianceStatus();
 	window.ArticleA11yLinter.init();
-}
-</script>
+// -------------------------------------------------------------------------
+// Feature: Document to WCAG AA Converter Studio for Articles
+// -------------------------------------------------------------------------
+(function() {
+	var _selectedDocFile = null;
+	var _lastConvertedData = null;
+	var _dragCounter = 0;
+
+	// Elements
+	var modal = document.getElementById("articleDocConvertModal");
+	var backdrop = document.getElementById("articleDocConvertModalBackdrop");
+	var overlay = document.getElementById("articleDocDropOverlay");
+	var editorContainer = document.getElementById("articleEditorDropContainer");
+	var btnTrigger = document.getElementById("btnArticleImportDoc");
+
+	if (btnTrigger) {
+		btnTrigger.addEventListener("click", function(e) {
+			if (e) e.preventDefault();
+			openArticleDocConvertModal();
+		});
+	}
+
+	// Drag & Drop onto Article Story Container & Window
+	if (editorContainer && overlay) {
+		window.addEventListener("dragenter", function(e) {
+			_dragCounter++;
+			if (hasDocFiles(e.dataTransfer)) {
+				overlay.style.display = "flex";
+				overlay.classList.add("is-active");
+			}
+		});
+
+		window.addEventListener("dragleave", function(e) {
+			_dragCounter--;
+			if (_dragCounter <= 0) {
+				_dragCounter = 0;
+				overlay.style.display = "none";
+				overlay.classList.remove("is-active");
+			}
+		});
+
+		window.addEventListener("dragover", function(e) {
+			if (hasDocFiles(e.dataTransfer)) {
+				e.preventDefault();
+				overlay.style.display = "flex";
+				overlay.classList.add("is-active");
+			}
+		});
+
+		window.addEventListener("drop", function(e) {
+			_dragCounter = 0;
+			overlay.style.display = "none";
+			overlay.classList.remove("is-active");
+
+			if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+				var file = e.dataTransfer.files[0];
+				var name = file.name || "";
+				var ext = name.split(".").pop().toLowerCase();
+				if (ext === "docx" || ext === "pdf") {
+					e.preventDefault();
+					openArticleDocConvertModal(file);
+				}
+			}
+		});
+	}
+
+	function hasDocFiles(dt) {
+		if (!dt || !dt.types) return false;
+		for (var i = 0; i < dt.types.length; i++) {
+			if (dt.types[i] === "Files") return true;
+		}
+		return false;
+	}
+
+	window.openArticleDocConvertModal = function(file) {
+		if (modal && backdrop) {
+			backdrop.style.display = "block";
+			modal.style.display = "flex";
+			document.body.style.overflow = "hidden";
+			if (file) {
+				handleArticleDocFileSelected([file]);
+				startArticleDocumentConversion();
+			}
+		}
+	};
+
+	window.closeArticleDocConvertModal = function() {
+		if (modal && backdrop) {
+			backdrop.style.display = "none";
+			modal.style.display = "none";
+			document.body.style.overflow = "";
+		}
+	};
+
+	window.handleArticleDocFileSelected = function(files) {
+		if (!files || !files.length) return;
+		var file = files[0];
+		var ext = (file.name || "").split(".").pop().toLowerCase();
+		if (ext !== "docx" && ext !== "pdf") {
+			if (typeof window.adminAlert === "function") {
+				window.adminAlert({
+					title: "Unsupported File Format",
+					message: "Please select a Microsoft Word document (.docx) or an Adobe PDF (.pdf) file.",
+					type: "warning"
+				});
+			} else {
+				alert("Please select a .docx or .pdf file.");
+			}
+			return;
+		}
+
+		_selectedDocFile = file;
+
+		var dropzone = document.getElementById("articleDocModalDropzone");
+		var fileInfo = document.getElementById("articleDocSelectedFileInfo");
+		var fileNameEl = document.getElementById("articleDocSelectedFileName");
+		var fileSizeEl = document.getElementById("articleDocSelectedFileSize");
+		var btnStart = document.getElementById("btnArticleDocConvertStart");
+
+		if (dropzone) dropzone.style.display = "none";
+		if (fileInfo) fileInfo.style.display = "flex";
+		if (fileNameEl) fileNameEl.textContent = file.name;
+		if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
+		if (btnStart) btnStart.disabled = false;
+	};
+
+	window.resetArticleDocSelection = function() {
+		_selectedDocFile = null;
+		_lastConvertedData = null;
+
+		var dropzone = document.getElementById("articleDocModalDropzone");
+		var fileInfo = document.getElementById("articleDocSelectedFileInfo");
+		var fileInput = document.getElementById("articleDocFileInput");
+		var progress = document.getElementById("articleDocConvertProgress");
+		var results = document.getElementById("articleDocConvertResultsArea");
+		var optionsCard = document.getElementById("articleDocImportOptionsCard");
+		var btnStart = document.getElementById("btnArticleDocConvertStart");
+		var btnPaste = document.getElementById("btnArticleDocConvertPaste");
+		var btnReset = document.getElementById("btnArticleDocConvertReset");
+
+		if (dropzone) dropzone.style.display = "block";
+		if (fileInfo) fileInfo.style.display = "none";
+		if (fileInput) fileInput.value = "";
+		if (progress) progress.style.display = "none";
+		if (results) results.style.display = "none";
+		if (optionsCard) optionsCard.style.display = "block";
+		if (btnStart) {
+			btnStart.style.display = "inline-flex";
+			btnStart.disabled = true;
+		}
+		if (btnPaste) btnPaste.style.display = "none";
+		if (btnReset) btnReset.style.display = "none";
+	};
+
+	window.startArticleDocumentConversion = function() {
+		if (!_selectedDocFile) return;
+
+		var progress = document.getElementById("articleDocConvertProgress");
+		var results = document.getElementById("articleDocConvertResultsArea");
+		var optionsCard = document.getElementById("articleDocImportOptionsCard");
+		var uploadArea = document.getElementById("articleDocConvertUploadArea");
+		var btnStart = document.getElementById("btnArticleDocConvertStart");
+		var btnPaste = document.getElementById("btnArticleDocConvertPaste");
+		var btnReset = document.getElementById("btnArticleDocConvertReset");
+
+		if (progress) progress.style.display = "block";
+		if (results) results.style.display = "none";
+		if (optionsCard) optionsCard.style.display = "none";
+		if (uploadArea) uploadArea.style.display = "none";
+		if (btnStart) btnStart.disabled = true;
+
+		var formData = new FormData();
+		formData.append("documentFile", _selectedDocFile);
+		formData.append("workspace", "<cfoutput>#EncodeForJavaScript(activeWorkspaceId)#</cfoutput>");
+
+		var csrfToken = "";
+		var metaCsrf = document.querySelector('meta[name="csrf-token"]');
+		if (metaCsrf) csrfToken = metaCsrf.getAttribute("content") || "";
+
+		fetch("/articles/convert-document", {
+			method: "POST",
+			headers: {
+				"X-Requested-With": "XMLHttpRequest",
+				"X-CSRF-Token": csrfToken
+			},
+			body: formData
+		})
+		.then(function(r) { return r.json(); })
+		.then(function(res) {
+			if (progress) progress.style.display = "none";
+
+			if (!res || !res.success) {
+				if (uploadArea) uploadArea.style.display = "block";
+				if (optionsCard) optionsCard.style.display = "block";
+				if (btnStart) btnStart.disabled = false;
+
+				var errMsg = (res && res.message) ? res.message : "Failed to extract and convert document content.";
+				if (typeof window.adminAlert === "function") {
+					window.adminAlert({ title: "Conversion Failed", message: errMsg, type: "danger" });
+				} else {
+					alert("Conversion Failed: " + errMsg);
+				}
+				return;
+			}
+
+			_lastConvertedData = (res && res.data) ? res.data : res;
+
+			// Populate KPIs
+			var stats = _lastConvertedData.stats || {};
+			setElText("articleDocStatHeadings", stats.headingsCount || 0);
+			setElText("articleDocStatParagraphs", stats.paragraphsCount || 0);
+			setElText("articleDocStatTables", stats.tablesCount || 0);
+			setElText("articleDocStatLists", stats.listsCount || 0);
+			setElText("articleDocStatImages", stats.imagesCount || 0);
+			setElText("articleDocStatWords", stats.wordCount || 0);
+
+			// Previews
+			var visual = document.getElementById("articleDocPreviewVisual");
+			var code = document.getElementById("articleDocPreviewCode");
+			if (visual) visual.innerHTML = res.html || "<p><em>(No formatted content extracted)</em></p>";
+			if (code) code.value = res.html || "";
+
+			if (results) results.style.display = "flex";
+			if (optionsCard) optionsCard.style.display = "block";
+			if (btnStart) btnStart.style.display = "none";
+			if (btnPaste) btnPaste.style.display = "inline-flex";
+			if (btnReset) btnReset.style.display = "inline-flex";
+
+			if (typeof window.showToast === "function") {
+				window.showToast("Document converted successfully to pure WCAG AA HTML!", "success");
+			}
+		})
+		.catch(function(err) {
+			if (progress) progress.style.display = "none";
+			if (uploadArea) uploadArea.style.display = "block";
+			if (optionsCard) optionsCard.style.display = "block";
+			if (btnStart) btnStart.disabled = false;
+			console.error("Conversion error", err);
+			if (typeof window.adminAlert === "function") {
+				window.adminAlert({ title: "Network Error", message: "Failed to upload document for conversion: " + err.message, type: "danger" });
+			} else {
+				alert("Network error during conversion.");
+			}
+		});
+	};
+
+	window.switchArticleDocPreviewTab = function(tab) {
+		var visual = document.getElementById("articleDocPreviewVisual");
+		var code = document.getElementById("articleDocPreviewCode");
+		var btnVisual = document.getElementById("btnArticleDocTabVisual");
+		var btnCode = document.getElementById("btnArticleDocTabCode");
+
+		if (tab === "visual") {
+			if (visual) visual.style.display = "block";
+			if (code) code.style.display = "none";
+			if (btnVisual) { btnVisual.className = "btn btn-xs btn-primary"; }
+			if (btnCode) { btnCode.className = "btn btn-xs btn-outline"; }
+		} else {
+			if (visual) visual.style.display = "none";
+			if (code) code.style.display = "block";
+			if (btnVisual) { btnVisual.className = "btn btn-xs btn-outline"; }
+			if (btnCode) { btnCode.className = "btn btn-xs btn-primary"; }
+		}
+	};
+
+	window.pasteArticleDocToEditor = function() {
+		if (!_lastConvertedData || !_lastConvertedData.html) return;
+
+		var html = _lastConvertedData.html;
+		var modeEl = document.getElementById("articleDocInsertMode");
+		var mode = modeEl ? modeEl.value : "replace";
+
+		var chkTitle = document.getElementById("chkArticleDocSyncTitle");
+		if (chkTitle && chkTitle.checked && _lastConvertedData.title) {
+			var titleEl = document.getElementById("articleTitle");
+			if (titleEl) {
+				titleEl.value = _lastConvertedData.title;
+				autoSlug(_lastConvertedData.title);
+			}
+		}
+
+		var chkSummary = document.getElementById("chkArticleDocSyncSummary");
+		if (chkSummary && chkSummary.checked && _lastConvertedData.summary) {
+			var summaryEl = document.getElementById("articleSummary");
+			if (summaryEl) summaryEl.value = _lastConvertedData.summary;
+		}
+
+		// Insert into JBDEditor
+		var textarea = document.getElementById("articleContent");
+		var jbdInstance = null;
+		if (window.JBDEditor && typeof window.JBDEditor.getInstance === "function") {
+			jbdInstance = window.JBDEditor.getInstance(textarea);
+		} else if (textarea && textarea._jbdEditor) {
+			jbdInstance = textarea._jbdEditor;
+		}
+
+		if (jbdInstance) {
+			if (mode === "replace") {
+				if (typeof jbdInstance.setHTML === "function") jbdInstance.setHTML(html);
+				else textarea.value = html;
+			} else if (mode === "insert") {
+				if (typeof jbdInstance.insertSnippetAtCursor === "function") jbdInstance.insertSnippetAtCursor(html);
+				else if (typeof jbdInstance.insertHTML === "function") jbdInstance.insertHTML(html);
+				else textarea.value += "\n" + html;
+			} else {
+				// append
+				var existing = (typeof jbdInstance.getHTML === "function") ? jbdInstance.getHTML() : textarea.value;
+				if (typeof jbdInstance.setHTML === "function") jbdInstance.setHTML(existing + "\n" + html);
+				else textarea.value = existing + "\n" + html;
+			}
+		} else if (textarea) {
+			if (mode === "replace") textarea.value = html;
+			else textarea.value += "\n" + html;
+		}
+
+		closeArticleDocConvertModal();
+
+		// Run live ADA Pre-Flight Linter immediately
+		setTimeout(function() {
+			if (window.ArticleA11yLinter && typeof window.ArticleA11yLinter.scan === "function") {
+				window.ArticleA11yLinter.scan();
+			}
+			if (typeof window.showToast === "function") {
+				window.showToast("Converted document pasted into Story Content successfully.", "success");
+			}
+		}, 150);
+	};
+
+	function setElText(id, txt) {
+		var el = document.getElementById(id);
+		if (el) el.textContent = txt;
+	}
+
+	function formatBytes(bytes) {
+		if (!bytes || bytes === 0) return "0 Bytes";
+		var k = 1024;
+		var sizes = ["Bytes", "KB", "MB", "GB"];
+		var i = Math.floor(Math.log(bytes) / Math.log(k));
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+	}
+})();
