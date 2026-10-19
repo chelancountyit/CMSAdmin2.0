@@ -1012,6 +1012,24 @@ This log maintains a chronological, permanent record of engineering milestones, 
 - **Verification:**
   - Verified HTTP 200 delivery of `admin-theme.css?v=4.3` on local IIS host.
 
+### 2026-10-18: Front-End Domain Integration, Layout Streamlining & Modal Title Typography
+- **Task Overview:**
+  1. Removed redundant "View in Content Manager" button from the Recent Workspace Pages panel header (retaining primary "+ Add Page" in header and "Manage in Content Manager" in card footer).
+  2. Updated "View Portal" (and global/page "View Live Site" / "View Live") to dynamically resolve and use each workspace's configured front-end `domain_name` (e.g. `https://www.chelancounty.gov/assessor` or dedicated domain).
+  3. Standardized modal titles (`.admin-modal-title`, `.modal-title`, `.ev-modal-title`, `.hdi-modal-title`, `.fb-modal-title`) to the same uppercase tracked brand typography (`font-weight: 700`, `letter-spacing: 0.04em`, `text-transform: uppercase`) sized 2 notches larger (`1.05rem`).
+- **Architectural & View Updates:**
+  1. **Dashboard View (`app/views/main/index.cfm`):**
+     - Dynamic resolution of `local.frontEndDomain` and `local.portalUrl` from `variables.activeWsObj.domain_name` and `virtual_directory`.
+     - Removed redundant `View in Content Manager` button from `.card-tools`.
+  2. **Page Editor & Shell Layout (`app/views/pages/edit.cfm`, `app/views/layout.cfm`):**
+     - Updated live preview links to point directly to public domain hostname.
+  3. **Theme Stylesheet (`stylesheets/admin-theme.css`, `app/views/pages/index.cfm`):**
+     - Styled modal titles with uppercase tracking at `1.05rem`.
+     - Bumped stylesheet cache version to `?v=4.4`.
+- **Verification:**
+  - Verified ColdFusion compilation and HTTP 200 delivery of `admin-theme.css?v=4.4`.
+
+
 
 
 

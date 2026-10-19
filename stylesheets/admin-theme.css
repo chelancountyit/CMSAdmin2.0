@@ -1806,14 +1806,28 @@ form.admin-modal-dialog {
   background: linear-gradient(to bottom, #ffffff, var(--admin-bg));
 }
 
-.admin-modal-title {
-  font-size: 1.15rem;
+.admin-modal-title,
+.modal-title,
+.ev-modal-title,
+.hdi-modal-title,
+.fb-modal-title {
+  font-family: var(--admin-font);
+  font-size: 1.05rem !important;
   font-weight: 700;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
   color: var(--admin-text-main);
   margin: 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+.admin-modal-title svg,
+.modal-title svg,
+.ev-modal-title svg,
+.hdi-modal-title svg,
+.fb-modal-title svg {
+  flex-shrink: 0;
 }
 
 .admin-modal-close {

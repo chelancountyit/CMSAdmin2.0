@@ -18,7 +18,33 @@
 	</div>
 	<div class="page-actions">
 		<cfif variables.hasWorkspace>
-			<a href="/#encodeForHTML(variables.activeWorkspaceId)#" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" title="Preview public portal for this workspace">
+			<cfscript>
+				local.frontEndDomain = (StructKeyExists(variables.activeWsObj, "domain_name") && Len(Trim(variables.activeWsObj.domain_name)))
+					? Trim(variables.activeWsObj.domain_name)
+					: "www.chelancounty.gov";
+				if (!REFindNoCase("^https?://", local.frontEndDomain)) {
+					local.frontEndDomain = "https://" & local.frontEndDomain;
+				}
+				if (Right(local.frontEndDomain, 1) == "/") {
+					local.frontEndDomain = Left(local.frontEndDomain, Len(local.frontEndDomain) - 1);
+				}
+				local.wsSlug = (StructKeyExists(variables.activeWsObj, "virtual_directory") && Len(Trim(variables.activeWsObj.virtual_directory)))
+					? Trim(variables.activeWsObj.virtual_directory)
+					: variables.activeWorkspaceId;
+				local.isStandaloneSite = (StructKeyExists(variables.activeWsObj, "type") && variables.activeWsObj.type == "site")
+					|| (local.wsSlug == "shared" || local.wsSlug == "root" || local.wsSlug == "global");
+				if (local.isStandaloneSite) {
+					local.portalUrl = local.frontEndDomain & "/";
+				} else if (StructKeyExists(variables.activeWsObj, "redirect_url") && Len(Trim(variables.activeWsObj.redirect_url))) {
+					local.portalUrl = variables.activeWsObj.redirect_url;
+					if (!REFindNoCase("^https?://", local.portalUrl) && Left(local.portalUrl, 1) != "/") {
+						local.portalUrl = local.frontEndDomain & "/" & local.portalUrl;
+					}
+				} else {
+					local.portalUrl = local.frontEndDomain & "/" & local.wsSlug;
+				}
+			</cfscript>
+			<a href="#encodeForHTMLAttribute(local.portalUrl)#" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" title="Preview public portal for this workspace (#encodeForHTMLAttribute(local.portalUrl)#)">
 				#svgIcon(name="globe", size=14)#
 				<span>View Portal</span>
 				#svgIcon(name="external-link", size=12)#
@@ -105,11 +131,6 @@
 					<span>Recent Workspace Pages</span>
 				</h2>
 				<div class="card-tools">
-					<cfif variables.hasWorkspace>
-						<a href="#urlFor(controller='pages', action='index', params='ws=' & variables.activeWorkspaceId)#" class="btn btn-secondary btn-sm">View in Content Manager</a>
-					<cfelse>
-						<a href="#urlFor(controller='pages', action='index')#" class="btn btn-secondary btn-sm">Content Manager</a>
-					</cfif>
 					<button type="button" class="btn btn-primary btn-sm" id="btnRecentPagesAddPage" onclick="openAddPageModal();">
 						#svgIcon(name="plus", size=14)#
 						<span>Add Page</span>

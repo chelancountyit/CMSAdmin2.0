@@ -72,8 +72,11 @@ form.admin-modal-dialog {
 	background: linear-gradient(to bottom, ##ffffff, var(--admin-bg, ##f8fafc));
 }
 .admin-modal-title {
-	font-size: 1.15rem;
+	font-family: var(--admin-font);
+	font-size: 1.05rem !important;
 	font-weight: 700;
+	text-transform: uppercase !important;
+	letter-spacing: 0.04em !important;
 	color: var(--admin-text-main, ##0f172a);
 	margin: 0;
 	display: flex;

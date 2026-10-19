@@ -25,7 +25,7 @@
 			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 
 			<!--- Our custom CMS Admin stylesheet inspired by Mashable Light --->
-			<link href="/stylesheets/admin-theme.css?v=4.3" media="all" rel="stylesheet" type="text/css">
+			<link href="/stylesheets/admin-theme.css?v=4.4" media="all" rel="stylesheet" type="text/css">
 			<link href="/stylesheets/jbdeditor.css?v=1.8" media="all" rel="stylesheet" type="text/css">
 			<link href="/stylesheets/jbd-templates.css?v=1.5" media="all" rel="stylesheet" type="text/css">
 			<cfif structKeyExists(params, "controller") and params.controller eq "forms">
@@ -210,6 +210,17 @@
 				activeWsPrimaryColor = (len(trim(activeWsObj.id ?: "")) && structKeyExists(activeWsObj, "color") && REFindNoCase("^##[0-9a-fA-F]{3,6}$", trim(activeWsObj.color)))
 					? trim(activeWsObj.color)
 					: "##0073aa";
+
+				publicSiteDomain = (structKeyExists(activeWsObj, "domain_name") && len(trim(activeWsObj.domain_name)))
+					? trim(activeWsObj.domain_name)
+					: "www.chelancounty.gov";
+				if (!REFindNoCase("^https?://", publicSiteDomain)) publicSiteDomain = "https://" & publicSiteDomain;
+				if (Right(publicSiteDomain, 1) == "/") publicSiteDomain = Left(publicSiteDomain, Len(publicSiteDomain) - 1);
+				if (activeWsObj.id != "global" && activeWsObj.id != "" && len(activeWsVirtualDir) && activeWsVirtualDir != "shared" && activeWsVirtualDir != "root" && !(structKeyExists(activeWsObj, "type") && activeWsObj.type == "site")) {
+					publicSiteUrl = publicSiteDomain & "/" & activeWsVirtualDir;
+				} else {
+					publicSiteUrl = publicSiteDomain & "/";
+				}
 
 				// Dynamic System Notifications for header bell
 				headerNotifications = getSystemNotifications(activeRole, 5);
@@ -412,7 +423,7 @@
 						</button>
 
 						<!--- View Live Site Link --->
-						<a href="/" target="_blank" class="nav-action-btn" title="View Public Website">
+						<a href="<cfoutput>#EncodeForHTMLAttribute(publicSiteUrl)#</cfoutput>" target="_blank" rel="noopener noreferrer" class="nav-action-btn" title="View Public Website (<cfoutput>#EncodeForHTMLAttribute(publicSiteUrl)#</cfoutput>)">
 							<cfoutput>#svgIcon(name="external-link", size=18)#</cfoutput>
 						</a>
 

@@ -463,6 +463,16 @@
 	}
 </style>
 
+<cfscript>
+	editWsObj = resolveUserActiveWorkspace(requestedWs=(Len(editSiteId) ? editSiteId : (page.siteId ?: "")), role=getCurrentActiveRole());
+	editDomain = (StructKeyExists(editWsObj, "domain_name") && Len(Trim(editWsObj.domain_name)))
+		? Trim(editWsObj.domain_name)
+		: "www.chelancounty.gov";
+	if (!REFindNoCase("^https?://", editDomain)) editDomain = "https://" & editDomain;
+	if (Right(editDomain, 1) == "/") editDomain = Left(editDomain, Len(editDomain) - 1);
+	livePageUrl = editDomain & "/" & page.slug;
+</cfscript>
+
 <div class="page-header">
 	<div>
 		<h1 class="page-title" style="margin-bottom:0;">#isNew ? "Add Page" : "Edit Page"#</h1>
@@ -485,7 +495,7 @@
 				<span>Revisions</span>
 				<span class="badge badge-neutral" id="pgHeaderRevCount" style="margin-left:4px; font-size:0.75rem; font-weight:700;">#Val(revisionCount)#</span>
 			</button>
-			<a href="/#EncodeForHTMLAttribute(page.slug)#" id="btnViewLivePage" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+			<a href="#EncodeForHTMLAttribute(livePageUrl)#" id="btnViewLivePage" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" title="View live page on #EncodeForHTMLAttribute(editDomain)#">
 				#svgIcon(name="eye", size=14)#
 				<span>View Live<span class="sr-only"> (opens in new tab)</span></span>
 			</a>
@@ -2275,7 +2285,7 @@
 				if (slug && newSlug) slug.value = newSlug;
 				var viewLiveBtn = document.getElementById("btnViewLivePage");
 				if (viewLiveBtn && newSlug) {
-					viewLiveBtn.href = "/" + newSlug;
+					viewLiveBtn.href = "#EncodeForJavaScript(editDomain)#/" + newSlug.replace(/^\/+/, "");
 				}
 			} else {
 				var msg = getField(data, "message") || "Error saving page attributes.";
