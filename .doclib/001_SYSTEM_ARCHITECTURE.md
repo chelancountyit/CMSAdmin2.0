@@ -82,3 +82,34 @@ All departmental assets and pages are partitioned by `siteid` (workspace slug, e
      ```
    - Failing to include these options triggers SQL Server `Msg 1934`.
 
+---
+
+## 6. Application Versioning & Build Scheme (`v2.1.[build]`)
+
+CMSAdmin 2.0 tracks versioning using standard semantic releases parameterized by build increments:
+
+- **Format:** `v2.1.[build]` (e.g. `v2.1.1`)
+- **Single Source of Truth:** [`config/version.json`](file:///c:/inetpub/CMSAdmin2.0/config/version.json)
+- **Framework Configuration:** [`config/settings.cfm`](file:///c:/inetpub/CMSAdmin2.0/config/settings.cfm) (`set(appVersion="2.1.1"); set(appBuildNumber=1);`)
+- **Global Helper Functions:**
+  - `getAppVersion()`: Returns structured version metadata struct.
+  - `appVersion()`: Returns semantic version string (e.g. `"2.1.1"`).
+  - `appVersionTag()`: Returns formatted version tag (e.g. `"v2.1.1"`).
+  - `appBuildNumber()`: Returns numeric build integer (e.g. `1`).
+  - `appBuildDisplay()`: Returns display string (e.g. `"v2.1.1 (Build 1)"`).
+- **UI Surfaces:**
+  - Header brand badge (`layout.cfm` line 290)
+  - Footer status indicator (`layout.cfm` line 837)
+  - HTML `<meta>` tags: `generator`, `cms-version`, `cms-build`
+  - System Info Telemetry (`/settings/system`)
+- **Automated CLI Incrementor:**
+  ```powershell
+  # Increments current build by 1 (e.g. v2.1.1 -> v2.1.2)
+  .\scripts\bump-version.ps1
+
+  # Explicit build or minor/major releases
+  .\scripts\bump-version.ps1 -Build 5
+  .\scripts\bump-version.ps1 -Minor 2
+  ```
+
+

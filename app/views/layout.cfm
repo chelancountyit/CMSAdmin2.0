@@ -9,6 +9,9 @@
 		<head>
 			<meta charset="utf-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<meta name="generator" content="Chelan County CMSAdmin <cfoutput>#appVersionTag()#</cfoutput>">
+			<meta name="cms-version" content="<cfoutput>#appVersion()#</cfoutput>">
+			<meta name="cms-build" content="<cfoutput>#appBuildNumber()#</cfoutput>">
 			<title><cfoutput>#(structKeyExists(variables, "pageTitle") ? variables.pageTitle & " - " : "")#CMS Admin</cfoutput></title>
 			<cfoutput>#csrfMetaTags()#</cfoutput>
 			
@@ -287,7 +290,7 @@
 									<img src="/images/logo.png" alt="Chelan County Logo" width="34" height="34" style="width:34px; height:34px; object-fit:contain; display:block;">
 								</div>
 								<span class="brand-text">CMS Admin</span>
-								<span class="brand-badge">2.0</span>
+								<span class="brand-badge" title="Chelan County CMS Admin <cfoutput>#appVersionTag()# (Build #appBuildNumber()#)</cfoutput>"><cfoutput>#appVersionTag()#</cfoutput></span>
 							</a>
 						</div>
 
@@ -714,7 +717,7 @@
 							<div class="nav-group">
 								<div class="nav-group-title">PIO</div>
 								<ul class="sidebar-nav">
-									<li class="nav-item has-submenu <cfoutput>#((structKeyExists(params, 'dept') and params.dept eq 'pio') or (structKeyExists(params, 'controller') and listFindNoCase('pressreleases,press-releases', params.controller)) ? 'open active' : '')#</cfoutput>">
+									<li class="nav-item has-submenu <cfoutput>#((structKeyExists(params, 'dept') and params.dept eq 'pio') or (structKeyExists(params, 'controller') and listFindNoCase('pressreleases,press-releases,alerts', params.controller)) ? 'open active' : '')#</cfoutput>">
 										<a href="javascript:void(0)" class="nav-link">
 											<span class="nav-link-main">
 												<span class="nav-icon"><cfoutput>#svgIcon(name="megaphone", size=18)#</cfoutput></span>
@@ -723,9 +726,11 @@
 											<cfoutput>#svgIcon(name="chevron-right", size=14, class="nav-caret")#</cfoutput>
 										</a>
 										<ul class="nav-submenu">
-											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'dept') and params.dept eq 'pio' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='forms', action='index', params='dept=pio')#</cfoutput>" class="submenu-link">PIO Forms &amp; Inquiries</a></li>
-											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and listFindNoCase('pressreleases,press-releases', params.controller) ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='pressReleases', action='index')#</cfoutput>" class="submenu-link">Press Releases &amp; Media</a></li>
-											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'alerts' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='alerts', action='index')#</cfoutput>" class="submenu-link">Emergency Alerts &amp; News</a></li>
+											<cfoutput>
+											<li class="submenu-item #(structKeyExists(params, 'dept') and params.dept eq 'pio' ? 'active' : '')#"><a href="#urlFor(controller='forms', action='index', params='dept=pio')#" class="submenu-link">PIO Forms &amp; Inquiries</a></li>
+											<li class="submenu-item #(structKeyExists(params, 'controller') and listFindNoCase('pressreleases,press-releases', params.controller) ? 'active' : '')#"><a href="#urlFor(controller='pressReleases', action='index')#" class="submenu-link">Press Releases &amp; Media</a></li>
+											<li class="submenu-item #(structKeyExists(params, 'controller') and params.controller eq 'alerts' ? 'active' : '')#"><a href="#urlFor(controller='alerts', action='index')#" class="submenu-link">Emergency Alerts &amp; News</a></li>
+											</cfoutput>
 										</ul>
 									</li>
 									<!--- Articles & Posts (PIO-owned content) --->
@@ -763,7 +768,7 @@
 											<cfoutput>#svgIcon(name="chevron-right", size=14, class="nav-caret")#</cfoutput>
 										</a>
 										<ul class="nav-submenu">
-											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'action') and params.action eq 'index' and (!structKeyExists(params, 'type') or params.type eq 'all') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='index')#</cfoutput>" class="submenu-link">All Workspaces</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'action') and params.action eq 'index' and (not structKeyExists(params, 'type') or params.type eq 'all') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='index')#</cfoutput>" class="submenu-link">All Workspaces</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'action') and params.action eq 'new' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='new')#</cfoutput>" class="submenu-link">Add New Workspace</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'type') and params.type eq 'dept' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='index', params='type=dept')#</cfoutput>" class="submenu-link">Departments</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'type') and params.type eq 'site' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='index', params='type=site')#</cfoutput>" class="submenu-link">Sites &amp; Portals</a></li>
@@ -832,7 +837,7 @@
 						</div>
 						<div class="footer-status">
 							<span class="status-indicator"></span>
-							<span>Wheels 4.1 &bull; Lucee CFML &bull; System Healthy</span>
+							<span><cfoutput>#appBuildDisplay()#</cfoutput> &bull; Wheels 4.1 &bull; Adobe ColdFusion &bull; System Healthy</span>
 						</div>
 					</footer>
 				</main>

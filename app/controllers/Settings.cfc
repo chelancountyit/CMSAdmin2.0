@@ -245,6 +245,7 @@ component extends="Controller" {
 		} catch (any e) {}
 
 		variables.diagnostics = {
+			"app": (structKeyExists(variables, "getAppVersion") ? getAppVersion() : { "version": "2.1.1", "versionTag": "v2.1.1", "build": 1, "releaseDate": "2026-10-19" }),
 			"server": {
 				"engine": server.coldfusion.productname ?: "ColdFusion",
 				"version": server.coldfusion.productversion ?: "Unknown",

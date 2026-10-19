@@ -4,7 +4,8 @@
 		<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
 			<span class="badge badge-primary" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em;">Settings &bull; Diagnostics</span>
 			<span class="badge badge-success" style="font-size:0.72rem;">Live Telemetry</span>
-			<span class="badge badge-neutral" style="font-size:0.72rem;">v#EncodeForHTML(diagnostics.server.wheelsVersion)#</span>
+			<span class="badge badge-primary" style="font-size:0.72rem; font-weight:700;">CMSAdmin #EncodeForHTML(diagnostics.app.versionTag ?: 'v2.1.1')# (Build #EncodeForHTML(diagnostics.app.build ?: 1)#)</span>
+			<span class="badge badge-neutral" style="font-size:0.72rem;">Wheels v#EncodeForHTML(diagnostics.server.wheelsVersion)#</span>
 		</div>
 		<h1 class="page-title" style="margin:0; font-size:1.5rem; font-weight:700;">System Info &amp; Diagnostics</h1>
 		<p class="text-muted" style="margin:0.35rem 0 0; color:var(--admin-text-muted); font-size:0.92rem;">
@@ -118,7 +119,14 @@
 			<table class="table" style="width:100%; margin:0; border-collapse:collapse; font-size:0.875rem;">
 				<tbody>
 					<tr style="border-bottom:1px solid var(--admin-border);">
-						<td style="padding:0.65rem 0; font-weight:600; color:var(--admin-text-main); width:35%;">CFML Engine</td>
+						<td style="padding:0.65rem 0; font-weight:600; color:var(--admin-text-main); width:35%;">CMSAdmin Version</td>
+						<td style="padding:0.65rem 0; color:var(--admin-text-muted);">
+							<span class="badge badge-primary" style="font-size:0.8rem; font-weight:700;">#EncodeForHTML(diagnostics.app.versionTag ?: 'v2.1.1')# (Build #EncodeForHTML(diagnostics.app.build ?: 1)#)</span>
+							&bull; Released: <strong>#EncodeForHTML(diagnostics.app.releaseDate ?: '2026-10-19')#</strong>
+						</td>
+					</tr>
+					<tr style="border-bottom:1px solid var(--admin-border);">
+						<td style="padding:0.65rem 0; font-weight:600; color:var(--admin-text-main);">CFML Engine</td>
 						<td style="padding:0.65rem 0; color:var(--admin-text-muted);">
 							<strong>#EncodeForHTML(diagnostics.server.engine)#</strong> (v#EncodeForHTML(diagnostics.server.version)#)
 						</td>

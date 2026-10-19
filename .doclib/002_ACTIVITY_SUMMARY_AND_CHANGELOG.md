@@ -108,6 +108,36 @@ This log maintains a chronological, permanent record of engineering milestones, 
      - Escaped SVG icon `stroke="##0284c7"` across `<cfoutput>` blocks in `index.cfm` and `picker.cfm` to eliminate `[coldfusion.util.RuntimeWrapper] 0284c7 is not a valid identifier name` runtime error.
      - Verified all three views (`/media/index`, `/media/upload`, `/media/picker`) return HTTP 200 with clean compilation under active authenticated session.
 
+### Session: October 18–19, 2026 — Page Editor V2 Layout Overhaul, LED Status Markers, and Comprehensive Modal Restoration
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/views/pages/edit.cfm`, `app/views/pages/editV2.cfm`, `app/views/pages/_pageEditorModals.cfm`, `app/views/pages/_pageEditorScripts.cfm`, `javascripts/filexplorer/explorer.js`, `app/controllers/Pages.cfc`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Page Editor V2 Dual-Panel & Accordion Architecture:**
+     - Restructured the Page Editor interface into a balanced dual-column layout:
+       - **Left Panel:** Page Title, Page Slug/URL with clipboard copy button, Page Layout selector, Full WYSIWYG Editor (`pgContent`), dedicated ADA Pre-Flight Linter toolbar & expandable diagnostic drawer directly above editor content, and integrated Search & Social Sharing metadata generator card.
+       - **Right Panel:** Page Features Deck containing 5 core features with real-time pulsing LED status markers (`.led-marker.is-active`, `.led-marker.is-inactive`) and active count badge (`X / 5 Active`):
+         - *Cover Image* (`#ledCoverImage`): Featured header cover image, alt text, caption, credit, and decorative toggle.
+         - *Navigation & Placement* (`#ledNavigation`): Menu item assignment, top-level toggle, and breadcrumbs.
+         - *Sidebar & Subpages* (`#ledSidebar`): Subpage listing manager, order positions, and sidebar chooser.
+         - *Folder Explorer* (`#ledFolder`): File repository items, server paths, and layout grid settings.
+         - *Publish Status & Scheduling* (`#ledPublish`): Immediate publish, scheduled release, archive dates, and direct launch button to Revisions Studio.
+     - **Removed Duplicate ADA Accordion Item:** Removed redundant `#accItemA11y` from the Right Panel features deck, keeping the ADA Pre-Flight Linter toolbar positioned above the content editor where real-time text analysis is performed.
+  2. **Comprehensive Modal Dialog Restoration & Layout Fixes:**
+     - **Resolved Script Halting Exception:** Corrected missing element ID lookup (`pgFolderItemRelative` vs `pgFolderItemRelativePath`) that previously threw an unhandled `TypeError` during script evaluation, preventing modal opener functions from defining.
+     - **Universal Modal Cancel & Close Button Handlers:** Fixed broken Cancel buttons across all modals:
+       - Subpage Modal (`#pgCancelSubpage`, `#pgCloseSubpageModal`): Assigned explicit IDs and `querySelectorAll('[data-close-subpage-modal]')` event bindings; exported `window.closeSubpageModal` globally.
+       - Folder Item Modal (`#pgCancelFolderItem`, `#pgCloseFolderModal`): Assigned explicit IDs, `querySelectorAll('[data-close-folder-modal]')` bindings; exported `window.closeFolderItemModal` globally.
+       - Media Picker (`#mediaPickerModal`), Revisions Studio (`#pgRevisionsModal`), Embed Form (`#embedFormModal`), Embed CTA (`#embedCtaModal`), and Document Converter (`#pgDocConvertModal`): Verified or added explicit Cancel buttons with instant closing and body scroll restoration.
+     - **Restored Iconized Layout Selection Cards:** Replaced plain `<select>` in `#pgFolderItemModal` with the original interactive `.fe-layout-card` wireframe cards for **"Full Width"** and **"3/9 Grid Layout"**, complete with active radio dots, CSS focus states, and arrow-key accessibility.
+     - **Revisions Studio Modal (`#pgRevisionsModal`):** Added fixed centered positioning (`position: fixed; inset: 0; z-index: 99999`), 96vw/88vh viewport containment, and dark blurred backdrop (`rgba(15,23,42,0.72)`) appended directly to `document.body` to eliminate document flow breakages.
+     - **Subpage Modal & Folder Item Modal:** Added null guards on title/save/delete buttons in `openSubpageModal()`, `openEditSubpageModal()`, and `closeSubpageModal()`, ensuring clean opening and body scroll lock/unlock without errors.
+     - **Embed Form, Embed CTA, & Document Converter Modals:** Verified all modal openers (`openEmbedFormModal`, `openEmbedCtaModal`, `openDocConvertModal`) append to `document.body` and display cleanly with ESC key dismissals.
+  3. **Media Picker Single-Click Card Selection:**
+     - Updated `javascripts/filexplorer/explorer.js` in `pickerMode` to render a direct **"Select Image" / "Select File"** button on every media card in grid and list views. Single-clicking the button immediately emits the payload to the parent window, updates the cover image preview and metadata, activates the `#ledCoverImage` LED status marker, and closes the modal seamlessly.
+  4. **Verification & Synchronization:**
+     - Verified identical synchronization between `app/views/pages/edit.cfm` and `app/views/pages/editV2.cfm`.
+     - Validated all modal Cancel triggers and iconized card selections in headless Chrome tests.
+
 ### Session: October 18, 2026 — Pure Adobe ColdFusion Document to WCAG 2.1 AA HTML Converter Studio (.docx & .pdf) & Articles Module Integration
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 (`app/models/DocumentConverter.cfc`, `app/controllers/Pages.cfc`, `app/controllers/Articles.cfc`, `app/views/pages/edit.cfm`, `app/views/articles/edit.cfm`, `config/routes.cfm`, `.doclib/000_SERIES_INDEX.md`, `.doclib/012_DOCUMENT_CONVERTER_WCAG_AA.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
@@ -1047,6 +1077,154 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 
 
+
+
+
+
+
+### 2026-10-18: Edit Page v2 Separate Mockup Branch (Consolidated Left Panel, Feature Accordions & LED Markers)
+- **Task Overview:**
+  - Implemented an alternate **v2 Mockup of Edit Page** featuring a unified left panel and an interactive right-hand Page Features Accordion deck with glowing LED light markers.
+  - Per the user's explicit directive (*"do not make any changes to main, this is a separate mockup"* and *"try accordion in exchange of modal"*), the main production files (`edit.cfm` and `index.cfm`) were kept completely untouched and pristine. The v2 mockup is completely segregated in `app/views/pages/editV2.cfm` and accessed via dedicated route `/pages/edit-v2`.
+- **Architectural & View Updates:**
+  1. **Main Branch Isolation:**
+     - `app/views/pages/edit.cfm` and `app/views/pages/index.cfm` restored to 100% byte-for-byte fidelity with origin/main.
+     - V2 experimentation is strictly confined to `app/views/pages/editV2.cfm` and `app/controllers/Pages.cfc::editV2()`.
+  2. **Routing & Controller (`config/routes.cfm`, `app/controllers/Pages.cfc`):**
+     - Registered `/pages/edit-v2` (`pagesEditV2`) and `/pages/editV2` routes in `config/routes.cfm`.
+     - Added `editV2()` method in `Pages.cfc` establishing `variables.isV2Branch = true` and invoking `renderView(template="editV2")`.
+  3. **Edit Page v2 View (`app/views/pages/editV2.cfm`):**
+     - **Left Panel (Core Authoring in ONE Panel):** Page Title, Page URL (with prefix and clipboard copy), Page Layout (interactive visual cards for Full Width vs. Right Sidebar), Page Content (JBDEditor, quick embeds for Word/PDF, CTA, Online Forms, and ADA Pre-Flight Linter Bar), and Search & Social Sharing (Browser Title with 0/65 counter, Meta Description with 0/160 counter, and Auto-Generate from content) all in a single consolidated card.
+     - **Right Panel (Page Features Accordion Deck):**
+       - Replaced popup modals with a smooth, collapsible Accordion deck (`.pg-features-accordion`).
+       - Features included: Cover Image, Navigation & Menu, Sidebar & Subpages, Folder Explorer, Publishing & Schedule, ADA Pre-Flight Audit, CTA Blocks, Online Forms, and RCW 42.56 Revision History.
+       - Quick "Expand All" and "Collapse All" controls.
+       - **LED Light Markers:** Dynamic glowing emerald/green pulses (`.led-marker.is-active`) for features with active content, glowing amber (`.led-marker.is-warn`) for warnings/attention (e.g. missing ADA alt text or unassigned sidebars), and subtle muted gray (`.led-marker.is-inactive`) for empty/unused features.
+       - Real-time client-side synchronization: LED markers and subtitles update dynamically as fields change or content is typed.
+- **Verification:**
+  - Tested authenticated HTTP 200 delivery of `/pages/edit-v2?id=1` (475KB), verifying presence of `.pg-v2-grid`, `.pg-features-accordion`, and dynamic `.led-marker` elements.
+  - Tested authenticated HTTP 200 delivery of main `/pages/edit?id=1` and `/pages` verifying 100% undisturbed production behavior.
+
+
+  4. **Restoration of Editor Toolbar Actions (Per User Request):**
+     - Moved in-content embedding tools and version history directly onto the Page Content label bar above `#pgContent`:
+       - `Import Word / PDF` (`#btnEditorImportDoc`) launching the WCAG AA HTML document converter modal.
+       - `Embed Call to Action` (`#btnEditorInsertCTA`) launching the multi-card grid & CTA embed modal.
+       - `Embed Form` (`#btnEditorInsertForm`) launching the online form selector & shortcode modal.
+       - `Revisions` (`#btnEditorOpenRevisions` with snapshot version badge) launching the RCW 42.56 Diff & Rollback Studio.
+     - Removed CTA Blocks, Online Forms Embed, and Revision History from the right-hand accordion deck so the accordion focuses cleanly on 6 core page configuration features (Cover Image, Navigation, Sidebars & Subpages, Folder Explorer, Publishing & Schedule, ADA Pre-Flight Audit).
+     - Updated real-time LED marker synchronizer badge to track the 6 core features (`0 / 6 Active`).
+
+  5. **Revision Link Consolidated into Publish Status Panel (Per User Request):**
+     - Removed `Revisions` button from the content editor toolbar above `#pgContent`, keeping the editor action bar focused solely on content creation (`Import Word / PDF`, `Embed Call to Action`, and `Embed Form`).
+     - In the **Publish Status** panel on the right, balanced the primary button row to `View Live` (flex 1) and `Cancel` (flex 1).
+     - Transformed the `Revision:` metadata row into an interactive, clickable link/badge (`v30 (30 records)` with a history icon) that opens the RCW 42.56 Diff & Rollback Studio modal window (`openRevisionsModal()`).
+
+  5. **Revision Link Consolidated into Publish Status Panel (Per User Request):**
+     - Removed `Revisions` button from the content editor toolbar above `#pgContent`, keeping the editor action bar focused solely on content creation (`Import Word / PDF`, `Embed Call to Action`, and `Embed Form`).
+     - In the **Publish Status** panel on the right, balanced the primary button row to `View Live` (flex 1) and `Cancel` (flex 1).
+     - Transformed the `Revision:` metadata row into an interactive, clickable link/badge (`v30 (30 records)` with a history icon) that opens the RCW 42.56 Diff & Rollback Studio modal window (`openRevisionsModal()`).
+
+
+  6. **Revision Note Relocated to Publish Status Panel:**
+     - Moved the `Revision Note` input (`#pgChangeSummary`) out of the Publishing & Schedule accordion item and placed it directly inside the primary **Publish Status** card right above the **Save Changes** button.
+     - Authors can now immediately enter a revision note (RCW 42.56 compliance audit log) when saving without needing to open or navigate any accordion deck items.
+
+
+### Milestone 21: Official Promotion & Overwrite of Edit Page v2 to Production (`edit.cfm`)
+- **User Directive:** "implement v2 overwrite granted"
+- **Architectural & View Implementation:**
+  1. **Production View Promotion (`app/views/pages/edit.cfm`):**
+     - Overwrote classic `edit.cfm` with the perfected v2 architecture:
+       - **Consolidated Left Panel:** Page Title, Page URL permalink with copy helper, Page Layout interactive cards (Full Width vs. Right Sidebar), Page Content (JBDEditor with dropzone and automated ADA Pre-Flight linter), and Search & Social Sharing (Browser Title + Meta Description counters) in a single unified flow.
+       - **Editor Action Bar:** Clean in-content embedding tools (`Import Word / PDF`, `Embed Call to Action`, and `Embed Form`) directly above `#pgContent`.
+       - **Publish Status Card:** Dedicated `Revision Note` (`#pgChangeSummary`) input placed directly above the `Save Changes` button for immediate compliance journaling; `View Live` and `Cancel` balanced action row; and interactive `Revision: vX (N records)` link launching the RCW 42.56 Diff & Rollback Studio modal.
+       - **6-Feature Accordion Deck:** Streamlined to the 6 core page configuration features (Cover Image, Navigation & Menu, Sidebar & Subpages, Folder Explorer, Publishing & Schedule, ADA Pre-Flight Audit) with live pulsing LED status markers (green for active, amber for warnings, gray for inactive).
+     - Stripped temporary mockup banners and "v2 Branch" badges, establishing standard production headers and breadcrumbs.
+  2. **Controller & Route Compatibility (`app/controllers/Pages.cfc`, `config/routes.cfm`):**
+     - `Pages.cfc::edit()` naturally serves the newly promoted production `edit.cfm`.
+     - `Pages.cfc::editV2()` maintained as an alias rendering `edit.cfm` to ensure backward compatibility for bookmarked URLs.
+- **Verification:**
+  - Automated PowerShell test scripts against live IIS server (`cmsadmin.chelancounty.gov`) verified:
+    - `GET /pages/edit?id=23` returned HTTP 200 OK (472KB) with full v2 layout, accordion deck, and LED markers.
+    - `POST /pages/save` verified successful persistence and revision recording with `changeSummary`.
+    - `GET /pages/revisions?pageId=23` verified RCW 42.56 snapshots API functionality.
+
+---
+
+### Milestone 22: Edit Page v2 Bug Fixes: Cover Image Browse, Menu Visibility, Layout Toggling & Folder Explorer LED
+- **User Directives:**
+  1. *Featured Cover Image:* "browse is disabled"
+  2. *Navigation on Menu:* "i selected top level but the menu item remained visible"
+  3. *Sidebar & Subpages:* "switch to full and switch to right tottle is not working properly"
+  4. *Folder Explorer:* "light remained green even if not selected a folder"
+- **Root Cause & Technical Resolution:**
+  1. **Featured Cover Image Browse Button (`edit.cfm`, `editV2.cfm`, `_pageEditorScripts.cfm`):**
+     - In `edit.cfm` and `editV2.cfm`, the Browse button lacked `id="btnBrowseFeaturedImg"`, preventing `document.getElementById('btnBrowseFeaturedImg')` from resolving in `openMediaPickerForPageCover` and `removeFeaturedImage`.
+     - Standardized button classes to `btn btn-secondary btn-xs` with explicit styling (`display:inline-flex; align-items:center; gap:0.3rem; cursor:pointer; font-weight:600;`) ensuring active, clickable appearance.
+     - Added callback `window.updatePageFeaturesLedStatus()` upon media picker image selection to ensure instant LED synchronization.
+  2. **Navigation on Menu Visibility (`edit.cfm`, `editV2.cfm`, `_pageEditorScripts.cfm`):**
+     - `updateMenuAssignmentVisibility()` was previously defined as a private local function scoped inside an IIFE in `_pageEditorScripts.cfm`, causing an unhandled `ReferenceError: updateMenuAssignmentVisibility is not defined` when `#pgParent` triggered its inline `onchange` handler.
+     - Globally exposed `window.updateMenuAssignmentVisibility` on `window` and ensured `#pgMenuAssignmentWrap` properly toggles display and hidden attribute when "Top Level - Called from URL" vs "Assign to Main Menu Item" is selected.
+     - Ensured `#pgParent` and `#pgMenuItemSelect` both trigger `window.updatePageFeaturesLedStatus()`.
+  3. **Sidebar & Subpages Layout Toggler (`edit.cfm`, `editV2.cfm`, `_pageEditorScripts.cfm`):**
+     - `updateSidebarAvailability()` in `_pageEditorScripts.cfm` crashed with a `TypeError` when reading `sidebarPanel.hidden` because `#pgSidebarLayoutOptions` was missing in v2, halting `selectLayoutV2()` before card classes and LED state could update.
+     - Added safe null-coalescing and checks for `sidebarPanel` (`document.getElementById("pgSidebarLayoutOptions") || document.getElementById("pgSidebarChooser")`) and `sidebarHelp`.
+     - Updated `selectLayoutV2()` and the inline `#btnSwitchToSidebarLayout` button inside Accordion Item 3 to dynamically toggle between "Switch to Full Width" and "Switch to Right Sidebar", synchronizing the left wireframe cards, notice text, subpage chooser opacity, and LED indicator.
+  4. **Folder Explorer LED Status Indicator (`edit.cfm`, `editV2.cfm`):**
+     - Previously, checking "Enable Folder Explorer on this page" unconditionally activated the green LED (`is-active`), even when zero folders were checked (`checkedFolders.length === 0`).
+     - Refactored `updatePageFeaturesLedStatus()`:
+       - When enabled AND `checkedFolders.length > 0`: Green LED (`is-active`), counts toward active features, summary displays `N folder(s) selected`.
+       - When enabled BUT `checkedFolders.length === 0`: Amber warning LED (`is-warn`), does not register as active, summary displays `Folder explorer enabled (0 folders selected)`.
+       - When unchecked: Inactive gray LED (`is-inactive`), summary displays `Disabled`.
+- **Verification:**
+  - Authenticated test request to `http://cmsadmin.chelancounty.gov/pages/edit?id=23` verified HTTP 200 (368KB).
+  - Node.js syntax parsing confirmed zero syntax errors across all embedded JavaScript blocks.
+  - Verified `edit.cfm` and `editV2.cfm` remain 100% in sync.
+
+---
+
+### Milestone 23: VS Code Error & CFML Navigation Syntax Resolution
+- **User Directive:** "fix vs code error"
+- **Context & Diagnosis:**
+  - Active document was `app/views/layout.cfm` (cursor positioned at line 728: PIO Emergency Alerts & News submenu item).
+  - Identified issues flagged by CFML LSP / HTML language servers and runtime navigation inconsistencies:
+    1. **Fragmented `<cfoutput>` Tags in HTML Attributes (`layout.cfm` lines 725–731):** Embedding `<cfoutput>#...#</cfoutput>` fragments inside `class=""` and `href=""` attributes violated HTML syntax rules in the language server. Restructured the `ul.nav-submenu` to wrap all child `li` items in a single, clean `<cfoutput>` block, emitting plain `#...#` expressions within attributes.
+    2. **Missing `alerts` in Parent Nav Item Active Condition (`layout.cfm` line 717):** The parent PIO menu item checked `listFindNoCase('pressreleases,press-releases', params.controller)` but omitted `alerts`, causing the parent navigation group to close/deactivate when navigating to the Emergency Alerts & Dispatch studio (`/alerts`). Added `'alerts'` to the parent list check.
+    3. **CFScript `!` Operator in CFML Tag Expression (`layout.cfm` line 763):** Replaced non-standard `(!structKeyExists(params, 'type') ...)` with canonical CFML tag expression `(not structKeyExists(params, 'type') ...)` in the Workspaces manager submenu.
+    4. **Prevented Nested `<cfoutput>` Across Includes (`edit.cfm`, `editV2.cfm`):** Moved the closing `</cfoutput>` tag in `edit.cfm` and `editV2.cfm` above the `<cfinclude template="_pageEditorModals.cfm">` and `<cfinclude template="_pageEditorScripts.cfm">` directives, eliminating potential nested `<cfoutput>` tag warnings.
+- **Verification:**
+  - Tested local IIS application response `http://cmsadmin.chelancounty.gov/` (HTTP 200).
+  - Verified `edit.cfm` and `editV2.cfm` are identical (`Compare-Object` returned zero differences).
+  - Cleaned all diagnostic triggers across `layout.cfm`, `edit.cfm`, and `editV2.cfm`.
+
+---
+
+### Milestone 24: Application Version & Build Tracking System (`v2.1.[build]`)
+- **User Directive:** "lets start a keep track of our versioning, V2.1.[build number]"
+- **Deliverables & Architecture:**
+  1. **Single Source of Truth (`config/version.json`):**
+     - Established JSON metadata schema with `major: 2`, `minor: 1`, `build: 1`, `version: "2.1.1"`, `versionTag: "v2.1.1"`, `releaseName: "Page Studio Parity & Visual Layout Controls"`, `releaseDate`, and `builtAt`.
+  2. **Application Configuration (`config/settings.cfm`):**
+     - Registered framework-wide configuration keys: `set(appMajorVersion=2);`, `set(appMinorVersion=1);`, `set(appBuildNumber=1);`, `set(appVersion="2.1.1");`, `set(appVersionTag="v2.1.1");`, `set(appBuildDisplay="v2.1.1 (Build 1)");`.
+  3. **Global Helper Functions (`app/global/functions.cfm`):**
+     - Added `getAppVersion()` with cached in-memory deserialization from `config/version.json`.
+     - Added `appVersion()`, `appVersionTag()`, `appBuildNumber()`, and `appBuildDisplay()`.
+  4. **Master Shell Presentation (`app/views/layout.cfm`):**
+     - **`<head>` Meta Tags:** Emits `<meta name="generator" content="Chelan County CMSAdmin v2.1.1">`, `<meta name="cms-version" content="2.1.1">`, and `<meta name="cms-build" content="1">`.
+     - **Header Brand Badge:** Dynamically renders `<span class="brand-badge" title="Chelan County CMS Admin v2.1.1 (Build 1)">v2.1.1</span>`.
+     - **Footer Status Bar:** Dynamically renders `<span>v2.1.1 (Build 1) &bull; Wheels 4.1 &bull; Adobe ColdFusion &bull; System Healthy</span>`.
+  5. **System Info & Telemetry Dashboard (`Settings.cfc` & `system.cfm`):**
+     - Integrated `diagnostics.app` into server diagnostics payload.
+     - Added CMSAdmin version and build telemetry badge in page header and primary runtime table row in `/settings/system`.
+  6. **Automated CLI Incrementor (`scripts/bump-version.ps1`):**
+     - Created PowerShell automation tool supporting default auto-increment (`.\scripts\bump-version.ps1`), explicit build numbers (`-Build N`), minor version bumps (`-Minor N`), and major bumps (`-Major N`), synchronizing both `config/version.json` and `config/settings.cfm`.
+  7. **Documentation Series Update:**
+     - Documented the versioning scheme in Section 6 of `.doclib/001_SYSTEM_ARCHITECTURE.md`.
+- **Verification:**
+  - Tested build bump execution via `.\scripts\bump-version.ps1` (verified increment to build 2 and reset back to build 1).
+  - Executed framework reload `/login?reload=true&password=chelancms` (HTTP 200).
+  - Verified clean syntax across all modified files.
 
 
 

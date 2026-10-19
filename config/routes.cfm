@@ -122,6 +122,8 @@
 		.post(name="deleteSubpage", pattern="pages/subpage/delete", to="pages##deleteSubpage")
 		.post(name="createPageModal", pattern="pages/create-modal", to="pages##createModal")
 		.post(name="savePage", pattern="pages/save", to="pages##save")
+		.get(name="pagesEditV2", pattern="pages/edit-v2", to="pages##editV2")
+		.get(name="pagesEditV2Camel", pattern="pages/editV2", to="pages##editV2")
 		.get(name="pageRevisions", pattern="pages/revisions", to="pages##revisions")
 		.get(name="pageRevision", pattern="pages/revision", to="pages##revision")
 		.post(name="restorePageRevision", pattern="pages/restore-revision", to="pages##restoreRevision")

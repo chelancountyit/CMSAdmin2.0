@@ -65,5 +65,13 @@
 	set(showErrorInformation=true);
 	set(functionName="flashMessages", encode=false);
 
+	// Application Versioning (v2.1.[build])
+	set(appMajorVersion=2);
+	set(appMinorVersion=1);
+	set(appBuildNumber=1);
+	set(appVersion="2.1.1");
+	set(appVersionTag="v2.1.1");
+	set(appBuildDisplay="v2.1.1 (Build 1)");
+
 	// CLI-Appends-Here
 </cfscript>

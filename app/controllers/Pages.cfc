@@ -108,6 +108,14 @@ component extends="Controller" {
 	}
 
 	/**
+	 * Add / Edit Page (Legacy v2 Route Alias)
+	 */
+	function editV2() {
+		edit();
+		renderView(template="edit");
+	}
+
+	/**
 	 * Resolves candidate SiteID values for a given workspace identifier (handles code, alias, virtual_dir, and singular/plural variations).
 	 */
 	private array function getCandidateSiteIds(string wsId = "") {

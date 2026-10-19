@@ -1134,5 +1134,69 @@ public string function renderCallToActionShortcodes(required string content) {
 
 	return parsed;
 }
+
+// ----------------------------------------------------
+// Application Versioning & Build Tracking (v2.1.[build])
+// ----------------------------------------------------
+
+/**
+ * Returns application versioning data struct loaded from config/version.json or defaults.
+ */
+public struct function getAppVersion() {
+	if (!structKeyExists(application, "appVersionData") || (structKeyExists(url, "reload") && (url.reload == "true" || url.reload == "1"))) {
+		var verFile = expandPath("/config/version.json");
+		if (fileExists(verFile)) {
+			try {
+				var jsonStr = fileRead(verFile, "utf-8");
+				application.appVersionData = deserializeJSON(jsonStr);
+			} catch (any e) {
+				// Fallback to defaults
+			}
+		}
+		if (!structKeyExists(application, "appVersionData") || !isStruct(application.appVersionData)) {
+			application.appVersionData = {
+				"major": 2,
+				"minor": 1,
+				"build": 1,
+				"version": "2.1.1",
+				"versionTag": "v2.1.1",
+				"releaseName": "Page Studio Parity & Visual Layout Controls",
+				"releaseDate": "2026-10-19",
+				"builtAt": "2026-10-19T00:15:00-07:00",
+				"environment": "development"
+			};
+		}
+	}
+	return application.appVersionData;
+}
+
+/**
+ * Returns standard semantic version string, e.g. "2.1.1"
+ */
+public string function appVersion() {
+	return getAppVersion().version ?: "2.1.1";
+}
+
+/**
+ * Returns formatted version tag, e.g. "v2.1.1"
+ */
+public string function appVersionTag() {
+	return getAppVersion().versionTag ?: "v2.1.1";
+}
+
+/**
+ * Returns numeric build number, e.g. 1
+ */
+public numeric function appBuildNumber() {
+	return Val(getAppVersion().build ?: 1);
+}
+
+/**
+ * Returns full version and build display string, e.g. "v2.1.1 (Build 1)"
+ */
+public string function appBuildDisplay() {
+	var v = getAppVersion();
+	return "#(v.versionTag ?: 'v2.1.1')# (Build #(v.build ?: 1)#)";
+}
 </cfscript>
 

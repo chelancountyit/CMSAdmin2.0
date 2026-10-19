@@ -691,18 +691,23 @@
 					var displayName = isShared ? 'Shared Images' : it.name;
 					var meta = isDir ? dirMeta(it) : (fmtSize(it.size) + ' \u00b7 ' + it.modified);
 					var badge = isShared ? '<span style="position:absolute; top:8px; right:8px; font-size:10.5px; font-weight:700; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:4px; padding:2px 6px;">READ-ONLY</span>' : '';
+					var pickerBtn = (state.pickerMode && !isDir)
+						? '<div style="margin-top:6px; width:100%;"><button type="button" class="btn btn-primary btn-xs btn-block" data-act="select-card-file" data-idx="' + idx + '" style="width:100%; font-size:11px; padding:3px 6px; font-weight:600; cursor:pointer;">' + (state.pickerMode === 'document' ? 'Select File' : 'Select Image') + '</button></div>'
+						: '';
 					return '<div class="card item' + (isShared ? ' is-shared-card' : '') + '" role="listitem" tabindex="' + (sel || (!state.selected && idx === 0) ? '0' : '-1') + '"' +
 						' aria-selected="' + (sel ? 'true' : 'false') + '" data-idx="' + idx + '">' +
 						badge +
 						'<div class="thumb">' + thumbFor(it) + '</div>' +
 						'<div class="name" title="' + esc(displayName) + '">' + esc(displayName) + '</div>' +
 						'<div class="meta">' + esc(meta) + '</div>' +
+						pickerBtn +
 						'</div>';
 				}).join('') +
 				'</div>';
 		} else {
 			el.items.innerHTML = '<div class="table-wrap"><table class="list" role="table"><thead><tr>' +
 				'<th scope="col">Name</th><th scope="col">Type</th><th scope="col" class="num">Size</th><th scope="col">Modified</th>' +
+				(state.pickerMode ? '<th scope="col" style="width:90px;">Action</th>' : '') +
 				'</tr></thead><tbody>' +
 				state.shown.map(function (it, idx) {
 					var sel = it.name === state.selected;
@@ -712,12 +717,16 @@
 					var k = isDir ? { cls: isShared ? 'shared' : 'dir', label: isShared ? 'Shared Photos' : 'Folder' } : fileKind(it.ext);
 					var chipText = isShared ? 'READ-ONLY' : (isDir ? 'DIR' : (it.ext || 'FILE'));
 					var chip = '<span class="chip bg-' + k.cls + '">' + esc(chipText) + '</span>';
+					var rowAction = state.pickerMode
+						? ('<td>' + (!isDir ? '<button type="button" class="btn btn-primary btn-xs" data-act="select-card-file" data-idx="' + idx + '" style="font-size:11px; padding:2px 8px;">Select</button>' : '') + '</td>')
+						: '';
 					return '<tr class="row item" tabindex="' + (sel || (!state.selected && idx === 0) ? '0' : '-1') + '"' +
 						' aria-selected="' + (sel ? 'true' : 'false') + '" data-idx="' + idx + '">' +
 						'<td><div class="cell-name">' + chip + '<span title="' + esc(displayName) + '">' + esc(displayName) + '</span></div></td>' +
 						'<td>' + esc(k.label) + '</td>' +
 						'<td class="num mono">' + esc(isDir ? '\u2014' : fmtSize(it.size)) + '</td>' +
 						'<td class="mono muted">' + esc(it.modified || '\u2014') + '</td>' +
+						rowAction +
 						'</tr>';
 				}).join('') +
 				'</tbody></table></div>';
@@ -1011,6 +1020,13 @@
 	}
 
 	el.items.addEventListener('click', function (e) {
+		var selBtn = e.target.closest('[data-act="select-card-file"]');
+		if (selBtn) {
+			e.stopPropagation();
+			var itCard = state.shown[Number(selBtn.getAttribute('data-idx'))];
+			if (itCard) selectForPicker(itCard);
+			return;
+		}
 		var b = e.target.closest('[data-path]');
 		if (b && b.tagName === 'BUTTON') { navigate(b.getAttribute('data-path')); return; }
 		var n = e.target.closest('.item');
