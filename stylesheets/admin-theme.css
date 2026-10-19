@@ -894,21 +894,34 @@ button, input, select, textarea {
   box-shadow: var(--shadow-md);
 }
 .card-header {
-  padding: 1.15rem 1.5rem;
+  padding: 0.85rem 1.25rem;
   border-bottom: 1px solid var(--admin-border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
-.card-title {
-  font-size: 1rem;
+.card-header .card-title,
+.card-title,
+.panel-title,
+.fb-panel-title {
+  font-family: var(--admin-font);
+  font-size: 0.825rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--admin-text-muted);
   margin: 0;
-  color: var(--admin-text-main);
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+.card-header .card-title svg,
+.card-title svg,
+.panel-title svg,
+.fb-panel-title svg {
+  color: var(--admin-text-muted);
+  flex-shrink: 0;
 }
 .card-tools {
   display: flex;
@@ -1608,23 +1621,6 @@ body.sidebar-collapsed .brand-wrapper {
   display: inline-block;
   width: 100%;
   vertical-align: top;
-}
-.dashboard-grid .card-header .card-title,
-.dashboard-grid .card-title {
-  font-family: var(--admin-font);
-  font-size: 0.825rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--admin-text-muted);
-}
-.dashboard-grid .card-header .card-title svg,
-.dashboard-grid .card-title svg {
-  color: var(--admin-text-muted);
-  flex-shrink: 0;
-}
-.dashboard-grid .card-header {
-  padding: 0.85rem 1.25rem;
 }
 @media (max-width: 1280px) {
   .dashboard-grid {

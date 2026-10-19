@@ -845,12 +845,12 @@
 	<!--- Sidebar column --->
 	<div class="pg-side-col">
 		<!--- Featured Cover Image Card --->
-		<div class="admin-card" id="pgCoverImagePanel" style="padding:1.25rem; margin-bottom:0;">
-			<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; border-bottom:1px solid var(--admin-border-subtle); padding-bottom:0.5rem; flex-wrap:wrap; gap:0.4rem;">
-				<h3 style="margin:0; font-size:0.95rem; font-weight:700; color:var(--admin-text-main); display:flex; align-items:center; gap:0.4rem;">
+		<div class="admin-card" id="pgCoverImagePanel" style="margin-bottom:0;">
+			<div class="card-header" style="flex-wrap:wrap; gap:0.4rem;">
+				<h2 class="card-title">
 					#svgIcon(name="image", size=16)#
 					<span>Featured Cover Image</span>
-				</h3>
+				</h2>
 				<div style="display:flex; align-items:center; gap:0.35rem;">
 					<span class="badge badge-neutral" id="featuredImgAdaBadge" style="font-size:0.7rem; font-weight:600;" title="Live ADA Title II & WCAG 2.1 AA Compliance Status">
 						<span id="featuredImgAdaText">No Image</span>
@@ -861,6 +861,7 @@
 					</span>
 				</div>
 			</div>
+			<div class="card-body">
 
 			<!--- Thumbnail Preview --->
 			<div style="margin-bottom:0.75rem;">
@@ -970,6 +971,7 @@
 					Photo Credit / Attribution
 				</label>
 				<input type="text" id="featuredImageCredit" name="imageAttribution" class="form-control" style="font-size:0.82rem;" value="#EncodeForHTML(page.imageAttribution ?: "")#" placeholder="e.g. Chelan County Sheriff's Office / Jane Doe" maxlength="255">
+			</div>
 			</div>
 		</div>
 

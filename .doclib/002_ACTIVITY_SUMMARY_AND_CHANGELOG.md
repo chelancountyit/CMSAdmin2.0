@@ -1029,6 +1029,19 @@ This log maintains a chronological, permanent record of engineering milestones, 
 - **Verification:**
   - Verified ColdFusion compilation and HTTP 200 delivery of `admin-theme.css?v=4.4`.
 
+### 2026-10-18: Site-Wide Panel Header Typography Standardization
+- **Task Overview:** Expanded the uppercase tracked stat label font styling (`font-size: 0.825rem`, `font-weight: 600`, `text-transform: uppercase`, `letter-spacing: 0.04em`, `color: var(--admin-text-muted)`) site-wide across all `.card-header .card-title`, `.card-title`, `.panel-title`, and `.fb-panel-title` elements.
+- **Architectural & View Updates:**
+  1. **Global Theme Stylesheet (`stylesheets/admin-theme.css`):**
+     - Promoted `.card-header .card-title` and `.card-title` definition to site-wide scope with standard `padding: 0.85rem 1.25rem` for `.card-header`.
+     - Standardized matching SVG icon color and sizing across all card and panel headers.
+     - Bumped stylesheet cache version to `?v=4.5`.
+  2. **Page Editor View (`app/views/pages/edit.cfm`):**
+     - Refactored `pgCoverImagePanel` ("Featured Cover Image") to use standard `.card-header` and `.card-title` markup with nested `.card-body`, matching the rest of the editor panels ("Publish", "Search & Sharing", "Page Attributes").
+- **Verification:**
+  - Verified ColdFusion compilation and HTTP 200 delivery of `admin-theme.css?v=4.5`.
+
+
 
 
 
