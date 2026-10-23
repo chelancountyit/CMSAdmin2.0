@@ -622,7 +622,11 @@ component extends="Controller" {
 				local.slugPart = ReReplaceNoCase(local.urlVal, "^" & local.basePath & "/+", "", "one");
 				return local.basePath & "/page/" & local.slugPart & local.hashAnchor;
 			}
-			return local.urlVal & local.hashAnchor;
+			local.slugPart = ReReplace(local.urlVal, "^/+", "", "one");
+			if (local.slugPart == "home" || local.slugPart == "index" || !Len(local.slugPart)) {
+				return local.basePath & local.hashAnchor;
+			}
+			return local.basePath & "/page/" & local.slugPart & local.hashAnchor;
 		} else {
 			if (
 				local.urlVal == "/"

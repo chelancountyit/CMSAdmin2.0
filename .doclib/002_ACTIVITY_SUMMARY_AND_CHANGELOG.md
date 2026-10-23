@@ -12,6 +12,29 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 22, 2026 — Assessor Workspace Re-Ingestion (`co.chelan.wa.us/assessor`), Navigation Hierarchy, and Elected Official Portrait
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 & ChelanCounty.gov (`config/sql/extract-assessor.sql`, `app/controllers/Navigation.cfc`, `tests/test_edit_assessor_pages.cfm`, `c:\inetpub\ChelanCounty.gov\app\global\functions.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Context & Request:**
+  - Complete re-ingestion of the Chelan County Assessor website (`co.chelan.wa.us/assessor`, legacy `SiteID = 1027` from `cccmsdbv2`) into the CMSAdmin 2.0 multi-tenant workspace architecture (`ChelanCountyWebsite` database, workspace code `assessor`) and public portal (`ChelanCounty.gov`).
+  - Purged 2 placeholder pages and old revisions; re-extracted all 39 legacy pages; built 27-item navigation hierarchy; configured elected County Assessor Wes Cornelius portrait (`/images/logo/assessor-elected.jpg`).
+- **Key Deliverables & Remediation:**
+  1. **Database Extraction Script (`config/sql/extract-assessor.sql`):**
+     - Safely purged stale placeholder pages (IDs 23, 24) and old revisions for workspace `assessor`.
+     - Updated `dbo.cms_workspaces` for `assessor`: `contact_first_name = 'Wes'`, `contact_last_name = 'Cornelius'`, `job_title = 'County Assessor'`, `leadership_type = 'elected'`, `contact_photo = '/images/logo/assessor-elected.jpg'`, `color = '#0284c7'`.
+     - Ingested 39 pages into `dbo.pages`: 35 Active, 4 Inactive/Draft. Preserved exact legacy ContentIDs (72-5818) with zero ID collisions via `SET IDENTITY_INSERT dbo.pages ON;`.
+     - Normalized legacy internal body links (`https://www.co.chelan.wa.us/files/assessor/` -> `/files/assessor/`).
+     - Stored clean JSON `SidebarIDs = '[]'` for all 39 pages (no legacy subpages in SiteID 1027).
+     - Provisioned navigation menu 4 ("Side Navigation") with 27 structured items (Assessments with 10 child items, Exemptions with 4 child items, Maps with 3 child items, plus 7 direct links).
+  2. **Navigation Link Resolution & Auto-Healing (`Navigation.cfc`, `ChelanCounty.gov/app/global/functions.cfm`):**
+     - Enhanced `normalizeWorkspacePageDestination()` in `CMSAdmin2.0/app/controllers/Navigation.cfc` and `getWorkspaceNav()` in `ChelanCounty.gov/app/global/functions.cfm`.
+     - Automatically resolves department page links (e.g. `/annual-revaluation`, `/seniordisabled-exemptions`) into their canonical public routes (`/assessor/page/annual-revaluation`, `/assessor/page/seniordisabled-exemptions`), preventing 404 routing errors on the public site while preserving home page (`/assessor`), external URLs, and hash anchors.
+  3. **Verification & Testing:**
+     - Authored `tests/test_edit_assessor_pages.cfm`: verified all 39 pages open in Page Editor with HTTP 200 OK and zero CFML/Java runtime errors (39/39 passed).
+     - Probed public route `http://chelancounty.gov/assessor`: verified Wes Cornelius portrait, title "County Assessor", and 27 navigation links render accurately.
+     - Probed public subpages (`/assessor/page/annual-revaluation`, `/assessor/page/seniordisabled-exemptions`, `/assessor/page/gis-mapping`, `/assessor/page/parcel-and-sale-search`, etc.): all returned HTTP 200 OK.
+     - Ran full regression suites: `tests/run_full_test_suite.cfm` (54/54 passed) and `tests/test_one_page_studio.cfm` (46/46 passed). Total test tally: 139 / 139 passed (100% green).
+
 ### Session: October 22, 2026 — Bugfix: Restore Official Elected Photo Resolution for Auditor Workspace (`/images/logo/auditor-elected.jpg`)
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 & ChelanCounty.gov (`config/sql/extract-auditor.sql`, `c:\inetpub\ChelanCounty.gov\app\global\functions.cfm`, `c:\inetpub\ChelanCounty.gov\app\views\shared\_dept-official.cfm`, `images/logo/`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
