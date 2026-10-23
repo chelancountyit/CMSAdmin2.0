@@ -1676,6 +1676,79 @@ body.jbd-noscroll {
 }
 
 /* ==========================================================================
+   Floating Link Bubble Toolbar
+   ========================================================================== */
+.jbd-link-bubble-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: var(--jbd-color-base-background, #ffffff);
+  border: 1px solid var(--jbd-color-base-border, #cbd5e1);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.16);
+  display: none;
+  align-items: center;
+  padding: 3px 6px;
+  gap: 3px;
+  pointer-events: auto;
+  white-space: nowrap;
+  z-index: 105;
+  user-select: none;
+  font-family: inherit;
+}
+.jbd-link-bubble-toolbar.jbd-link-bubble-visible {
+  display: inline-flex;
+}
+.jbd-link-bubble-url {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #0284c7;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 2px 6px;
+  font-weight: 500;
+  border-radius: 4px;
+}
+.jbd-link-bubble-url:hover {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+.jbd-link-bubble-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--jbd-color-text, #1e293b);
+  height: 28px;
+  padding: 0 7px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  gap: 4px;
+}
+.jbd-link-bubble-btn:hover {
+  background: var(--jbd-color-toolbar-button-hover, #f1f5f9);
+}
+.jbd-link-bubble-btn-danger:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.jbd-link-bubble-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--jbd-color-base-border, #e2e8f0);
+  margin: 0 2px;
+}
+
+/* ==========================================================================
    Image Dialog Styling & Interactive Controls
    ========================================================================== */
 .jbd-image-dialog-container {

@@ -247,6 +247,7 @@ export class CustomEditor {
     this.initContent();
       this.initImageInteractions();
       this.initTableInteractions();
+    this.initLinkInteractions();
 
     // AutoSave
     if (this.options.autoSaveKey) {
@@ -420,6 +421,10 @@ export class CustomEditor {
     this._handleKeyDown = (e) => this.onKeyDown(e);
     this._handlePaste = (e) => this.onPaste(e);
     this._handleClick = (e) => {
+      const link = e.target.closest('a');
+      if (link && this.contentArea.contains(link)) {
+        e.preventDefault();
+      }
       const addFaqBtn = e.target.closest('[data-jbd-faq-add]');
       if (addFaqBtn && this.contentArea.contains(addFaqBtn)) {
         e.preventDefault();
@@ -779,9 +784,9 @@ export class CustomEditor {
     this._handleInput();
   }
 
-  openLinkModal() {
+  openLinkModal(targetAnchor = null) {
     if (this.isSourceMode) return;
-    const currentAnchor = getClosestBlock(this.contentArea, 'a');
+    const currentAnchor = targetAnchor || (this.selectedLink && this.contentArea.contains(this.selectedLink) ? this.selectedLink : getClosestBlock(this.contentArea, 'a'));
     const currentUrl = currentAnchor ? (currentAnchor.getAttribute('href') || '') : '';
     const currentText = getSelectedText() || (currentAnchor ? currentAnchor.textContent : '');
     const isBlank = currentAnchor ? currentAnchor.getAttribute('target') === '_blank' : false;
@@ -1756,6 +1761,291 @@ export class CustomEditor {
     }
   }
 
+  resolveLinkUrl(rawHref) {
+      if (!rawHref) return '#';
+      if (/^(https?:|\/\/|mailto:|tel:|#|javascript:)/i.test(rawHref)) {
+        return rawHref;
+      }
+      let publicBase = 'http://chelancounty.gov';
+      if (typeof window !== 'undefined' && window.location) {
+        const proto = window.location.protocol || 'http:';
+        const host = (window.location.hostname || '').toLowerCase();
+        if (host.startsWith('cmsadmin.')) {
+          const publicHost = host.replace(/^cmsadmin\./i, '');
+          publicBase = `${proto}//${publicHost}`;
+        } else if (host === 'cmsadmin') {
+          publicBase = `${proto}//chelancounty.gov`;
+        } else if (host === 'localhost' || host === '127.0.0.1') {
+          publicBase = 'http://chelancounty.gov';
+        } else if (host.includes('chelancounty.gov')) {
+          publicBase = `${proto}//chelancounty.gov`;
+        }
+      }
+      const cleanPath = rawHref.startsWith('/') ? rawHref : `/${rawHref}`;
+      return `${publicBase}${cleanPath}`;
+    }
+    if (typeof window !== 'undefined' && window.location) {
+      const host = window.location.hostname;
+      if (host.startsWith('cmsadmin.')) {
+        const publicHost = host.replace(/^cmsadmin\./i, '');
+        return `${window.location.protocol}//${publicHost}${rawHref.startsWith('/') ? '' : '/'}${rawHref}`;
+      } else if (host === 'localhost' || host === '127.0.0.1') {
+        return `http://chelancounty.gov${rawHref.startsWith('/') ? '' : '/'}${rawHref}`;
+      }
+    }
+    return rawHref;
+  }
+
+  initLinkInteractions() {
+    if (typeof document === 'undefined') return;
+
+    this.selectedLink = null;
+
+    this.linkBubbleOverlay = createElement('div', {
+      className: 'jbd-link-bubble-toolbar',
+      role: 'toolbar',
+      'aria-label': 'Link Quick Actions'
+    });
+
+    this.linkBubbleOverlay.innerHTML = `
+      <span class="jbd-link-bubble-icon" style="display:inline-flex; align-items:center; color:var(--jbd-color-muted,#64748b); padding-left:4px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      </span>
+      <a href="#" class="jbd-link-bubble-url" target="_blank" rel="noopener noreferrer" title="Open destination in new tab"></a>
+      <div class="jbd-link-bubble-divider"></div>
+      <button type="button" class="jbd-link-bubble-btn" data-link-action="open" title="Open Link in New Tab (safely)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        <span>Open</span>
+      </button>
+      <button type="button" class="jbd-link-bubble-btn" data-link-action="edit" title="Edit Link Destination & Accessible Text">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span>Edit</span>
+      </button>
+      <button type="button" class="jbd-link-bubble-btn" data-link-action="copy" title="Copy URL Destination">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span>Copy</span>
+      </button>
+      <button type="button" class="jbd-link-bubble-btn jbd-link-bubble-btn-danger" data-link-action="unlink" title="Remove Hyperlink (Unlink)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.16 11.75-1.72 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+        <span>Unlink</span>
+      </button>`;
+
+    this.wrapper.appendChild(this.linkBubbleOverlay);
+
+    this.linkBubbleOverlay.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-link-action]');
+      const urlPreview = e.target.closest('.jbd-link-bubble-url');
+
+      if (urlPreview && this.selectedLink) {
+        e.preventDefault();
+        e.stopPropagation();
+        const rawHref = this.selectedLink.getAttribute('href');
+        const resolvedHref = this.resolveLinkUrl(rawHref);
+        if (resolvedHref && resolvedHref !== '#') {
+          window.open(resolvedHref, '_blank', 'noopener,noreferrer');
+        }
+        return;
+      }
+
+      if (!btn || !this.selectedLink) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const action = btn.dataset.linkAction;
+      const targetLink = this.selectedLink;
+      const rawHref = targetLink.getAttribute('href') || '';
+      const resolvedHref = this.resolveLinkUrl(rawHref);
+
+      if (action === 'open') {
+        if (resolvedHref && resolvedHref !== '#') {
+          window.open(resolvedHref, '_blank', 'noopener,noreferrer');
+        }
+      } else if (action === 'edit') {
+        this.openLinkModal(targetLink);
+      } else if (action === 'copy') {
+        if (rawHref && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(rawHref).then(() => {
+            const span = btn.querySelector('span');
+            if (span) {
+              const orig = span.textContent;
+              span.textContent = 'Copied!';
+              setTimeout(() => { if (span) span.textContent = orig; }, 1500);
+            }
+          });
+        }
+      } else if (action === 'unlink') {
+        this.deselectLink();
+        while (targetLink.firstChild) {
+          targetLink.parentNode.insertBefore(targetLink.firstChild, targetLink);
+        }
+        targetLink.remove();
+        this._handleInput();
+      }
+    });
+
+    this._handleLinkAreaClick = (e) => {
+      const anchor = e.target.closest('a');
+      if (anchor && this.contentArea.contains(anchor)) {
+        // PREVENT DEFAULT NAVIGATION TO STOP CRASHING CMSADMIN
+        e.preventDefault();
+
+        if (e.ctrlKey || e.metaKey || e.button === 1) {
+          const rawHref = anchor.getAttribute('href');
+          const resolvedHref = this.resolveLinkUrl(rawHref);
+          if (resolvedHref && resolvedHref !== '#') {
+            window.open(resolvedHref, '_blank', 'noopener,noreferrer');
+          }
+          return;
+        }
+
+        this.selectLink(anchor);
+        return;
+      }
+
+      if (this.selectedLink && !e.target.closest('.jbd-link-bubble-toolbar')) {
+        this.deselectLink();
+      }
+    };
+    this.contentArea.addEventListener('click', this._handleLinkAreaClick, true);
+
+    this._handleLinkAuxClick = (e) => {
+      const anchor = e.target.closest('a');
+      if (anchor && this.contentArea.contains(anchor)) {
+        e.preventDefault();
+        const rawHref = anchor.getAttribute('href');
+        const resolvedHref = this.resolveLinkUrl(rawHref);
+        if (resolvedHref && resolvedHref !== '#') {
+          window.open(resolvedHref, '_blank', 'noopener,noreferrer');
+        }
+      }
+    };
+    this.contentArea.addEventListener('auxclick', this._handleLinkAuxClick);
+
+    this._handleLinkDblClick = (e) => {
+      const anchor = e.target.closest('a');
+      if (anchor && this.contentArea.contains(anchor)) {
+        e.preventDefault();
+        this.selectLink(anchor);
+        this.openLinkModal(anchor);
+      }
+    };
+    this.contentArea.addEventListener('dblclick', this._handleLinkDblClick);
+
+    this._handleLinkReposition = () => {
+      if (this.selectedLink) {
+        this.updateLinkOverlayPosition();
+      }
+    };
+    this.contentArea.addEventListener('scroll', this._handleLinkReposition, { passive: true });
+    window.addEventListener('scroll', this._handleLinkReposition, { passive: true });
+    window.addEventListener('resize', this._handleLinkReposition, { passive: true });
+
+    this._handleLinkDocMousedown = (e) => {
+      if (this.selectedLink && !this.wrapper.contains(e.target) && !document.querySelector('.jbd-dialog-overlay')) {
+        this.deselectLink();
+      }
+    };
+    document.addEventListener('mousedown', this._handleLinkDocMousedown);
+
+    this._handleLinkKeydown = (e) => {
+      if (e.key === 'Escape' && this.selectedLink) {
+        this.deselectLink();
+      }
+    };
+    this.contentArea.addEventListener('keydown', this._handleLinkKeydown);
+  }
+
+  selectLink(anchor) {
+    if (!anchor || !this.contentArea.contains(anchor)) return;
+    this.selectedLink = anchor;
+    this.updateLinkOverlayPosition();
+    this.linkBubbleOverlay.classList.add('jbd-link-bubble-visible');
+
+    const rawHref = anchor.getAttribute('href') || '#';
+    const resolvedHref = this.resolveLinkUrl(rawHref);
+    const urlEl = this.linkBubbleOverlay.querySelector('.jbd-link-bubble-url');
+    if (urlEl) {
+      urlEl.href = resolvedHref;
+      urlEl.title = rawHref;
+      let displayHref = rawHref;
+      if (displayHref.length > 36) {
+        displayHref = displayHref.substring(0, 34) + '…';
+      }
+      urlEl.textContent = displayHref;
+    }
+  }
+
+  deselectLink() {
+    this.selectedLink = null;
+    if (this.linkBubbleOverlay) {
+      this.linkBubbleOverlay.classList.remove('jbd-link-bubble-visible');
+    }
+  }
+
+  updateLinkOverlayPosition() {
+    if (!this.selectedLink || !this.selectedLink.isConnected) {
+      this.deselectLink();
+      return;
+    }
+
+    const linkRect = this.selectedLink.getBoundingClientRect();
+    const wrapRect = this.wrapper.getBoundingClientRect();
+
+    const bubbleEl = this.linkBubbleOverlay;
+    if (!bubbleEl) return;
+
+    const bubbleWidth = bubbleEl.offsetWidth || 280;
+    const bubbleHeight = bubbleEl.offsetHeight || 38;
+
+    let top = (linkRect.top - wrapRect.top) - bubbleHeight - 8;
+    let flipped = false;
+
+    if (top < 4) {
+      top = (linkRect.bottom - wrapRect.top) + 8;
+      flipped = true;
+    }
+
+    const linkCenter = (linkRect.left - wrapRect.left) + (linkRect.width / 2);
+    let left = linkCenter - (bubbleWidth / 2);
+
+    const minLeft = 8;
+    const maxLeft = wrapRect.width - bubbleWidth - 8;
+    if (left < minLeft) left = minLeft;
+    if (left > maxLeft) left = Math.max(minLeft, maxLeft);
+
+    bubbleEl.style.top = `${Math.round(top)}px`;
+    bubbleEl.style.left = `${Math.round(left)}px`;
+    bubbleEl.classList.toggle('jbd-link-bubble-flipped', flipped);
+  }
+
+  destroyLinkInteractions() {
+    this.deselectLink();
+    if (this.linkBubbleOverlay && this.linkBubbleOverlay.parentNode) {
+      this.linkBubbleOverlay.parentNode.removeChild(this.linkBubbleOverlay);
+      this.linkBubbleOverlay = null;
+    }
+    if (this._handleLinkAreaClick) {
+      this.contentArea.removeEventListener('click', this._handleLinkAreaClick);
+    }
+    if (this._handleLinkAuxClick) {
+      this.contentArea.removeEventListener('auxclick', this._handleLinkAuxClick);
+    }
+    if (this._handleLinkDblClick) {
+      this.contentArea.removeEventListener('dblclick', this._handleLinkDblClick);
+    }
+    if (this._handleLinkReposition) {
+      this.contentArea.removeEventListener('scroll', this._handleLinkReposition);
+      window.removeEventListener('scroll', this._handleLinkReposition);
+      window.removeEventListener('resize', this._handleLinkReposition);
+    }
+    if (this._handleLinkDocMousedown) {
+      document.removeEventListener('mousedown', this._handleLinkDocMousedown);
+    }
+    if (this._handleLinkKeydown) {
+      this.contentArea.removeEventListener('keydown', this._handleLinkKeydown);
+    }
+  }
+
   updateExistingTable(table, options) {
     if (!table) return;
 
@@ -2270,10 +2560,19 @@ export class CustomEditor {
     return html;
   }
 
-  setHTML(html) {
-    this.contentArea.innerHTML = html;
-    this.sourceArea.value = html;
-  }
+  normalizeMunicipalLinks(html) {
+      if (!html || typeof html !== 'string') return html;
+      return html.replace(/<a\b([^>]*?)\bhref=(["'])\/([a-zA-Z0-9_\-]+(?:\/[^"'>\s]*)?)\2/gi, (match, before, quote, path) => {
+        if (path.startsWith('/') || path.startsWith('#')) return match;
+        return `<a${before}href=${quote}http://chelancounty.gov/${path}${quote}`;
+      });
+    }
+
+    setHTML(html) {
+      const normalized = this.normalizeMunicipalLinks(html);
+      this.contentArea.innerHTML = normalized;
+      this.sourceArea.value = normalized;
+    }
 
   getText() {
     return this.contentArea.innerText || this.contentArea.textContent || '';
@@ -2412,6 +2711,7 @@ export class CustomEditor {
   destroy() {
     this.destroyImageInteractions();
     this.destroyTableInteractions();
+    this.destroyLinkInteractions();
     if (this.autoSaver) this.autoSaver.cancel();
 
     this.contentArea.removeEventListener('input', this._handleInput);

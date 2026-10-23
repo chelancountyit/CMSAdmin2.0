@@ -742,6 +742,61 @@
       assert('deselectTable removes active class from table', !testTable.classList.contains('jbd-table-active'));
       assert('Table overlay hidden on deselect', !tblOverlay.classList.contains('active'));
 
+      // ==========================================
+      // SECTION 16: Link Interaction & Contextual Bubble Suite
+      // ==========================================
+      const linkOverlay = editor.linkBubbleOverlay;
+      assert('Editor has linkBubbleOverlay attached to wrapper', linkOverlay !== null && editor.wrapper.contains(linkOverlay));
+      assert('Link overlay initially not visible', !linkOverlay.classList.contains('jbd-link-bubble-visible'));
+      assert('Link overlay contains Open in new tab button', linkOverlay.querySelector('[data-link-action="open"]') !== null);
+      assert('Link overlay contains Edit button', linkOverlay.querySelector('[data-link-action="edit"]') !== null);
+      assert('Link overlay contains Copy button', linkOverlay.querySelector('[data-link-action="copy"]') !== null);
+      assert('Link overlay contains Unlink button', linkOverlay.querySelector('[data-link-action="unlink"]') !== null);
+      assert('Link overlay contains URL preview element', linkOverlay.querySelector('.jbd-link-bubble-url') !== null);
+
+      // Insert test link
+      editor.setHTML('<p>Visit the <a href="https://www.co.chelan.wa.us/auditor" id="test-anchor" target="_blank" rel="noopener noreferrer">Chelan County Auditor</a> for documents.</p>');
+      const testAnchor = editor.contentArea.querySelector('#test-anchor');
+      assert('Test anchor exists in contentArea', testAnchor !== null);
+
+      // Simulate clicking the link inside the editor
+      const linkClickEvt = new MouseEvent('click', { bubbles: true, cancelable: true });
+      testAnchor.dispatchEvent(linkClickEvt);
+
+      assert('Clicking link inside editor intercepts and calls preventDefault (prevents navigation crash)', linkClickEvt.defaultPrevented === true);
+      assert('Clicking link selects it as editor.selectedLink', editor.selectedLink === testAnchor);
+      assert('Link bubble overlay becomes visible on link click', linkOverlay.classList.contains('jbd-link-bubble-visible'));
+
+      const urlPreviewEl = linkOverlay.querySelector('.jbd-link-bubble-url');
+      assert('URL preview displays link href destination', urlPreviewEl && urlPreviewEl.href.includes('auditor'));
+
+      // Test Unlink button in bubble toolbar
+      const unlinkBtn = linkOverlay.querySelector('[data-link-action="unlink"]');
+      unlinkBtn.click();
+
+      assert('Unlink button removes anchor tag from contentArea', editor.contentArea.querySelector('#test-anchor') === null);
+      assert('Unlink preserves inner anchor text content', editor.contentArea.textContent.includes('Chelan County Auditor'));
+      assert('Unlink resets editor.selectedLink to null', editor.selectedLink === null);
+      assert('Unlink hides link bubble overlay', !linkOverlay.classList.contains('jbd-link-bubble-visible'));
+
+      // Test deselectLink
+      editor.setHTML('<p><a href="/elections/page/results" id="test-anchor-2">Election Results</a></p>');
+      const testAnchor2 = editor.contentArea.querySelector('#test-anchor-2');
+      editor.selectLink(testAnchor2);
+      assert('selectLink sets selectedLink and shows overlay', editor.selectedLink === testAnchor2 && linkOverlay.classList.contains('jbd-link-bubble-visible'));
+      editor.deselectLink();
+      assert('deselectLink clears selectedLink and hides overlay', editor.selectedLink === null && !linkOverlay.classList.contains('jbd-link-bubble-visible'));
+
+      // Test local relative link resolution (e.g. /assessor/page/home)
+      editor.setHTML('<p>Go to <a href="/assessor/page/home" id="test-anchor-local">Assessor Home</a></p>');
+      const localAnchor = editor.contentArea.querySelector('#test-anchor-local');
+      const localClickEvt = new MouseEvent('click', { bubbles: true, cancelable: true });
+      localAnchor.dispatchEvent(localClickEvt);
+      assert('Clicking local link /assessor/page/home intercepts and prevents default navigation', localClickEvt.defaultPrevented === true);
+      assert('Local link selected as editor.selectedLink', editor.selectedLink === localAnchor);
+      const localPreviewUrl = editor.resolveLinkUrl('/assessor/page/home');
+      assert('resolveLinkUrl maps local /assessor/page/home to public front-end', localPreviewUrl.includes('chelancounty.gov/assessor/page/home'));
+
       editor.destroy();
       assert('Destroy restores textarea visibility', textarea.style.display === '');
       assert('Destroy removes wrapper DOM', document.querySelector('.jbd-editor-wrapper') === null);

@@ -29,7 +29,7 @@
 
 			<!--- Our custom CMS Admin stylesheet inspired by Mashable Light --->
 			<link href="/stylesheets/admin-theme.css?v=4.5" media="all" rel="stylesheet" type="text/css">
-			<link href="/stylesheets/jbdeditor.css?v=2.3" media="all" rel="stylesheet" type="text/css">
+			<link href="/stylesheets/jbdeditor.css?v=2.5" media="all" rel="stylesheet" type="text/css">
 			<link href="/stylesheets/jbd-templates.css?v=1.7" media="all" rel="stylesheet" type="text/css">
 			<cfif structKeyExists(params, "controller") and params.controller eq "forms">
 				<link href="/stylesheets/form-builder.css?v=2.3" media="all" rel="stylesheet" type="text/css">
@@ -885,7 +885,7 @@
 
 			<!--- Core Vanilla JS Interactions --->
 			<script src="/javascripts/admin.js?v=1.7" type="text/javascript"></script>
-			<script src="/javascripts/jbdeditor.js?v=2.3" type="text/javascript"></script>
+			<script src="/javascripts/jbdeditor.js?v=2.5" type="text/javascript"></script>
 			<cfif structKeyExists(params, "controller") and params.controller eq "forms" and structKeyExists(params, "action") and params.action eq "builder">
 				<script src="/javascripts/form-builder.js?v=2.6" type="text/javascript"></script>
 			</cfif>

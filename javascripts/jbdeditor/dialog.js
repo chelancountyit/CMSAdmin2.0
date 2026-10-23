@@ -468,7 +468,9 @@ export class Dialog {
                 urlInput.focus();
                 return;
               }
-              if (!/^[a-z]+:/i.test(url) && !url.startsWith('/') && !url.startsWith('#')) {
+              if (url.startsWith('/') && !url.startsWith('//')) {
+                url = 'http://chelancounty.gov' + url;
+              } else if (!/^[a-z]+:/i.test(url) && !url.startsWith('#')) {
                 url = 'https://' + url;
               }
             }

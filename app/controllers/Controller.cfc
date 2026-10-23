@@ -38,7 +38,7 @@ component extends="wheels.Controller" {
 		if (local.ctrl == "articles" && local.act == "api") return true;
 		if (local.ctrl == "scheduler" && (local.act == "apirun" || local.act == "apistatus")) return true;
 		if (listFindNoCase("pressreleases,press-releases", local.ctrl) && (local.act == "api" || local.act == "view")) return true;
-		if (local.ctrl == "pages" && (local.act == "previewonepagesite" || local.act == "exportonepagesite")) return true;
+		if (local.ctrl == "pages" && (local.act == "previewonepagesite" || local.act == "exportonepagesite" || local.act == "publicredirect")) return true;
 		return false;
 	}
 

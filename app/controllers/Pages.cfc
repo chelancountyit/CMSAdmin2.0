@@ -116,6 +116,24 @@ component extends="Controller" {
 	}
 
 	/**
+	 * Public Front-End Municipal Link Fallback & Redirect
+	 * Intercepts requests like /[workspace]/page/[slug] on cmsadmin to prevent RouteNotFound crashes
+	 */
+	function publicRedirect() {
+		local.proto = (CGI.HTTPS IS "on" OR CGI.SERVER_PORT_SECURE == 1) ? "https://" : "http://";
+		local.publicHost = "chelancounty.gov";
+		if (FindNoCase("cmsadmin.", CGI.SERVER_NAME)) {
+			local.publicHost = ReplaceNoCase(CGI.SERVER_NAME, "cmsadmin.", "");
+		}
+		local.targetPath = CGI.PATH_INFO;
+		if (Len(CGI.QUERY_STRING)) {
+			local.targetPath &= "?" & CGI.QUERY_STRING;
+		}
+		local.dest = local.proto & local.publicHost & local.targetPath;
+		cflocation(url=local.dest, addToken=false);
+	}
+
+	/**
 	 * Resolves candidate SiteID values for a given workspace identifier (handles code, alias, virtual_dir, and singular/plural variations).
 	 */
 	private array function getCandidateSiteIds(string wsId = "") {

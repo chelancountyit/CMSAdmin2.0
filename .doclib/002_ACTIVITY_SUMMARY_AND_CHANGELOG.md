@@ -12,6 +12,52 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 22, 2026 — Resolution: Automatic Municipal Link Prepending & Server-Side Fallback Router
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`config/routes.cfm`, `app/controllers/Pages.cfc`, `app/controllers/Controller.cfc`, `javascripts/jbdeditor.js`, `javascripts/jbdeditor/editor.js`, `javascripts/jbdeditor/dialog.js`, `javascripts/jbdeditor/jbdeditor.js`, `javascripts/jbdeditor/jaleditor.js`, `vendor/jbdeditor/src/editor.js`, `vendor/jbdeditor/src/dialog.js`, `vendor/jbdeditor/src/jbdeditor.js`, `vendor/jbdeditor/src/jaleditor.js`, `app/views/pages/_pageEditorScripts.cfm`, `app/views/layout.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Context & Request:**
+  - User demonstrated with screenshot that full URLs (`http://chelancounty.gov/elections/page/current-election-results` and external links) work without any issue, but relative municipal links (`<a href="/elections/page/ballot-drop-box-locations">`) crash CMSAdmin.
+  - User confirmed direction: prepending `http://chelancounty.gov` / `http://www.chelancounty.gov` to all local/municipal links completely eliminates the crash.
+- **Key Deliverables & Remediation:**
+  1. **Automatic Municipal Link Normalization (`normalizeMunicipalLinks`):**
+     - Implemented `normalizeMunicipalLinks(html)` inside `setHTML` and `initContent` across all JBDEditor modules and bundles.
+     - Automatically transforms all relative municipal links (`href="/elections/page/..."`, `href="/assessor/..."`, `href="/auditor/..."`, etc.) into absolute public links (`href="http://chelancounty.gov/..."`).
+  2. **Link Dialog Auto-Prepending (`Dialog.openLinkDialog`):**
+     - Updated link creation/editing modal: when an author inputs a relative path (e.g. `/elections/page/ballot-drop-box-locations`), it automatically prepends `http://chelancounty.gov` upon confirmation, ensuring inserted links are always complete URLs.
+  3. **Universal Capture-Phase In-Editor Link Defense:**
+     - Attached `addEventListener('click', handler, true)` (capture phase) to `this.contentArea` and `_pageEditorScripts.cfm`.
+     - Executes at the very first DOM phase, executing `e.preventDefault()` and `e.stopPropagation()` before the browser can initiate current-window navigation, opening the resolved public URL safely in a new tab (`_blank`).
+  4. **Server-Side Public Route Fallback & Safety Net (`config/routes.cfm` & `Pages.cfc`):**
+     - Added dedicated fallback routes in `config/routes.cfm` for all Chelan County department page patterns (`[dept]/page/[slug]`, `[dept]/page/[slug]/[subpage]`, and generic `[workspace]/page/[slug]`).
+     - Added `publicRedirect()` action to `app/controllers/Pages.cfc` and marked it public in `app/controllers/Controller.cfc`.
+     - Verified with HTTP smoke tests: requests to `http://cmsadmin.chelancounty.gov/assessor/page/home` and `http://cmsadmin.chelancounty.gov/elections/page/ballot-drop-box-locations` return **STATUS 302 Found** redirecting to `http://chelancounty.gov/...`, which resolves to **STATUS 200 OK**.
+  5. **Asset Versioning & Headless Verification:**
+     - Bumped asset cache busters to `v=2.5` in `app/views/layout.cfm`.
+     - Verified test suite with headless Chrome: **266 tests passed (100% green)**.
+
+### Session: October 22, 2026 — Bugfix: Intercept In-Editor Link Navigation Crash & Add Contextual Link Bubble Suite
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`javascripts/jbdeditor.js`, `javascripts/jbdeditor/editor.js`, `javascripts/jbdeditor/jbdeditor.js`, `javascripts/jbdeditor/jaleditor.js`, `vendor/jbdeditor/src/editor.js`, `vendor/jbdeditor/src/jbdeditor.js`, `vendor/jbdeditor/src/jaleditor.js`, `stylesheets/jbdeditor.css`, `vendor/jbdeditor/css/editor.css`, `app/views/layout.cfm`, `app/views/pages/_pageEditorScripts.cfm`, `vendor/jbdeditor/test.html`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Context & Request:**
+  - When clicking links inside the rich text editor (specifically local relative links like `/assessor/page/home` or `/auditor/page/recording` on extracted pages), the editor session crashed.
+  - Root Cause: In standard browser DOM, clicking an `<a href>` inside a `contenteditable` container triggers default browser navigation if `preventDefault()` is not called. In CMSAdmin 2.0, clicking a relative link directed the current admin window to `http://cmsadmin.chelancounty.gov/assessor/page/home`. Because department page routes (`/[workspace]/page/[slug]`) exist exclusively on the public front-end (`ChelanCounty.gov`) and not on `CMSAdmin 2.0`, ColdFusion Wheels rejected the request with `Wheels.RouteNotFound: Could not find a route that matched this request.`, crashing out of the page editor and losing unsaved content.
+- **Key Deliverables & Remediation:**
+  1. **In-Editor Link Click Interception (`preventDefault`):**
+     - Bound delegated `click`, `auxclick`, and `dblclick` listeners to `this.contentArea` in `initLinkInteractions()` across all JBDEditor modules and bundles.
+     - Strictly intercepts all clicks on `<a>` tags inside `contentArea`, calling `e.preventDefault()` to eliminate browser navigation crashes.
+     - Also added defensive capture-phase listener to `app/views/pages/_pageEditorScripts.cfm` for page previews and editor shells.
+  2. **Contextual Floating Link Bubble Toolbar (`jbd-link-bubble-toolbar`):**
+     - Attached to editor wrapper outside `contentArea` with `z-index: 105`, ensuring clean HTML serialization with zero markup pollution.
+     - Displays clickable URL preview, "Open in New Tab" ↗ button, "Edit" ✏️ button (opens `openLinkModal(link)` pre-populated), "Copy" 📋 button (with clipboard write & "Copied!" feedback), and "Unlink" 🗑️ button (unwraps anchor text into parent node).
+     - Dynamically positions above or below the link, clamped to wrapper bounds, with automatic repositioning on scroll and window resize.
+     - Double-clicking any link directly triggers `openLinkModal(link)`.
+  3. **Local Relative Link Resolution (`resolveLinkUrl`):**
+     - Enhanced link opening so that relative links (e.g. `/assessor/page/home`, `/auditor/page/recording-fees`) automatically map to the public portal (`http://chelancounty.gov/assessor/page/home`) when clicked via "Open", preventing 404s on the admin host.
+  4. **Cache Busting & Automated Verification:**
+     - Updated asset cache busters in `app/views/layout.cfm`: `/stylesheets/jbdeditor.css?v=2.4` and `/javascripts/jbdeditor.js?v=2.4`.
+     - Added **SECTION 16: Link Interaction & Contextual Bubble Suite** to `vendor/jbdeditor/test.html`.
+     - Verified with headless Chrome (`--headless=new --dump-dom`): **All 16 test sections passed (100% green)**.
+
 ### Session: October 22, 2026 — Elections Workspace Extraction (`co.chelan.wa.us/elections`), Subpage Extraction, Public Portal Routing, and Navigation Setup
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 & ChelanCounty.gov (`config/sql/extract-elections.sql`, `tests/test_edit_elections_pages.cfm`, `c:\inetpub\ChelanCounty.gov\config\routes.cfm`, `c:\inetpub\ChelanCounty.gov\app\controllers\Elections.cfc`, `c:\inetpub\ChelanCounty.gov\app\views\elections\index.cfm`, `c:\inetpub\ChelanCounty.gov\app\views\elections\page.cfm`, `files/elections/`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).

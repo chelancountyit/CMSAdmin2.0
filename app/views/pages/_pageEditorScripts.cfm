@@ -1613,6 +1613,36 @@ window.closeEmbedFormModal = function() {
 		}
 	});
 
+	// Universal in-editor link protection: prevents any link click inside editor or preview from unloading CMSAdmin
+	document.addEventListener("click", function(e) {
+		var editorLink = e.target.closest(".jbd-editor-content a, .preview-content-rendered a, .pg-editor a, [contenteditable] a");
+		if (editorLink) {
+			e.preventDefault();
+			e.stopPropagation();
+			var rawHref = editorLink.getAttribute("href") || "";
+			if (!rawHref || rawHref === "#" || rawHref.indexOf("javascript:") === 0) return;
+
+			var resolvedHref = rawHref;
+			if (!/^(https?:|\/\/|mailto:|tel:)/i.test(rawHref)) {
+				var publicBase = "http://chelancounty.gov";
+				if (window.location && window.location.hostname) {
+					var h = window.location.hostname.toLowerCase();
+					if (h.indexOf("cmsadmin.") === 0) {
+						publicBase = window.location.protocol + "//" + h.substring(9);
+					} else if (h === "cmsadmin" || h === "localhost" || h === "127.0.0.1") {
+						publicBase = window.location.protocol + "//chelancounty.gov";
+					}
+				}
+				resolvedHref = publicBase + (rawHref.charAt(0) === "/" ? "" : "/") + rawHref;
+			}
+
+			// In preview mode or if Ctrl/Cmd/middle clicked: open link safely in new tab
+			if (e.ctrlKey || e.metaKey || e.button === 1 || e.target.closest(".preview-content-rendered")) {
+				window.open(resolvedHref, "_blank", "noopener,noreferrer");
+			}
+		}
+	}, true);
+
 	// Call to Action Embed Integration for JBDEditor
 	function syncCtaCardSelectionState() {
 		document.querySelectorAll(".embed-cta-card-item").forEach(function(card) {
