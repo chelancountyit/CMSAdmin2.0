@@ -1593,7 +1593,10 @@ component extends="Controller" {
 		try {
 			local.content = GetHTTPRequestData().content;
 			if (IsBinary(local.content)) local.content = CharsetEncode(local.content, "utf-8");
-			if (Len(Trim(local.content)) && IsJSON(local.content)) return DeserializeJSON(local.content);
+			if (IsSimpleValue(local.content) && Len(Trim(local.content))) {
+				local.content = healUtf8Mojibake(local.content);
+				if (IsJSON(local.content)) return healUtf8MojibakeData(DeserializeJSON(local.content));
+			}
 		} catch (any e) {
 			return "";
 		}
@@ -1659,6 +1662,20 @@ component extends="Controller" {
 				if (!IsArray(local.sidebarList)) {
 					local.sidebarList = [];
 				}
+				local.normalizedSidebarList = [];
+				for (local.sbItem in local.sidebarList) {
+					local.sbStr = Trim(ToString(local.sbItem));
+					local.sbCleanNum = ReReplaceNoCase(local.sbStr, "^subpage-", "");
+					if (IsNumeric(local.sbCleanNum) && Int(Val(local.sbCleanNum)) > 0) {
+						local.normToken = "subpage-" & Int(Val(local.sbCleanNum));
+						if (!ArrayFindNoCase(local.normalizedSidebarList, local.normToken)) {
+							ArrayAppend(local.normalizedSidebarList, local.normToken);
+						}
+					} elseif (Len(local.sbStr) && !ArrayFindNoCase(local.normalizedSidebarList, local.sbStr)) {
+						ArrayAppend(local.normalizedSidebarList, local.sbStr);
+					}
+				}
+				local.sidebarList = local.normalizedSidebarList;
 				local.updatedStr = "";
 				if (IsDate(local.row.Modified)) {
 					local.updatedStr = DateFormat(local.row.Modified, "mm/dd/yyyy") & " " & TimeFormat(local.row.Modified, "hh:mm:ss");
@@ -1703,7 +1720,7 @@ component extends="Controller" {
 				};
 				if (Compare(local.row.Body ?: "", local.res.body) != 0) {
 					try {
-						queryExecute("UPDATE pages SET Body = :body WHERE ContentID = :id", {
+						queryExecute("SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON; UPDATE pages SET Body = :body WHERE ContentID = :id", {
 							body: { value: local.res.body, cfsqltype: "cf_sql_nvarchar" },
 							id: { value: local.row.ContentID, cfsqltype: "cf_sql_integer" }
 						}, { datasource: "ChelanCountyWebsite" });
@@ -5405,7 +5422,7 @@ component extends="Controller" {
 						title: "Reservations & Contact Us",
 						slug: "reservations-contact",
 						summary: "Contact the on-site park host, check site availability, or submit group facility reservations.",
-						body: "<p>Our friendly on-site rangers and camp hosts are available daily to assist you during your stay in Chelan County.</p><p><strong>Physical Address:</strong> 2924 State Highway 2, Monitor, WA 98836<br><strong>Park Office Phone:</strong> (509) 667-6490<br><strong>Email:</strong> parks@co.chelan.wa.us<br><strong>Gate Hours:</strong> 7:00 AM – 10:00 PM Daily</p>",
+						body: "<p>Our friendly on-site rangers and camp hosts are available daily to assist you during your stay in Chelan County.</p><p><strong>Physical Address:</strong> 2924 State Highway 2, Monitor, WA 98836<br><strong>Park Office Phone:</strong> (509) 667-6490<br><strong>Email:</strong> parks@co.chelan.wa.us<br><strong>Gate Hours:</strong> 7:00 AM &ndash; 10:00 PM Daily</p>",
 						anchor: "contact",
 						layout: "full",
 						bg: "dark"

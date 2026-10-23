@@ -998,10 +998,13 @@ public string function renderCallToActionCardHtml(required struct item) {
  * Repairs any .jbd-cta-link anchors whose arrow/external icon was saved as '?', '&rarr;', or '&nearr;' instead of inline SVG.
  */
 public string function normalizeCtaLinkIcons(required string content) {
-	if (!Len(arguments.content) || FindNoCase("jbd-cta-link", arguments.content) == 0) {
+	if (!Len(arguments.content)) {
 		return arguments.content;
 	}
-	var result = arguments.content;
+	var result = healUtf8Mojibake(arguments.content);
+	if (FindNoCase("jbd-cta-link", result) == 0) {
+		return result;
+	}
 	var arrowSvg = ' <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
 	var extSvg = ' <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
 	var matches = REMatchNoCase('<a\b[^>]*class="[^"]*\bjbd-cta-link\b[^"]*"[^>]*>[\s\S]*?</a>', result);
@@ -1198,5 +1201,246 @@ public string function appBuildDisplay() {
 	var v = getAppVersion();
 	return "#(v.versionTag ?: 'v2.1.1')# (Build #(v.build ?: 1)#)";
 }
-</cfscript>
 
+/**
+ * Multi-pass Windows-1252 (Cp1252) to UTF-8 Mojibake Self-Healer.
+ * Detects and unwinds 1st- through 8th-generation UTF-8 mojibake sequences
+ * without altering valid Unicode characters elsewhere in the string.
+ */
+public string function healUtf8Mojibake(required any input) {
+	if (!IsSimpleValue(arguments.input)) return "";
+	local.s = ToString(arguments.input);
+	if (!Len(local.s)) return local.s;
+
+	if (!Find(Chr(195), local.s) && !Find(Chr(194), local.s) && !Find(Chr(226), local.s)) {
+		return local.s;
+	}
+
+	local.utf8Charset = createObject("java", "java.nio.charset.StandardCharsets").UTF_8;
+	local.codingErrorAction = createObject("java", "java.nio.charset.CodingErrorAction");
+	local.byteBufferClass = createObject("java", "java.nio.ByteBuffer");
+	local.sb = createObject("java", "java.lang.StringBuilder").init(Len(local.s));
+
+	local.len = Len(local.s);
+	local.i = 1;
+	while (local.i <= local.len) {
+		local.ch = Mid(local.s, local.i, 1);
+		local.code = Asc(local.ch);
+		if (local.code <= 127) {
+			local.sb.append(local.ch);
+			local.i++;
+			continue;
+		}
+
+		local.j = local.i;
+		while (local.j <= local.len && Asc(Mid(local.s, local.j, 1)) > 127) {
+			local.j++;
+		}
+		local.run = Mid(local.s, local.i, local.j - local.i);
+
+		for (local.pass = 1; local.pass <= 8; local.pass++) {
+			local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(65533), Chr(8221), "all");
+			local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(157),   Chr(8221), "all");
+			if (Len(local.run) < 2 || (!Find(Chr(195), local.run) && !Find(Chr(194), local.run) && !Find(Chr(226), local.run))) {
+				break;
+			}
+			try {
+				local.bytes = local.run.getBytes("windows-1252");
+				local.decoder = local.utf8Charset.newDecoder();
+				local.decoder.onMalformedInput(local.codingErrorAction.REPORT);
+				local.decoder.onUnmappableCharacter(local.codingErrorAction.REPORT);
+				local.decoded = local.decoder.decode(local.byteBufferClass.wrap(local.bytes)).toString();
+				if (local.decoded == local.run || Find(Chr(65533), local.decoded)) {
+					if (Find(Chr(226) & Chr(8364) & Chr(65533), local.decoded)) {
+						local.run = Replace(local.decoded, Chr(226) & Chr(8364) & Chr(65533), Chr(8221), "all");
+						continue;
+					}
+					break;
+				}
+				local.run = local.decoded;
+			} catch (any e) {
+				break;
+			}
+		}
+
+		local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(8482), Chr(8217), "all");
+		local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(732),  Chr(8216), "all");
+		local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(339),  Chr(8220), "all");
+		local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(65533),Chr(8221), "all");
+		local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(157),  Chr(8221), "all");
+		local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(8220), Chr(8211), "all");
+		local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(8221), Chr(8212), "all");
+		local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(166),  Chr(8230), "all");
+		local.run = Replace(local.run, Chr(226) & Chr(8364) & Chr(162),  Chr(8226), "all");
+		local.run = Replace(local.run, Chr(194) & Chr(160),              Chr(160),  "all");
+		local.run = Replace(local.run, Chr(194) & Chr(169),              Chr(169),  "all");
+		local.run = Replace(local.run, Chr(194) & Chr(174),              Chr(174),  "all");
+		local.run = Replace(local.run, Chr(194) & Chr(176),              Chr(176),  "all");
+		local.run = Replace(local.run, Chr(194) & Chr(167),              Chr(167),  "all");
+
+		local.sb.append(local.run);
+		local.i = local.j;
+	}
+
+	return local.sb.toString();
+}
+
+/**
+ * Recursively heals UTF-8 mojibake across strings, structs, and arrays.
+ */
+public any function healUtf8MojibakeData(required any val) {
+	if (IsNull(arguments.val)) return "";
+	if (IsSimpleValue(arguments.val)) {
+		if (IsNumeric(arguments.val) || IsBoolean(arguments.val)) return arguments.val;
+		return healUtf8Mojibake(arguments.val);
+	}
+	if (IsStruct(arguments.val)) {
+		for (local.k in arguments.val) {
+			if (!IsNull(arguments.val[local.k])) {
+				arguments.val[local.k] = healUtf8MojibakeData(arguments.val[local.k]);
+			}
+		}
+		return arguments.val;
+	}
+	if (IsArray(arguments.val)) {
+		for (local.idx = 1; local.idx <= ArrayLen(arguments.val); local.idx++) {
+			if (!IsNull(arguments.val[local.idx])) {
+				arguments.val[local.idx] = healUtf8MojibakeData(arguments.val[local.idx]);
+			}
+		}
+		return arguments.val;
+	}
+	return arguments.val;
+}
+
+// ----------------------------------------------------
+// Persistent "Remember Me" Authentication Helpers (30-Day Signed Cookie)
+// ----------------------------------------------------
+
+public string function getRememberMeSecretKey() {
+	return "ChelanCMS2_RememberMe_HMAC_Key_2026_" & Hash(ExpandPath("/"), "SHA-256");
+}
+
+public void function issueRememberMeCookie(required numeric userId, required string email, numeric days = 30) {
+	local.expEpoch = DateDiff("s", CreateDateTime(1970, 1, 1, 0, 0, 0), Now()) + (arguments.days * 86400);
+	local.payload = Int(arguments.userId) & "|" & LCase(Trim(arguments.email)) & "|" & local.expEpoch;
+	local.sig = LCase(Hmac(local.payload, getRememberMeSecretKey(), "HMACSHA256", "UTF-8"));
+	local.token = ToBase64(local.payload & "|" & local.sig, "UTF-8");
+
+	cookie.cmsadmin_remember = {
+		value: local.token,
+		expires: arguments.days,
+		path: "/",
+		httponly: true
+	};
+	cookie.cmsadmin_last_email = {
+		value: LCase(Trim(arguments.email)),
+		expires: 30,
+		path: "/"
+	};
+}
+
+public void function clearRememberMeCookie() {
+	cookie.cmsadmin_remember = {
+		value: "",
+		expires: "now",
+		path: "/",
+		httponly: true
+	};
+}
+
+public boolean function tryRestoreRememberedSession() {
+	if (!StructKeyExists(cookie, "cmsadmin_remember") || !Len(Trim(cookie.cmsadmin_remember))) {
+		return false;
+	}
+	try {
+		local.rawToken = URLDecode(Trim(cookie.cmsadmin_remember));
+		local.decoded = ToString(ToBinary(local.rawToken), "UTF-8");
+		local.parts = ListToArray(local.decoded, "|");
+		if (ArrayLen(local.parts) != 4) {
+			clearRememberMeCookie();
+			return false;
+		}
+		local.userId = Val(local.parts[1]);
+		local.email = LCase(Trim(local.parts[2]));
+		local.expEpoch = Val(local.parts[3]);
+		local.providedSig = LCase(Trim(local.parts[4]));
+
+		local.nowEpoch = DateDiff("s", CreateDateTime(1970, 1, 1, 0, 0, 0), Now());
+		if (local.userId <= 0 || local.expEpoch < local.nowEpoch) {
+			clearRememberMeCookie();
+			return false;
+		}
+
+		local.payload = local.userId & "|" & local.email & "|" & local.expEpoch;
+		local.expectedSig = LCase(Hmac(local.payload, getRememberMeSecretKey(), "HMACSHA256", "UTF-8"));
+		if (Compare(local.providedSig, local.expectedSig) != 0) {
+			clearRememberMeCookie();
+			return false;
+		}
+
+		local.qUser = queryExecute("
+			SELECT TOP 1 u.id, u.role_id, u.role_code, u.username, u.email, u.first_name, u.last_name,
+			       u.job_title, u.phone, u.department_code, u.department_name, u.assigned_workspaces,
+			       u.status, u.two_factor_enabled, u.totp_connected,
+			       r.name AS role_name, r.badge_class AS role_badge, r.color_hex AS role_color, r.icon_name AS role_icon
+			FROM cms_users u
+			LEFT JOIN cms_roles r ON u.role_id = r.id
+			WHERE u.id = :id AND LOWER(LTRIM(RTRIM(u.email))) = :email AND u.status = 'active' AND u.deletedat IS NULL
+		", {
+			id: { value: local.userId, cfsqltype: "cf_sql_integer" },
+			email: { value: local.email, cfsqltype: "cf_sql_varchar" }
+		}, { datasource: "ChelanCountyWebsite" });
+
+		if (!local.qUser.recordCount) {
+			clearRememberMeCookie();
+			return false;
+		}
+
+		local.row = local.qUser;
+		local.wsList = [];
+		local.rawWs = Trim(local.row.assigned_workspaces ?: "");
+		if (Len(local.rawWs) && IsJSON(local.rawWs)) {
+			local.wsList = DeserializeJSON(local.rawWs);
+		} else if (Len(local.rawWs)) {
+			local.wsList = ListToArray(local.rawWs);
+		} else {
+			local.wsList = [Len(local.row.department_code) ? local.row.department_code : "global"];
+		}
+
+		session.user = {
+			id: local.row.id,
+			username: local.row.username,
+			email: local.row.email,
+			first_name: local.row.first_name,
+			last_name: local.row.last_name,
+			full_name: local.row.first_name & " " & local.row.last_name,
+			initials: UCase(Left(local.row.first_name, 1) & Left(local.row.last_name, 1)),
+			role_code: local.row.role_code,
+			role_name: Len(local.row.role_name) ? local.row.role_name : "Author",
+			role_badge: Len(local.row.role_badge) ? local.row.role_badge : "badge-primary",
+			role_color: Len(local.row.role_color) ? local.row.role_color : "##0073aa",
+			role_icon: Len(local.row.role_icon) ? local.row.role_icon : "user",
+			job_title: Len(local.row.job_title) ? local.row.job_title : "County Staff",
+			department_code: Len(local.row.department_code) ? local.row.department_code : "global",
+			department_name: Len(local.row.department_name) ? local.row.department_name : "County Administration",
+			workspaces: local.wsList,
+			totp_connected: (local.row.totp_connected == 1 || local.row.totp_connected == true),
+			remember_me: true,
+			logged_in_at: Now(),
+			last_activity: Now()
+		};
+
+		if (!StructKeyExists(session, "simulatedRole") || !Len(Trim(session.simulatedRole))) {
+			session.simulatedRole = local.row.role_code;
+		}
+		if (!StructKeyExists(cookie, "cmsadmin_simulated_role") || !Len(Trim(cookie.cmsadmin_simulated_role))) {
+			cookie.cmsadmin_simulated_role = local.row.role_code;
+		}
+
+		return true;
+	} catch (any e) {
+		return false;
+	}
+}
+</cfscript>

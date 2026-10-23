@@ -866,7 +866,7 @@ component extends="Controller" {
 		try {
 			local.content = GetHTTPRequestData().content;
 			if (IsBinary(local.content)) local.content = CharsetEncode(local.content, "utf-8");
-			if (Len(Trim(local.content)) && IsJSON(local.content)) return DeserializeJSON(local.content);
+			if (Len(Trim(local.content)) && IsJSON(local.content)) return healUtf8MojibakeData(DeserializeJSON(healUtf8Mojibake(local.content)));
 		} catch (any e) {
 			writeLog(type="warning", file="navigation", text="Unable to read navigation request body: #e.message#");
 			return "";

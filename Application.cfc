@@ -251,6 +251,11 @@ component output="false" {
 
 	public boolean function onRequestStart( string targetPage ) {
 
+		try {
+			getPageContext().getRequest().setCharacterEncoding("UTF-8");
+			getPageContext().getResponse().setCharacterEncoding("UTF-8");
+		} catch (any eEncoding) {}
+
 		this.$setContentOnlyForFormat();
 
 		// Reload password transport: the Wheels CLI sends it in the

@@ -7,7 +7,7 @@
 		this.sessionTimeout = CreateTimeSpan(0,0,5,0);
 	*/
 	this.name = "CMSAdmin_" & Hash(this.wheels.rootPath);
-	this.sessionTimeout = CreateTimeSpan(0,1,0,0); // 1 hour session timeout
+	this.sessionTimeout = CreateTimeSpan(1,0,0,0); // 24 hour session timeout (plus 30-day Remember Me cookie support)
 
 	// CLI-Appends-Here
 </cfscript>

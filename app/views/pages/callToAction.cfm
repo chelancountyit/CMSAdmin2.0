@@ -903,7 +903,7 @@
 
 			fetch(routes.save || "/pages/call-to-action/save", {
 				method: "POST",
-				headers: { "Content-Type": "application/json", "Accept": "application/json" },
+				headers: { "Content-Type": "application/json; charset=utf-8", "Accept": "application/json" },
 				body: JSON.stringify(payload)
 			})
 			.then(function(r) {
@@ -964,7 +964,7 @@
 	function executeDeleteCta(id) {
 		fetch(routes.delete || "/pages/call-to-action/delete", {
 			method: "POST",
-			headers: { "Content-Type": "application/json", "Accept": "application/json" },
+			headers: { "Content-Type": "application/json; charset=utf-8", "Accept": "application/json" },
 			body: JSON.stringify({ id: id })
 		})
 		.then(function(r) {

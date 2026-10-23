@@ -1257,7 +1257,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 
 				return fetch(routes.saveSection, {
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers: { "Content-Type": "application/json; charset=utf-8" },
 					body: JSON.stringify({
 						one_page_site_id: curSiteId,
 						page_id: pageId,
@@ -1408,7 +1408,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 
 			fetch(routes.saveSection, {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: { "Content-Type": "application/json; charset=utf-8" },
 				body: JSON.stringify(payload)
 			}).then(function (r) {
 				return r.json();
@@ -1453,7 +1453,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 
 				fetch(routes.deleteSection, {
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers: { "Content-Type": "application/json; charset=utf-8" },
 					body: JSON.stringify({ id: id })
 				}).then(function (r) {
 					return r.json();
@@ -1484,7 +1484,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 	function reorderSections(newOrderIds) {
 		fetch(routes.reorderSections, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: { "Content-Type": "application/json; charset=utf-8" },
 			body: JSON.stringify({ ids: newOrderIds })
 		}).then(function (r) {
 			return r.json();
@@ -1617,7 +1617,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 
 			fetch(routes.saveSite, {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: { "Content-Type": "application/json; charset=utf-8" },
 				body: JSON.stringify(payload)
 			}).then(function (r) {
 				return r.json();
@@ -1664,7 +1664,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 
 				fetch(routes.deleteSite, {
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers: { "Content-Type": "application/json; charset=utf-8" },
 					body: JSON.stringify({ id: curSiteId })
 				}).then(function (r) {
 					return r.json();
@@ -1702,7 +1702,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 
 				fetch(routes.deleteSite, {
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers: { "Content-Type": "application/json; charset=utf-8" },
 					body: JSON.stringify({ id: siteId })
 				}).then(function (r) {
 					return r.json();
@@ -1735,7 +1735,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 
 			fetch(routes.syncMenu, {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: { "Content-Type": "application/json; charset=utf-8" },
 				body: JSON.stringify({ id: curSiteId })
 			}).then(function (r) {
 				return r.json();
@@ -1771,7 +1771,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 
 			fetch(routes.compile, {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: { "Content-Type": "application/json; charset=utf-8" },
 				body: JSON.stringify({ id: curSiteId, separateAssets: separateAssets })
 			}).then(function (r) {
 				return r.json();
@@ -1827,7 +1827,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 
 				fetch(routes.publish, {
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers: { "Content-Type": "application/json; charset=utf-8" },
 					body: JSON.stringify({ id: curSiteId })
 				}).then(function (r) {
 					return r.json();

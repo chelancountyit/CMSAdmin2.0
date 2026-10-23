@@ -12,6 +12,64 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 23, 2026 — Dashboard Cleanup: Remove Platform Environment Card
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/views/main/index.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  - Removed the **Platform Environment** card (`Database`, `Framework`, `CFML Engine`, `Web Server`, `Active Host`) from the right column of the main Dashboard view ([app/views/main/index.cfm](file:///c:/inetpub/CMSAdmin2.0/app/views/main/index.cfm#L374-L414)).
+
+### Session: October 23, 2026 — Auth Enhancement: Extended Session Timeout (12h / 24h) & 30-Day "Remember Me" Persistent Login
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`config/app.cfm`, `app/global/functions.cfm`, `app/controllers/Controller.cfc`, `app/controllers/Sessions.cfc`, `app/views/sessions/new.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Extended Default Session Timeout ([app.cfm](file:///c:/inetpub/CMSAdmin2.0/config/app.cfm#L10), [Controller.cfc](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Controller.cfc#L60-L71)):**
+     - Increased ColdFusion's `this.sessionTimeout` from 1 hour to 24 hours (`CreateTimeSpan(1,0,0,0)`).
+     - Increased the standard inactivity limit in `Controller.cfc:requireLogin()` from 60 minutes (1 hour) to **720 minutes (12 hours)**, and **30 days (`43200` minutes)** when **Remember me** is active.
+  2. **30-Day "Remember Me" Checkbox & Signed Cookie Auto-Login ([new.cfm](file:///c:/inetpub/CMSAdmin2.0/app/views/sessions/new.cfm#L708-L715), [Sessions.cfc](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Sessions.cfc#L447-L485), [functions.cfm](file:///c:/inetpub/CMSAdmin2.0/app/global/functions.cfm#L1318-L1439)):**
+     - Added a **"Keep me signed in for 30 days (Remember me)"** checkbox (checked by default) on the Sign-In page (`/login`) and pre-filled the last signed-in email (`cmsadmin_last_email`).
+     - Implemented `issueRememberMeCookie()`, `clearRememberMeCookie()`, and `tryRestoreRememberedSession()` using an `HttpOnly`, HMAC-SHA256 signed token (`cmsadmin_remember`) that seamlessly restores `session.user` across browser restarts or expired ColdFusion sessions until the user explicitly clicks **Sign Out**.
+
+### Session: October 23, 2026 — Bugfix: Public Website (`chelancounty.gov`) Ignoring "Full Width Layout" When Subpages Exist
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** `chelancounty.gov` (`app/global/functions.cfm`), `CMSAdmin2.0` (`app/controllers/Pages.cfc`, `app/views/pages/_pageEditorScripts.cfm`), `ChelanCountyWebsite` SQL Server Database (`dbo.pages`).
+- **Root Cause Analysis:**
+  1. `getAttachedSidebars(page)` in `chelancounty.gov/app/global/functions.cfm` never checked `page.LayoutType`. Even when an editor switched a page from **Right Sidebar Layout** to **Full Width Layout** (`LayoutType = 'Full'`), `getAttachedSidebars()` fell back to querying `dbo.page_SubPage WHERE ContentID = page.ContentID`, causing `hasSidebar` to evaluate to `true` and rendering the 2-column Right Sidebar layout on the public site.
+  2. Migrated Auditor pages had numeric JSON arrays (e.g. `[6.0]`) in `dbo.pages.SidebarIDs` instead of `["subpage-6"]`, preventing the subpage checkboxes in the Page Editor from matching on load, and `updateSidebarAvailability()` in `_pageEditorScripts.cfm` was setting `hidden = true` on `#pgSidebarChooser` when switching to Full Width.
+- **Key Deliverables & Remediation:**
+  1. **Enforce `LayoutType` in `getAttachedSidebars()` ([functions.cfm](file:///c:/inetpub/chelancounty.gov/app/global/functions.cfm#L261-L315)):** Immediately returns an empty query whenever `page.LayoutType` is not `"Right Sidebar"` / `"right-sidebar"`, and only falls back to `ContentID` lookup when `SidebarIDs` was never configured (not when explicitly `"[]"`).
+  2. **Normalize `SidebarIDs` Tokens ([Pages.cfc](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Pages.cfc#L1665-L1679)):** Normalized numeric `SidebarIDs` entries (`[3.0]` &rarr; `["subpage-3"]`) in `loadPageFromDb()` and across `dbo.pages` in `ChelanCountyWebsite`, and kept `#pgSidebarChooser` visible (dimmed) in `_pageEditorScripts.cfm` when Full Width is selected.
+
+### Session: October 23, 2026 — UX Enhancement: Page Features Deck & Content Action Toolbar Quick-Guide Hover Tooltips ("Simple For Dummies")
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/views/pages/edit.cfm`, `app/views/pages/editV2.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Floating Quick-Guide Hover Tooltip Portal (`#pgFeatureQuickTooltip`):**
+     - Added an instant, high-contrast floating popover card attached to `document.body` that appears on mouseover or keyboard focus on:
+       - All 5 **Page Features Deck** items (`Featured Cover Image`, `Navigation & Menu`, `Sidebar & Subpages`, `Folder Explorer`, `Publishing & Schedule`).
+       - All 3 **Page Content Action Buttons** (`Import Word / PDF`, `Embed Call to Action`, `Embed Form`).
+  2. **Zero-Jargon "1-2-3" Format:**
+     - Each tooltip displays three scannable sections designed for non-technical users: **What is it for?** (1-sentence plain-English purpose), **How to use it (1-2-3)** (numbered step-by-step instructions), and **What the colored dot means** / **Good to know** tip footer.
+  3. **Visual `?` Help Badge & Viewport-Aware Positioning:**
+     - Added a `.pg-feature-help-pill` (`?`) indicator on each feature row header and toolbar button, with automatic left-of-panel or centered-below-button positioning and dynamic pointer arrow alignment.
+### Session: October 23, 2026 — Bugfix: Eliminate Recursive UTF-8 / Windows-1252 Mojibake ("ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s") on Page Saves & Heal Database Records
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** ChelanCountyWebsite SQL Server Database (dbo.pages, dbo.page_revisions, dbo.calendar_events), CMSAdmin2.0 (Application.cfc, pp/global/functions.cfm, pp/controllers/Pages.cfc, pp/controllers/Articles.cfc, pp/controllers/Alerts.cfc, pp/controllers/Events.cfc, pp/controllers/Forms.cfc, pp/controllers/Jobs.cfc, pp/controllers/Navigation.cfc, pp/views/**/*.cfm, javascripts/jbdeditor.js, javascripts/jbdeditor/*.js, endor/jbdeditor/src/*.js, pp/views/layout.cfm, scripts/extract-legacy-workspace.ps1), ChelanCounty.gov (Application.cfc).
+- **Root Cause Analysis:**
+  - AJAX etch() requests sending JSON payloads (Content-Type: application/json without ; charset=utf-8) arrived at Adobe ColdFusion 2021 after Application.cfc:onRequestStart() had already touched url/orm scopes without first calling getPageContext().getRequest().setCharacterEncoding("UTF-8").
+  - Because pplication/json is treated as text by ColdFusion (IsBinary(GetHTTPRequestData().content) == false), the Servlet container locked the request encoding to Windows default Cp1252 (Windows-1252).
+  - Consequently, every page save decoded 3-byte UTF-8 typographic punctuation (’ E2 80 99, “ E2 80 9C, ” E2 80 9D, – E2 80 93, — E2 80 94) as Cp1252, compounding exponentially across saves (’ &rarr; â€™ &rarr; Ã¢â‚¬â„¢ &rarr; ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢).
+- **Key Deliverables & Remediation:**
+  1. **Servlet Request/Response UTF-8 Enforcement (Application.cfc):**
+     - Added getPageContext().getRequest().setCharacterEncoding("UTF-8") and setCharacterEncoding("UTF-8") on the response at the very top of onRequestStart() in both CMSAdmin2.0/Application.cfc and ChelanCounty.gov/Application.cfc prior to any url or orm scope access.
+  2. **Explicit charset=utf-8 on Client JSON Requests (pp/views/**/*.cfm):**
+     - Standardized all etch() headers across 17 view templates from "Content-Type": "application/json" to "Content-Type": "application/json; charset=utf-8".
+  3. **Multi-Pass Server & Client Mojibake Self-Healer (unctions.cfm, Pages.cfc, jbdeditor.js):**
+     - Implemented healUtf8Mojibake() and healUtf8MojibakeData() in pp/global/functions.cfm (using strict StandardCharsets.UTF_8 CodingErrorAction.REPORT decoding over contiguous non-ASCII runs up to 8 generations deep) and wired it into 
+ormalizeCtaLinkIcons() and xReadJsonBody() across all controllers.
+     - Added client-side healMojibakeText() in JBDEditor (javascripts/jbdeditor.js and source modules, asset version =2.6) so any open browser tab or clipboard paste is healed immediately.
+  4. **Full Database Scan & Remediation (ChelanCountyWebsite):**
+     - Scanned all text columns across all 34+ tables in ChelanCountyWebsite and healed all affected rows in dbo.pages (Body and SearchText on IDs 4, 37, 45), dbo.page_revisions (20 revision snapshots), and dbo.calendar_events (ID 9). Verified 0 remaining mojibake rows across the entire database.
+
 ### Session: October 22, 2026 — Resolution: Automatic Municipal Link Prepending & Server-Side Fallback Router
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 (`config/routes.cfm`, `app/controllers/Pages.cfc`, `app/controllers/Controller.cfc`, `javascripts/jbdeditor.js`, `javascripts/jbdeditor/editor.js`, `javascripts/jbdeditor/dialog.js`, `javascripts/jbdeditor/jbdeditor.js`, `javascripts/jbdeditor/jaleditor.js`, `vendor/jbdeditor/src/editor.js`, `vendor/jbdeditor/src/dialog.js`, `vendor/jbdeditor/src/jbdeditor.js`, `vendor/jbdeditor/src/jaleditor.js`, `app/views/pages/_pageEditorScripts.cfm`, `app/views/layout.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).

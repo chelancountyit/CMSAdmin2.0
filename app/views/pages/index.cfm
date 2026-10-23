@@ -886,7 +886,7 @@ form.admin-modal-dialog {
 		// 3. Persist title, permalink, workspace, and layout to database
 		var csrfMeta = document.querySelector('meta[name="csrf-token"]');
 		var headers = {
-			"Content-Type": "application/json",
+			"Content-Type": "application/json; charset=utf-8",
 			"Accept": "application/json",
 			"X-Requested-With": "XMLHttpRequest"
 		};
@@ -1005,7 +1005,7 @@ form.admin-modal-dialog {
 		if (typeof window.showPageLoader === "function") window.showPageLoader("Reactivating archived page...");
 		var csrfMeta = document.querySelector('meta[name="csrf-token"]');
 		var headers = {
-			"Content-Type": "application/json",
+			"Content-Type": "application/json; charset=utf-8",
 			"Accept": "application/json",
 			"X-Requested-With": "XMLHttpRequest"
 		};
@@ -1079,7 +1079,7 @@ async function confirmDeletePage(id, title) {
 
 	var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 	var headers = {
-		'Content-Type': 'application/json',
+		'Content-Type': 'application/json; charset=utf-8',
 		'X-Requested-With': 'XMLHttpRequest'
 	};
 	if (csrfToken) {

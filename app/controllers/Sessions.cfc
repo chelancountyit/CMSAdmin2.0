@@ -23,6 +23,7 @@ component extends="Controller" {
 
 		// Check if an email was pre-filled via query string
 		variables.prefilledEmail = structKeyExists(params, "email") ? Trim(params.email) : "";
+		variables.rememberedEmail = (structKeyExists(cookie, "cmsadmin_last_email") && Len(Trim(cookie.cmsadmin_last_email))) ? Trim(cookie.cmsadmin_last_email) : "";
 	}
 
 	/**
@@ -135,7 +136,8 @@ component extends="Controller" {
 
 		// Clean up OTP state & perform login
 		structDelete(session, "loginOtp");
-		authenticateAndEstablishSession(local.targetUser);
+		local.rememberMe = !structKeyExists(params, "remember_me") || (params.remember_me == "1" || params.remember_me == 1 || params.remember_me == true || params.remember_me == "true");
+		authenticateAndEstablishSession(local.targetUser, local.rememberMe);
 
 		flashInsert(success="Welcome back, <strong>" & local.targetUser.first_name & "</strong>! You have signed in via Email OTP.");
 
@@ -175,7 +177,8 @@ component extends="Controller" {
 			return;
 		}
 
-		authenticateAndEstablishSession(local.targetUser);
+		local.rememberMe = !structKeyExists(params, "remember_me") || (params.remember_me == "1" || params.remember_me == 1 || params.remember_me == true || params.remember_me == "true");
+		authenticateAndEstablishSession(local.targetUser, local.rememberMe);
 
 		flashInsert(success="Welcome back, <strong>" & local.targetUser.first_name & "</strong>! Authenticator verification verified.");
 
@@ -267,7 +270,8 @@ component extends="Controller" {
 		}
 
 		structDelete(session, "pendingTotpSecret");
-		authenticateAndEstablishSession(local.targetUser);
+		local.rememberMe = !structKeyExists(params, "remember_me") || (params.remember_me == "1" || params.remember_me == 1 || params.remember_me == true || params.remember_me == "true");
+		authenticateAndEstablishSession(local.targetUser, local.rememberMe);
 
 		flashInsert(success="<strong>Authenticator Connected!</strong> Microsoft/Google Authenticator paired successfully with your account.");
 
@@ -284,6 +288,7 @@ component extends="Controller" {
 	function destroy() {
 		StructClear(session);
 		try { sessionRotate(); } catch (any e) {}
+		try { clearRememberMeCookie(); } catch (any e) {}
 		cookie.cmsadmin_simulated_role = { value: "", expires: "now" };
 		cookie.cmsadmin_workspace = { value: "", expires: "now" };
 
@@ -444,7 +449,7 @@ component extends="Controller" {
 	/**
 	 * Establishes authenticated user session and updates database last_login_at
 	 */
-	private void function authenticateAndEstablishSession(required struct user) {
+	private void function authenticateAndEstablishSession(required struct user, boolean rememberMe = true) {
 		session.user = {
 			id: arguments.user.id,
 			username: arguments.user.username,
@@ -463,12 +468,24 @@ component extends="Controller" {
 			department_name: arguments.user.department_name,
 			workspaces: arguments.user.workspaces,
 			totp_connected: arguments.user.totp_connected,
-			logged_in_at: Now()
+			remember_me: arguments.rememberMe,
+			logged_in_at: Now(),
+			last_activity: Now()
 		};
 
 		// Synchronize role simulator and session role
 		session.simulatedRole = arguments.user.role_code;
 		cookie.cmsadmin_simulated_role = arguments.user.role_code;
+
+		// Issue or clear 30-day persistent Remember Me cookie
+		try {
+			if (arguments.rememberMe) {
+				issueRememberMeCookie(arguments.user.id, arguments.user.email, 30);
+			} else {
+				clearRememberMeCookie();
+				cookie.cmsadmin_last_email = { value: LCase(Trim(arguments.user.email)), expires: 30, path: "/" };
+			}
+		} catch (any eCookie) {}
 
 		// Update SQL Server database last_login_at
 		try {

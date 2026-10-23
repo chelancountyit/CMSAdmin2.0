@@ -657,7 +657,7 @@ function handleAlertFormSubmit(e) {
 	fetch('/alerts/save', {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'application/json',
+			'Content-Type': 'application/json; charset=utf-8',
 			'X-Requested-With': 'XMLHttpRequest',
 			'X-CSRF-Token': csrfToken
 		},
@@ -685,7 +685,7 @@ function toggleAlert(id) {
 	fetch('/alerts/toggle', {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'application/json',
+			'Content-Type': 'application/json; charset=utf-8',
 			'X-Requested-With': 'XMLHttpRequest',
 			'X-CSRF-Token': csrfToken
 		},
@@ -720,7 +720,7 @@ function executeDeleteAlert(id) {
 	fetch('/alerts/delete', {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'application/json',
+			'Content-Type': 'application/json; charset=utf-8',
 			'X-Requested-With': 'XMLHttpRequest',
 			'X-CSRF-Token': csrfToken
 		},

@@ -411,40 +411,6 @@
 			</div>
 		</div>
 
-		<!--- Platform Environment & Health --->
-		<div class="admin-card">
-			<div class="card-header">
-				<h2 class="card-title">
-					#svgIcon(name="settings", size=18)#
-					<span>Platform Environment</span>
-				</h2>
-				<span class="badge badge-success">Online</span>
-			</div>
-			<div class="card-body" style="font-size:0.825rem;">
-				<div style="display:flex; flex-direction:column; gap:0.6rem;">
-					<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--admin-border-subtle); padding-bottom:0.4rem;">
-						<span style="color:var(--admin-text-muted);">Database</span>
-						<span style="font-weight:600;">Microsoft SQL Server (ChelanCountyWebsite)</span>
-					</div>
-					<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--admin-border-subtle); padding-bottom:0.4rem;">
-						<span style="color:var(--admin-text-muted);">Framework</span>
-						<span style="font-weight:600;">CFWheels 4.1.2</span>
-					</div>
-					<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--admin-border-subtle); padding-bottom:0.4rem;">
-						<span style="color:var(--admin-text-muted);">CFML Engine</span>
-						<span style="font-weight:600;">Lucee CFML (Java 21)</span>
-					</div>
-					<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--admin-border-subtle); padding-bottom:0.4rem;">
-						<span style="color:var(--admin-text-muted);">Web Server</span>
-						<span style="font-weight:600;">Microsoft-IIS/10.0</span>
-					</div>
-					<div style="display:flex; justify-content:space-between;">
-						<span style="color:var(--admin-text-muted);">Active Host</span>
-						<span style="font-weight:600;">cmsadmin.chelancounty.gov</span>
-					</div>
-				</div>
-			</div>
-		</div>
 </div>
 
 <!--- Add Page Modal Dialog (WCAG 2.1/2.2 AA Compliant) --->
@@ -835,7 +801,7 @@
 
 			var csrfMeta = document.querySelector('meta[name="csrf-token"]');
 			var headers = {
-				"Content-Type": "application/json",
+				"Content-Type": "application/json; charset=utf-8",
 				"Accept": "application/json",
 				"X-Requested-With": "XMLHttpRequest"
 			};

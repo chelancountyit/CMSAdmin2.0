@@ -53,11 +53,12 @@ component extends="wheels.Controller" {
 	private void function requireLogin() {
 		if (isPublicRequest()) return;
 
-		local.idleLimitMinutes = 60; // 1 hour idle limit
 		local.signedIn = StructKeyExists(session, "user") && IsStruct(session.user) && StructKeyExists(session.user, "id");
 		local.expired = false;
 
 		if (local.signedIn) {
+			local.isRemembered = StructKeyExists(session.user, "remember_me") && (session.user.remember_me == true || session.user.remember_me == 1);
+			local.idleLimitMinutes = local.isRemembered ? 43200 : 720; // 30 days if Remember Me, otherwise 12 hours
 			local.lastSeen = session.user.last_activity ?: (session.user.logged_in_at ?: Now());
 			if (IsDate(local.lastSeen) && DateDiff("n", local.lastSeen, Now()) >= local.idleLimitMinutes) {
 				StructClear(session);
@@ -67,6 +68,11 @@ component extends="wheels.Controller" {
 				session.user.last_activity = Now();
 				return;
 			}
+		}
+
+		// Automatically restore session if a valid 30-day Remember Me cookie is present
+		if (!local.signedIn && tryRestoreRememberedSession()) {
+			return;
 		}
 
 		if (isAjaxRequest()) {

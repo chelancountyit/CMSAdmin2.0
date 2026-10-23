@@ -261,12 +261,9 @@
 
 	function updateSidebarAvailability() {
 		var hasSidebarLayout = layout && layout.value === "Right Sidebar";
-		if (sidebarPanel) {
+		if (sidebarPanel && sidebarPanel.id !== "pgSidebarChooser") {
 			sidebarPanel.hidden = !hasSidebarLayout;
 		}
-		Array.prototype.forEach.call(sidebarInputs, function (input) {
-			input.disabled = !hasSidebarLayout;
-		});
 		if (sidebarHelp && hasSidebarLayout) {
 			sidebarHelp.textContent = "Select one or more sidebars for this page.";
 		}
@@ -310,7 +307,7 @@
 	}
 	function folderPostJson(url, data) {
 		var csrfMeta = document.querySelector('meta[name="csrf-token"]');
-		var headers = { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" };
+		var headers = { "Content-Type": "application/json; charset=utf-8", "X-Requested-With": "XMLHttpRequest" };
 		if (csrfMeta) headers["X-CSRF-Token"] = csrfMeta.getAttribute("content");
 		return fetch(url, { method: "POST", credentials: "same-origin", headers: headers, body: JSON.stringify(data) })
 			.then(function (response) {
@@ -1063,7 +1060,7 @@
 
 		var csrfMeta = document.querySelector('meta[name="csrf-token"]');
 		var headers = {
-			"Content-Type": "application/json",
+			"Content-Type": "application/json; charset=utf-8",
 			"Accept": "application/json",
 			"X-Requested-With": "XMLHttpRequest"
 		};
@@ -2843,7 +2840,7 @@ function executeRollback(pageId, revisionId, versionNumber) {
 	fetch("/pages/restore-revision", {
 		method: "POST",
 		headers: {
-			"Content-Type": "application/json",
+			"Content-Type": "application/json; charset=utf-8",
 			"Accept": "application/json"
 		},
 		body: JSON.stringify({
@@ -2961,7 +2958,7 @@ function createManualSnapshot() {
 		fetch("/pages/snapshot-revision", {
 			method: "POST",
 			headers: {
-				"Content-Type": "application/json",
+				"Content-Type": "application/json; charset=utf-8",
 				"Accept": "application/json"
 			},
 			body: JSON.stringify({

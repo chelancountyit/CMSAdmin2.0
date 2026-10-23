@@ -1265,7 +1265,7 @@ component extends="Controller" {
 			local.raw = CharsetEncode(local.raw, "utf-8");
 		}
 		if (IsSimpleValue(local.raw) && IsJSON(local.raw)) {
-			return DeserializeJSON(local.raw);
+			return healUtf8MojibakeData(DeserializeJSON(healUtf8Mojibake(local.raw)));
 		}
 		return {};
 	}

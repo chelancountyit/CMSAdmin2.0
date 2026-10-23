@@ -539,7 +539,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		fetch("/jobs/application/status", {
 			method: "POST",
 			headers: {
-				"Content-Type": "application/json",
+				"Content-Type": "application/json; charset=utf-8",
 				"X-Requested-With": "XMLHttpRequest"
 			},
 			body: JSON.stringify(payload)

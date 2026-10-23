@@ -222,7 +222,7 @@ async function toggleReleaseStatus(id, newStatus) {
 	if (!ok) return;
 	fetch('/press-releases/toggle-status', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		headers: { 'Content-Type': 'application/json; charset=utf-8' },
 		body: JSON.stringify({ id: id, status: newStatus })
 	})
 	.then(r => r.json())
@@ -249,7 +249,7 @@ async function confirmDeleteRelease(id, title) {
 	if (!ok) return;
 	fetch('/press-releases/delete', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		headers: { 'Content-Type': 'application/json; charset=utf-8' },
 		body: JSON.stringify({ id: id })
 	})
 	.then(r => r.json())

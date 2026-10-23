@@ -699,9 +699,17 @@
 							<span class="input-icon-left">#svgIcon(name="mail", size=18)#</span>
 							<input type="email" id="emailInput" name="email" class="form-control-custom" 
 							       placeholder="username@chelancounty.gov" 
-							       value="#EncodeForHTMLAttribute(variables.prefilledEmail)#" 
+							       value="#EncodeForHTMLAttribute(Len(variables.prefilledEmail) ? variables.prefilledEmail : (variables.rememberedEmail ?: ''))#" 
+							       data-url-prefilled="#(Len(variables.prefilledEmail) ? '1' : '0')#"
 							       required autofocus autocomplete="email">
 						</div>
+					</div>
+
+					<div style="margin-bottom: 1.15rem; padding: 0.7rem 0.9rem; background: ##f8fafc; border: 1px solid ##e2e8f0; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+						<label for="rememberMeCheckbox" style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; margin: 0; font-size: 0.86rem; font-weight: 600; color: ##1e293b; user-select: none;">
+							<input type="checkbox" id="rememberMeCheckbox" name="remember_me" value="1" checked style="width: 17px; height: 17px; accent-color: var(--login-primary); cursor: pointer; flex-shrink: 0;">
+							<span>Keep me signed in for 30 days <span style="font-weight: 400; color: ##64748b; font-size: 0.78rem;">(Remember me)</span></span>
+						</label>
 					</div>
 
 					<button type="submit" id="btnCheckEmail" class="btn-login-primary">
@@ -1032,8 +1040,10 @@
 				}
 			});
 
-			var prefilled = document.getElementById('emailInput').value.trim();
-			if (prefilled.length > 0 && prefilled.indexOf('@') > 0) {
+			var emailEl = document.getElementById('emailInput');
+			var prefilled = emailEl ? emailEl.value.trim() : '';
+			var isUrlPrefilled = emailEl && emailEl.getAttribute('data-url-prefilled') === '1';
+			if (isUrlPrefilled && prefilled.length > 0 && prefilled.indexOf('@') > 0) {
 				lookupEmail(prefilled);
 			}
 		});
@@ -1334,6 +1344,8 @@
 			var formData = new FormData();
 			formData.append('email', userEmail);
 			formData.append('code', code);
+			var remEl = document.getElementById('rememberMeCheckbox');
+			formData.append('remember_me', (!remEl || remEl.checked) ? '1' : '0');
 			if (csrfToken) formData.append('authenticityToken', csrfToken);
 
 			fetch('/login/verify-otp', {
@@ -1377,6 +1389,8 @@
 			var formData = new FormData();
 			formData.append('email', userEmail);
 			formData.append('code', code);
+			var remEl = document.getElementById('rememberMeCheckbox');
+			formData.append('remember_me', (!remEl || remEl.checked) ? '1' : '0');
 			if (csrfToken) formData.append('authenticityToken', csrfToken);
 
 			fetch('/login/verify-authenticator', {
@@ -1476,6 +1490,8 @@
 			var formData = new FormData();
 			formData.append('email', userEmail);
 			formData.append('code', code);
+			var remEl = document.getElementById('rememberMeCheckbox');
+			formData.append('remember_me', (!remEl || remEl.checked) ? '1' : '0');
 			formData.append('secret', currentSecret);
 			if (csrfToken) formData.append('authenticityToken', csrfToken);
 

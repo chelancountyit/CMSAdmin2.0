@@ -327,7 +327,7 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 		}
 		var csrfMeta = document.querySelector('meta[name="csrf-token"]');
 		var headers = {
-			"Content-Type": "application/json",
+			"Content-Type": "application/json; charset=utf-8",
 			"X-Requested-With": "XMLHttpRequest"
 		};
 		if (csrfMeta) headers["X-CSRF-Token"] = csrfMeta.getAttribute("content");

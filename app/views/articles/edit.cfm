@@ -2815,7 +2815,7 @@ async function saveArticleForm() {
 	fetch('/articles/save', {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'application/json',
+			'Content-Type': 'application/json; charset=utf-8',
 			'X-Requested-With': 'XMLHttpRequest',
 			'X-CSRF-Token': csrfToken
 		},

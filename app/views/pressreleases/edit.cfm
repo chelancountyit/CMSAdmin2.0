@@ -253,7 +253,7 @@ function saveReleaseForm() {
 
 	fetch('/press-releases/save', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		headers: { 'Content-Type': 'application/json; charset=utf-8' },
 		body: JSON.stringify(payload)
 	})
 	.then(r => r.json())

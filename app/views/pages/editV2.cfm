@@ -1,5 +1,11 @@
 <cfoutput>
 <cfscript>
+	if (!StructKeyExists(variables, "page") || !IsStruct(variables.page)) {
+		variables.page = {};
+	}
+	if (!StructKeyExists(variables.page, "sidebarIds") || !IsArray(variables.page.sidebarIds)) {
+		variables.page.sidebarIds = IsSimpleValue(variables.page.sidebarIds ?: "") && Len(Trim(variables.page.sidebarIds ?: "")) ? ListToArray(variables.page.sidebarIds) : [];
+	}
 	folderAttachedHere = false;
 	for (folderCheck in availableFolders) {
 		if (Val(folderCheck.contentId ?: 0) == Val(page.id)) { folderAttachedHere = true; break; }
@@ -308,6 +314,195 @@
 		from { opacity: 0; transform: translateY(-4px); }
 		to { opacity: 1; transform: translateY(0); }
 	}
+
+	/* =========================================================================
+	   PAGE FEATURES DECK — QUICK-GUIDE HOVER TOOLTIP ("FOR DUMMIES")
+	   ========================================================================= */
+	.pg-feature-help-pill {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 16px;
+		height: 16px;
+		border-radius: 999px;
+		background: var(--admin-bg, ##e2e8f0);
+		color: var(--admin-text-muted, ##64748b);
+		font-size: 0.65rem;
+		font-weight: 800;
+		line-height: 1;
+		margin-left: 0.25rem;
+		border: 1px solid var(--admin-border, ##cbd5e1);
+		transition: all 0.15s ease;
+		flex-shrink: 0;
+	}
+	.pg-accordion-header:hover .pg-feature-help-pill,
+	.pg-accordion-header:focus-visible .pg-feature-help-pill,
+	.btn:hover .pg-feature-help-pill,
+	.btn:focus-visible .pg-feature-help-pill {
+		background: var(--admin-primary, ##0284c7);
+		color: ##ffffff;
+		border-color: var(--admin-primary, ##0284c7);
+		transform: scale(1.08);
+	}
+	.pg-feature-quick-tooltip {
+		position: fixed;
+		z-index: 99999;
+		width: 325px;
+		max-width: calc(100vw - 24px);
+		background: ##0f172a;
+		color: ##f8fafc;
+		border: 1px solid ##334155;
+		border-radius: 0.65rem;
+		box-shadow: 0 18px 38px rgba(15, 23, 42, 0.42), 0 4px 12px rgba(15, 23, 42, 0.25);
+		padding: 0.85rem 0.95rem;
+		pointer-events: none;
+		opacity: 0;
+		transform: translateX(6px) scale(0.98);
+		transition: opacity 0.15s ease, transform 0.15s ease;
+		font-size: 0.78rem;
+		line-height: 1.4;
+		visibility: hidden;
+	}
+	.pg-feature-quick-tooltip.is-visible {
+		opacity: 1;
+		transform: translateX(0) scale(1);
+		visibility: visible;
+	}
+	.pg-feature-quick-tooltip::after {
+		content: "";
+		position: absolute;
+		top: var(--tt-arrow-top, 24px);
+		right: -6px;
+		width: 11px;
+		height: 11px;
+		background: ##0f172a;
+		border-top: 1px solid ##334155;
+		border-right: 1px solid ##334155;
+		transform: translateY(-50%) rotate(45deg);
+	}
+	.pg-feature-quick-tooltip.is-below::after {
+		top: -6px;
+		right: auto;
+		left: var(--tt-arrow-left, 28px);
+		transform: translateX(-50%) rotate(-45deg);
+	}
+	.pg-feature-quick-tooltip.is-above::after {
+		top: auto;
+		bottom: -6px;
+		right: auto;
+		left: var(--tt-arrow-left, 28px);
+		transform: translateX(-50%) rotate(135deg);
+	}
+	.pg-ft-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		padding-bottom: 0.5rem;
+		margin-bottom: 0.55rem;
+		border-bottom: 1px solid ##1e293b;
+	}
+	.pg-ft-title {
+		font-size: 0.86rem;
+		font-weight: 800;
+		color: ##ffffff;
+		letter-spacing: -0.01em;
+	}
+	.pg-ft-tag {
+		font-size: 0.62rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		padding: 0.12rem 0.42rem;
+		border-radius: 999px;
+		background: rgba(56, 189, 248, 0.16);
+		color: ##38bdf8;
+		border: 1px solid rgba(56, 189, 248, 0.3);
+		white-space: nowrap;
+	}
+	.pg-ft-section {
+		margin-bottom: 0.55rem;
+	}
+	.pg-ft-section:last-child {
+		margin-bottom: 0;
+	}
+	.pg-ft-label {
+		font-size: 0.65rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: ##38bdf8;
+		margin-bottom: 0.22rem;
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	.pg-ft-what {
+		color: ##e2e8f0;
+		font-size: 0.79rem;
+		background: ##1e293b;
+		padding: 0.42rem 0.55rem;
+		border-radius: 0.4rem;
+		border-left: 3px solid ##38bdf8;
+	}
+	.pg-ft-steps {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+	.pg-ft-steps li {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.45rem;
+		color: ##cbd5e1;
+		font-size: 0.76rem;
+	}
+	.pg-ft-step-num {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 17px;
+		height: 17px;
+		border-radius: 999px;
+		background: ##0284c7;
+		color: ##ffffff;
+		font-size: 0.66rem;
+		font-weight: 800;
+		flex-shrink: 0;
+		margin-top: 0.05rem;
+	}
+	.pg-ft-steps strong {
+		color: ##ffffff;
+		font-weight: 700;
+	}
+	.pg-ft-lights {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem 0.65rem;
+		background: rgba(15, 23, 42, 0.6);
+		border: 1px solid ##1e293b;
+		border-radius: 0.4rem;
+		padding: 0.38rem 0.55rem;
+		font-size: 0.7rem;
+		color: ##94a3b8;
+	}
+	.pg-ft-light-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	.pg-ft-dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 999px;
+		display: inline-block;
+	}
+	.pg-ft-dot.is-green { background: ##10b981; box-shadow: 0 0 6px ##10b981; }
+	.pg-ft-dot.is-yellow { background: ##f59e0b; box-shadow: 0 0 6px ##f59e0b; }
+	.pg-ft-dot.is-gray { background: ##64748b; }
 
 	/* ADA Pre-Flight Linter Bar */
 	.pg-a11y-linter-bar {
@@ -688,17 +883,20 @@
 							<span style="font-size:0.75rem; color:var(--admin-text-muted);">(WCAG 2.1 AA)</span>
 						</div>
 						<div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
-							<button type="button" class="btn btn-outline-primary btn-xs" id="btnEditorImportDoc" title="Import Word (.docx) or PDF and convert to WCAG AA HTML">
+							<button type="button" class="btn btn-outline-primary btn-xs" id="btnEditorImportDoc">
 								#svgIcon(name="file-text", size=13)#
 								<span>Import Word / PDF</span>
+								<span class="pg-feature-help-pill" aria-hidden="true">?</span>
 							</button>
-							<button type="button" class="btn btn-outline btn-xs" id="btnEditorInsertCTA" title="Embed Call to Action card or grid into content">
+							<button type="button" class="btn btn-outline btn-xs" id="btnEditorInsertCTA">
 								#svgIcon(name="cta", size=13)#
 								<span>Embed Call to Action</span>
+								<span class="pg-feature-help-pill" aria-hidden="true">?</span>
 							</button>
-							<button type="button" class="btn btn-outline btn-xs" id="btnEditorInsertForm" title="Embed online form into content">
+							<button type="button" class="btn btn-outline btn-xs" id="btnEditorInsertForm">
 								#svgIcon(name="form", size=13)#
 								<span>Embed Form</span>
+								<span class="pg-feature-help-pill" aria-hidden="true">?</span>
 							</button>
 						</div>
 					</div>
@@ -895,7 +1093,7 @@
 						#svgIcon(name="layers", size=16)#
 						<span>Page Features Deck</span>
 					</h2>
-					<p class="pg-help" style="margin:0;">Expand any feature below to edit details inline.</p>
+					<p class="pg-help" style="margin:0;">Hover over any item for a quick 1-2-3 guide, or click to expand.</p>
 				</div>
 				<div style="display:flex; align-items:center; gap:0.4rem;">
 					<button type="button" class="btn btn-ghost btn-xs" onclick="expandAllAccordion()" title="Expand all features" style="font-size:0.72rem; padding:0.15rem 0.4rem;">Expand All</button>
@@ -915,13 +1113,13 @@
 					<div class="pg-accordion-item" id="accItemCoverImage">
 						<button type="button" class="pg-accordion-header" onclick="toggleAccordionItem('accItemCoverImage')" aria-expanded="false" aria-controls="accBodyCoverImage">
 							<div class="pg-accordion-info">
-								<span class="led-marker is-inactive" id="ledCoverImage" title="Cover Image LED status indicator"></span>
+								<span class="led-marker is-inactive" id="ledCoverImage"></span>
 								<div class="pg-accordion-icon-wrap">
 									#svgIcon(name="image", size=16)#
 								</div>
 								<div class="pg-accordion-texts">
 									<div class="pg-accordion-title">
-										<span>Featured Cover Image</span>
+										<span>Featured Cover Image</span><span class="pg-feature-help-pill" aria-hidden="true">?</span>
 									</div>
 									<div class="pg-accordion-desc" id="summaryCoverImage">
 										#(Len(Trim(page.imageAttachment ?: '')) ? 'Image attached' : 'No image configured')#
@@ -1015,13 +1213,13 @@
 					<div class="pg-accordion-item" id="accItemNavigation">
 						<button type="button" class="pg-accordion-header" onclick="toggleAccordionItem('accItemNavigation')" aria-expanded="false" aria-controls="accBodyNavigation">
 							<div class="pg-accordion-info">
-								<span class="led-marker is-inactive" id="ledNavigation" title="Navigation Assignment LED status indicator"></span>
+								<span class="led-marker is-inactive" id="ledNavigation"></span>
 								<div class="pg-accordion-icon-wrap">
 									#svgIcon(name="navigation", size=16)#
 								</div>
 								<div class="pg-accordion-texts">
 									<div class="pg-accordion-title">
-										<span>Navigation &amp; Menu</span>
+										<span>Navigation &amp; Menu</span><span class="pg-feature-help-pill" aria-hidden="true">?</span>
 									</div>
 									<div class="pg-accordion-desc" id="summaryNavigation">
 										#(page.menuItem ? 'Shown in main menu' : (Len(Trim(page.parent)) ? page.parent : 'Top-level route'))#
@@ -1082,16 +1280,16 @@
 					<div class="pg-accordion-item" id="accItemSidebar">
 						<button type="button" class="pg-accordion-header" onclick="toggleAccordionItem('accItemSidebar')" aria-expanded="false" aria-controls="accBodySidebar">
 							<div class="pg-accordion-info">
-								<span class="led-marker is-inactive" id="ledSidebar" title="Sidebar & Subpages LED status indicator"></span>
+								<span class="led-marker is-inactive" id="ledSidebar"></span>
 								<div class="pg-accordion-icon-wrap">
 									#svgIcon(name="columns", size=16)#
 								</div>
 								<div class="pg-accordion-texts">
 									<div class="pg-accordion-title">
-										<span>Sidebar &amp; Subpages</span>
+										<span>Sidebar &amp; Subpages</span><span class="pg-feature-help-pill" aria-hidden="true">?</span>
 									</div>
 									<div class="pg-accordion-desc" id="summarySidebar">
-										#(page.layout eq 'Right Sidebar' ? (ArrayLen(page.sidebarIds) ? ArrayLen(page.sidebarIds) & ' subpages attached' : 'Right sidebar active (0 selected)') : 'Full width layout')#
+										#(page.layout eq 'Right Sidebar' ? (IsArray(page.sidebarIds) && ArrayLen(page.sidebarIds) ? ArrayLen(page.sidebarIds) & ' subpages attached' : 'Right sidebar active (0 selected)') : 'Full width layout')#
 									</div>
 								</div>
 							</div>
@@ -1113,14 +1311,14 @@
 								<div id="pgSidebarChooser" role="group" aria-label="Assigned sidebars" style="display:flex; flex-direction:column; gap:0; max-height:220px; overflow-y:auto; border:1px solid var(--admin-border); border-radius:var(--radius-sm); padding:0.4rem 0.65rem; background:var(--admin-surface);">
 									<cfloop array="#availableSidebars#" index="sidebarOption">
 										<label style="display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0; border-bottom:1px solid var(--admin-border-subtle); cursor:pointer;">
-											<input type="checkbox" name="sidebarIds" value="#EncodeForHTMLAttribute(sidebarOption.id)#" <cfif ArrayFind(page.sidebarIds, sidebarOption.id)>checked</cfif> onchange="updatePageFeaturesLedStatus();" style="width:16px; height:16px; flex-shrink:0; accent-color:var(--admin-primary);">
+											<input type="checkbox" name="sidebarIds" value="#EncodeForHTMLAttribute(sidebarOption.id)#" <cfif IsArray(page.sidebarIds) && ArrayFind(page.sidebarIds, sidebarOption.id)>checked</cfif> onchange="updatePageFeaturesLedStatus();" style="width:16px; height:16px; flex-shrink:0; accent-color:var(--admin-primary);">
 											<span><strong style="font-size:0.82rem; color:var(--admin-text-main);">#EncodeForHTML(sidebarOption.name)#</strong></span>
 										</label>
 									</cfloop>
 									<cfloop array="#availableSubpages#" index="subpageOption">
 										<div class="pg-subpage-row" style="padding:0.35rem 0; gap:0.5rem;">
 											<label style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; cursor:pointer;">
-												<input type="checkbox" name="sidebarIds" value="subpage-#subpageOption.id#" data-id="#subpageOption.id#" data-subpage-title="#EncodeForHTMLAttribute(subpageOption.title)#" data-content="#EncodeForHTMLAttribute(subpageOption.body)#" data-position="#Val(subpageOption.position)#" <cfif ArrayFindNoCase(page.sidebarIds, "subpage-#subpageOption.id#")>checked</cfif> onchange="updatePageFeaturesLedStatus();" style="width:16px; height:16px; flex-shrink:0; accent-color:var(--admin-primary);">
+												<input type="checkbox" name="sidebarIds" value="subpage-#subpageOption.id#" data-id="#subpageOption.id#" data-subpage-title="#EncodeForHTMLAttribute(subpageOption.title)#" data-content="#EncodeForHTMLAttribute(subpageOption.body)#" data-position="#Val(subpageOption.position)#" <cfif IsArray(page.sidebarIds) && ArrayFindNoCase(page.sidebarIds, "subpage-#subpageOption.id#")>checked</cfif> onchange="updatePageFeaturesLedStatus();" style="width:16px; height:16px; flex-shrink:0; accent-color:var(--admin-primary);">
 												<span><strong data-subpage-title style="font-size:0.82rem; color:var(--admin-text-main);">#EncodeForHTML(subpageOption.title)#</strong></span>
 											</label>
 											<button type="button" class="btn btn-outline btn-xs btn-icon-only" data-edit-subpage title="Edit" aria-label="Edit #EncodeForHTMLAttribute(subpageOption.title)#">#svgIcon(name="edit", size=12)#</button>
@@ -1152,13 +1350,13 @@
 					<div class="pg-accordion-item" id="accItemFolder">
 						<button type="button" class="pg-accordion-header" onclick="toggleAccordionItem('accItemFolder')" aria-expanded="false" aria-controls="accBodyFolder">
 							<div class="pg-accordion-info">
-								<span class="led-marker is-inactive" id="ledFolder" title="Folder Explorer LED status indicator"></span>
+								<span class="led-marker is-inactive" id="ledFolder"></span>
 								<div class="pg-accordion-icon-wrap">
 									#svgIcon(name="folder", size=16)#
 								</div>
 								<div class="pg-accordion-texts">
 									<div class="pg-accordion-title">
-										<span>Folder Explorer</span>
+										<span>Folder Explorer</span><span class="pg-feature-help-pill" aria-hidden="true">?</span>
 									</div>
 									<div class="pg-accordion-desc" id="summaryFolder">
 										#(folderAttachedHere or (structKeyExists(page, "hasArchive") and page.hasArchive) ? 'Folder explorer attached' : 'Disabled')#
@@ -1216,13 +1414,13 @@
 					<div class="pg-accordion-item" id="accItemPublish">
 						<button type="button" class="pg-accordion-header" onclick="toggleAccordionItem('accItemPublish')" aria-expanded="false" aria-controls="accBodyPublish">
 							<div class="pg-accordion-info">
-								<span class="led-marker is-inactive" id="ledPublish" title="Publishing & Scheduling LED status indicator"></span>
+								<span class="led-marker is-inactive" id="ledPublish"></span>
 								<div class="pg-accordion-icon-wrap">
 									#svgIcon(name="clock", size=16)#
 								</div>
 								<div class="pg-accordion-texts">
 									<div class="pg-accordion-title">
-										<span>Publishing &amp; Schedule</span>
+										<span>Publishing &amp; Schedule</span><span class="pg-feature-help-pill" aria-hidden="true">?</span>
 									</div>
 									<div class="pg-accordion-desc" id="summaryPublish">
 										#page.visibility# &middot; #page.status#
@@ -1715,6 +1913,254 @@
 	});
 
 	setTimeout(window.updatePageFeaturesLedStatus, 300);
+
+	// 6. Page Features Deck & Content Toolbar — Quick-Guide Hover Tooltips ("Simple For Dummies")
+	var featureGuides = {
+		btnEditorImportDoc: {
+			placement: "below",
+			title: "Import Word / PDF",
+			tag: "Time Saver",
+			what: "Turns a Word (.docx) or PDF file directly into a clean webpage so you don't have to re-type or copy/paste.",
+			steps: [
+				"Click <strong>Import Word / PDF</strong> and drop your file into the box.",
+				"Click <strong>Convert Document</strong> to preview your text, tables, and photos.",
+				"Click <strong>Paste to Page Content</strong> to drop it right into the editor!"
+			],
+			tip: "Automatically formats headings and tables so your page passes ADA accessibility checks."
+		},
+		btnEditorInsertCTA: {
+			placement: "below",
+			title: "Embed Call to Action",
+			tag: "Action Cards",
+			what: "Adds eye-catching button boxes or service cards (like <em>Pay Taxes</em> or <em>Apply for a Permit</em>) into your page.",
+			steps: [
+				"Click <strong>Embed Call to Action</strong> to browse ready-made cards.",
+				"<strong>For 1 Card:</strong> Simply click the card you want to insert.",
+				"<strong>For a Row of Cards:</strong> Check the corner boxes on 2+ cards and click <strong>Embed Selected Cards as Grid</strong>."
+			],
+			tip: "Need to make a brand-new card? Click <strong>Open CTA Studio</strong> at the bottom of the popup."
+		},
+		btnEditorInsertForm: {
+			placement: "below",
+			title: "Embed Form",
+			tag: "Online Form",
+			what: "Puts a fillable online form right on your page so visitors can submit requests without printing a PDF.",
+			steps: [
+				"Click <strong>Embed Form</strong> to see your department's online forms.",
+				"Find your form and click the blue <strong>Embed Form</strong> button next to it.",
+				"Click <strong>Save Changes</strong> on your page—visitors can now fill it out right here!"
+			],
+			tip: "Don't see your form yet? Click <strong>Open Form Builder</strong> in the popup to create one."
+		},
+		accItemCoverImage: {
+			title: "Featured Cover Image",
+			tag: "Optional Banner",
+			what: "Puts a large banner photo across the top of your page.",
+			steps: [
+				"Click this row to open it.",
+				"Click <strong>Choose Cover Image</strong> to pick a photo.",
+				"Type a short description in <strong>Alternative Text</strong> (for blind visitors), or check <strong>Mark as decorative</strong>."
+			],
+			lights: [
+				{ dot: "green", text: "Photo + ADA description ready" },
+				{ dot: "yellow", text: "Needs Alt Text description" },
+				{ dot: "gray", text: "No photo used" }
+			]
+		},
+		accItemNavigation: {
+			title: "Navigation & Menu",
+			tag: "Where It Lives",
+			what: "Controls where visitors find this page in your department menu.",
+			steps: [
+				"Leave on <strong>Top Level</strong> if you only link to this page from buttons or text.",
+				"Or choose <strong>Assign to Main Menu Item</strong> and pick which menu folder it belongs under.",
+				"Check <strong>Show in main menu</strong> only if it belongs on the main top bar."
+			],
+			lights: [
+				{ dot: "green", text: "Linked in a menu" },
+				{ dot: "gray", text: "Standalone link (Top Level)" }
+			]
+		},
+		accItemSidebar: {
+			title: "Sidebar & Subpages",
+			tag: "Right Column",
+			what: "Adds extra contact boxes, links, or mini-pages along the right side of the page.",
+			steps: [
+				"Click <strong>Switch to Right Sidebar</strong> (or pick Right Sidebar layout on the left).",
+				"Check the boxes next to the sidebars or subpages you want to show.",
+				"Need a new one? Click <strong>+ Create New Subpage</strong> at the bottom."
+			],
+			lights: [
+				{ dot: "green", text: "Sidebar on + items checked" },
+				{ dot: "yellow", text: "Sidebar on, 0 items checked" },
+				{ dot: "gray", text: "Full width (no sidebar)" }
+			]
+		},
+		accItemFolder: {
+			title: "Folder Explorer",
+			tag: "Document Box",
+			what: "Embeds a clickable folder box on your page so visitors can download PDFs and forms.",
+			steps: [
+				"Check <strong>Enable Folder Explorer on this page</strong>.",
+				"Check the folder(s) you want visitors to see.",
+				"Don't see your folder? Click <strong>+ Add Folder Item</strong> to connect one."
+			],
+			lights: [
+				{ dot: "green", text: "Enabled + folder checked" },
+				{ dot: "yellow", text: "Enabled, pick a folder" },
+				{ dot: "gray", text: "Turned off" }
+			]
+		},
+		accItemPublish: {
+			title: "Publishing & Schedule",
+			tag: "Who Can See It",
+			what: "Controls whether the public can see this page right now, later, or not yet.",
+			steps: [
+				"<strong>Go Live Now:</strong> Set Status to <strong>Active</strong> and Visibility to <strong>Published</strong>.",
+				"<strong>Save for Later:</strong> Set Visibility to <strong>Draft</strong> while you work on it.",
+				"<strong>Auto-Post Later:</strong> Pick <strong>Scheduled</strong> and choose a Publish Date/Time."
+			],
+			lights: [
+				{ dot: "green", text: "Live on website" },
+				{ dot: "yellow", text: "Draft or Scheduled" },
+				{ dot: "gray", text: "Inactive / Hidden" }
+			]
+		}
+	};
+
+	function initPageFeaturesQuickTooltips() {
+		var tip = document.createElement("div");
+		tip.id = "pgFeatureQuickTooltip";
+		tip.className = "pg-feature-quick-tooltip";
+		tip.setAttribute("role", "tooltip");
+		tip.setAttribute("aria-hidden", "true");
+		document.body.appendChild(tip);
+
+		var activeItemId = null;
+
+		function renderTooltipContent(info) {
+			var stepsHtml = info.steps.map(function(step, idx) {
+				return '<li><span class="pg-ft-step-num">' + (idx + 1) + '</span><span>' + step + '</span></li>';
+			}).join("");
+
+			var footerHtml = "";
+			if (info.lights && info.lights.length) {
+				var lightsHtml = info.lights.map(function(l) {
+					return '<span class="pg-ft-light-item"><span class="pg-ft-dot is-' + l.dot + '"></span><span>' + l.text + '</span></span>';
+				}).join("");
+				footerHtml =
+					'<div class="pg-ft-section">' +
+						'<div class="pg-ft-label">&#128161; What the colored dot means</div>' +
+						'<div class="pg-ft-lights">' + lightsHtml + '</div>' +
+					'</div>';
+			} else if (info.tip) {
+				footerHtml =
+					'<div class="pg-ft-section">' +
+						'<div class="pg-ft-label">&#128161; Good to know</div>' +
+						'<div class="pg-ft-lights" style="color:#e2e8f0;">' + info.tip + '</div>' +
+					'</div>';
+			}
+
+			tip.innerHTML =
+				'<div class="pg-ft-head">' +
+					'<span class="pg-ft-title">' + info.title + '</span>' +
+					'<span class="pg-ft-tag">' + info.tag + '</span>' +
+				'</div>' +
+				'<div class="pg-ft-section">' +
+					'<div class="pg-ft-label">&#127919; What is it for?</div>' +
+					'<div class="pg-ft-what">' + info.what + '</div>' +
+				'</div>' +
+				'<div class="pg-ft-section">' +
+					'<div class="pg-ft-label">&#9889; How to use it (1-2-3)</div>' +
+					'<ol class="pg-ft-steps">' + stepsHtml + '</ol>' +
+				'</div>' +
+				footerHtml;
+		}
+
+		function positionTooltip(targetEl, info) {
+			var rect = targetEl.getBoundingClientRect();
+			var tipWidth = tip.offsetWidth || 325;
+			var tipHeight = tip.offsetHeight || 240;
+			var gap = 12;
+
+			tip.classList.remove("is-below", "is-above");
+
+			if (info.placement === "below" || rect.left < tipWidth + gap + 12) {
+				var centerX = rect.left + (rect.width / 2);
+				var leftBelow = Math.max(12, Math.min(window.innerWidth - tipWidth - 12, centerX - (tipWidth / 2)));
+				var arrowLeft = Math.max(20, Math.min(tipWidth - 20, centerX - leftBelow));
+				tip.style.setProperty("--tt-arrow-left", Math.round(arrowLeft) + "px");
+
+				var topBelow = rect.bottom + gap;
+				if (topBelow + tipHeight > window.innerHeight - 12 && rect.top > tipHeight + gap + 12) {
+					tip.classList.add("is-above");
+					topBelow = rect.top - tipHeight - gap;
+				} else {
+					tip.classList.add("is-below");
+				}
+				tip.style.left = Math.round(leftBelow) + "px";
+				tip.style.top = Math.round(topBelow) + "px";
+			} else {
+				var left = rect.left - tipWidth - gap;
+				var top = rect.top + (rect.height / 2) - 28;
+				var maxTop = window.innerHeight - tipHeight - 12;
+				if (top > maxTop) top = maxTop;
+				if (top < 12) top = 12;
+				var arrowTop = Math.max(18, Math.min(tipHeight - 18, (rect.top + rect.height / 2) - top));
+				tip.style.setProperty("--tt-arrow-top", Math.round(arrowTop) + "px");
+				tip.style.left = Math.round(left) + "px";
+				tip.style.top = Math.round(top) + "px";
+			}
+		}
+
+		function showTooltip(itemId, targetEl) {
+			var info = featureGuides[itemId];
+			if (!info) return;
+			activeItemId = itemId;
+			renderTooltipContent(info);
+			tip.classList.add("is-visible");
+			tip.setAttribute("aria-hidden", "false");
+			positionTooltip(targetEl, info);
+		}
+
+		function hideTooltip() {
+			activeItemId = null;
+			tip.classList.remove("is-visible");
+			tip.setAttribute("aria-hidden", "true");
+		}
+
+		Object.keys(featureGuides).forEach(function(itemId) {
+			var itemEl = document.getElementById(itemId);
+			if (!itemEl) return;
+			var triggerEl = itemEl.querySelector(".pg-accordion-header") || itemEl;
+
+			triggerEl.addEventListener("mouseenter", function() {
+				showTooltip(itemId, triggerEl);
+			});
+			triggerEl.addEventListener("mouseleave", function() {
+				hideTooltip();
+			});
+			triggerEl.addEventListener("focus", function() {
+				showTooltip(itemId, triggerEl);
+			});
+			triggerEl.addEventListener("blur", function() {
+				hideTooltip();
+			});
+			triggerEl.addEventListener("click", function() {
+				hideTooltip();
+			});
+		});
+
+		window.addEventListener("scroll", function() {
+			if (activeItemId) hideTooltip();
+		}, { passive: true });
+	}
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", initPageFeaturesQuickTooltips);
+	} else {
+		initPageFeaturesQuickTooltips();
+	}
 
 })();
 </script>

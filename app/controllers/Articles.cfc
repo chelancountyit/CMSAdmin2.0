@@ -902,7 +902,7 @@ component extends="Controller" {
 		}
 		if (Len(Trim(local.content)) && IsJSON(local.content)) {
 			try {
-				return DeserializeJSON(local.content);
+				return healUtf8MojibakeData(DeserializeJSON(healUtf8Mojibake(local.content)));
 			} catch (any e) {}
 		}
 		return params;

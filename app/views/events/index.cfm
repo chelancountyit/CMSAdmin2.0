@@ -1271,7 +1271,7 @@
 		var csrfMeta = document.querySelector('meta[name="csrf-token"]');
 		var csrfToken = csrfMeta ? csrfMeta.getAttribute("content") : "";
 		var headers = {
-			"Content-Type": "application/json",
+			"Content-Type": "application/json; charset=utf-8",
 			"Accept": "application/json",
 			"X-Requested-With": "XMLHttpRequest"
 		};

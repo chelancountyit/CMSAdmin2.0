@@ -136,7 +136,7 @@ function submitTagForm() {
 
 	fetch('/articles/tag/save', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		headers: { 'Content-Type': 'application/json; charset=utf-8' },
 		body: JSON.stringify(payload)
 	})
 	.then(r => r.json())
@@ -166,7 +166,7 @@ async function deleteTagItem(id, name) {
 
 	fetch('/articles/tag/delete', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		headers: { 'Content-Type': 'application/json; charset=utf-8' },
 		body: JSON.stringify({ id: id })
 	})
 	.then(r => r.json())
