@@ -1372,11 +1372,14 @@ window.openMediaPicker = function(mode, options) {
 			+ '&callback=onMediaSelectedFromPicker';
 	}
 
+	var hasDialogOverlay = !!document.querySelector('.jbd-dialog-overlay');
 	if (modal) {
+		modal.style.zIndex = hasDialogOverlay ? '100005' : '99999';
 		modal.style.display = 'flex';
 		modal.classList.add('open');
 	}
 	if (backdrop) {
+		backdrop.style.zIndex = hasDialogOverlay ? '100004' : '99998';
 		backdrop.style.display = 'block';
 		backdrop.style.opacity = '1';
 		backdrop.style.visibility = 'visible';
@@ -1391,12 +1394,14 @@ window.closeMediaPickerModal = function() {
 	if (modal) {
 		modal.style.display = 'none';
 		modal.classList.remove('open');
+		modal.style.zIndex = '99999';
 	}
 	if (backdrop) {
 		backdrop.style.display = 'none';
 		backdrop.style.opacity = '0';
 		backdrop.style.visibility = 'hidden';
 		backdrop.classList.remove('open');
+		backdrop.style.zIndex = '99998';
 	}
 	window._mediaPickerCustomCallback = null;
 	document.body.style.overflow = '';

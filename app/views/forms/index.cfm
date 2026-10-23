@@ -49,6 +49,93 @@
 		#formsTable tbody tr.form-row td:nth-child(7) > * { justify-self:start; }
 		#formsTable tbody tr.form-row td:first-child code { white-space:normal; overflow-wrap:anywhere; }
 	}
+
+	/* Modal Window Launcher Buttons (Email & Share Modal Buttons) */
+	.btn-email-settings,
+	.btn-share-modal {
+		background: var(--admin-surface) !important;
+		border: 1px solid var(--admin-border) !important;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+		transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+		color: var(--admin-text-main) !important;
+	}
+	.btn-email-settings:hover,
+	.btn-share-modal:hover {
+		background: var(--admin-primary-light) !important;
+		border-color: var(--admin-primary) !important;
+		color: var(--admin-primary) !important;
+		box-shadow: 0 3px 6px -1px rgba(0, 115, 170, 0.25);
+		transform: translateY(-1px);
+	}
+	.btn-email-settings:active,
+	.btn-share-modal:active {
+		transform: translateY(0);
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+	}
+
+	/* Buttons Inside Both Modal Windows (Footers & Copy buttons) */
+	.fb-modal-dialog .btn {
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+		transition: all 0.15s ease;
+	}
+	.fb-modal-dialog .btn:hover {
+		box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+		transform: translateY(-1px);
+	}
+	.fb-modal-dialog .btn:active {
+		transform: translateY(0);
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+	}
+
+	/* Universal CMSAdmin 2.0 Slate-Blue/Transparent Gray Modal Backdrops with Blur */
+	.admin-modal-backdrop,
+	.fb-modal {
+		position: fixed !important;
+		inset: 0 !important;
+		top: 0 !important;
+		left: 0 !important;
+		right: 0 !important;
+		bottom: 0 !important;
+		width: 100vw !important;
+		height: 100vh !important;
+		background: rgba(15, 23, 42, 0.72) !important;
+		backdrop-filter: blur(6px) !important;
+		-webkit-backdrop-filter: blur(6px) !important;
+		z-index: 100050 !important;
+		display: none;
+		align-items: center !important;
+		justify-content: center !important;
+		padding: 1.5rem !important;
+		box-sizing: border-box !important;
+		overflow-y: auto !important;
+		opacity: 0;
+		visibility: hidden;
+		transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+	}
+	.admin-modal-backdrop.open,
+	.admin-modal-backdrop.is-open,
+	.fb-modal.open,
+	.fb-modal.is-open {
+		display: flex !important;
+		opacity: 1 !important;
+		visibility: visible !important;
+	}
+	.admin-modal-backdrop .fb-modal-dialog,
+	.fb-modal .fb-modal-dialog {
+		position: relative !important;
+		z-index: 100051 !important;
+		margin: auto !important;
+		box-shadow: 0 25px 65px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+		transform: translateY(12px) scale(0.98);
+		transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+	}
+	.admin-modal-backdrop.open .fb-modal-dialog,
+	.admin-modal-backdrop.is-open .fb-modal-dialog,
+	.fb-modal.open .fb-modal-dialog,
+	.fb-modal.is-open .fb-modal-dialog {
+		transform: translateY(0) scale(1) !important;
+	}
+
 </style>
 
 <!--- CMS Admin 2.0 - All Online Forms Management & Form Builder Directory --->
@@ -225,7 +312,7 @@
 			<tbody id="formsTableBody">
 				<cfloop array="#formsList#" index="formItem">
 					<cfoutput>
-						<tr class="form-row" data-form-id="#formItem.id#" data-dept="#EncodeForHTMLAttribute(formItem.deptKey)#" data-status="#EncodeForHTMLAttribute(formItem.status)#" data-title="#EncodeForHTMLAttribute(formItem.title)#" data-slug="#EncodeForHTMLAttribute(formItem.slug)#" data-dept-name="#EncodeForHTMLAttribute(formItem.deptName)#" data-edit-url="#EncodeForHTMLAttribute(formItem.editUrl)#" data-preview-url="#EncodeForHTMLAttribute(formItem.previewUrl)#" data-public-url="#EncodeForHTMLAttribute(formItem.publicUrl)#" data-delete-url="#EncodeForHTMLAttribute(urlFor(route='formSoftDelete'))#">
+						<tr class="form-row" data-form-id="#formItem.id#" data-dept="#EncodeForHTMLAttribute(formItem.deptKey)#" data-status="#EncodeForHTMLAttribute(formItem.status)#" data-title="#EncodeForHTMLAttribute(formItem.title)#" data-slug="#EncodeForHTMLAttribute(formItem.slug)#" data-dept-name="#EncodeForHTMLAttribute(formItem.deptName)#" data-edit-url="#EncodeForHTMLAttribute(formItem.editUrl)#" data-preview-url="#EncodeForHTMLAttribute(formItem.previewUrl)#" data-public-url="#EncodeForHTMLAttribute(formItem.publicUrl)#" data-delete-url="#EncodeForHTMLAttribute(urlFor(route='formSoftDelete'))#" data-email-settings-url="#EncodeForHTMLAttribute(urlFor(route='formEmailSettings'))#" data-email-save-url="#EncodeForHTMLAttribute(urlFor(route='formSaveEmailSettings'))#">
 							<td data-label="Form">
 								<div style="display:flex; align-items:flex-start; gap:0.5rem;">
 									<div style="width:32px; height:32px; border-radius:var(--radius-sm); background:var(--admin-primary-light); color:var(--admin-primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
@@ -256,8 +343,9 @@
 							<td data-label="Actions" style="text-align:right; white-space:nowrap;">
 								<a href="#EncodeForHTMLAttribute(formItem.editUrl)#" class="btn btn-outline btn-sm btn-icon-only" title="Edit in Form Builder">#svgIcon(name="edit", size=14)#</a>
 								<a href="#EncodeForHTMLAttribute(formItem.previewUrl)#" target="_blank" rel="noopener" class="btn btn-outline btn-sm btn-icon-only" title="Preview Public Form">#svgIcon(name="eye", size=14)#</a>
+								<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-email-settings" data-id="#formItem.id#" data-title="#EncodeForHTMLAttribute(formItem.title)#" title="Email Notifications &amp; Citizen Templates">#svgIcon(name="mail", size=14)#</button>
 								<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-share-modal" data-title="#EncodeForHTMLAttribute(formItem.title)#" data-url="#EncodeForHTMLAttribute(formItem.publicUrl)#" data-slug="#EncodeForHTMLAttribute(formItem.slug)#" title="Share &amp; Embed Form">#svgIcon(name="share-2", size=14)#</button>
-								<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-delete-form" title="Delete form" aria-label="Delete #EncodeForHTMLAttribute(formItem.title)#" style="color:var(--admin-danger);">#svgIcon(name="trash", size=14)#</button>
+							<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-delete-form" title="Delete form" aria-label="Delete #EncodeForHTMLAttribute(formItem.title)#" style="color:var(--admin-danger);">#svgIcon(name="trash", size=14)#</button>
 							</td>
 						</tr>
 					</cfoutput>
@@ -945,8 +1033,7 @@
 <!--- =========================================================================
       Interactive Share & Embed Modal
       ========================================================================= --->
-<div class="fb-modal" id="modalShareEmbed" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:1000; align-items:center; justify-content:center;">
-	<div class="fb-modal-backdrop" style="position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px);"></div>
+<div class="admin-modal-backdrop fb-modal" id="modalShareEmbed" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle" style="display:none;">
 	<div class="fb-modal-dialog" style="position:relative; background:var(--admin-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:640px; max-width:92%; max-height:90vh; overflow-y:auto; border:1px solid var(--admin-border); z-index:1001;">
 		<div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--admin-border); display:flex; align-items:center; justify-content:space-between;">
 			<div style="display:flex; align-items:center; gap:0.6rem;">
@@ -1030,8 +1117,7 @@
 <!--- =========================================================================
       Interactive Recent Submissions Drawer / Modal
       ========================================================================= --->
-<div class="fb-modal" id="modalSubmissions" role="dialog" aria-modal="true" aria-labelledby="subsModalTitle" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:1000; align-items:center; justify-content:center;">
-	<div class="fb-modal-backdrop" style="position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px);"></div>
+<div class="admin-modal-backdrop fb-modal" id="modalSubmissions" role="dialog" aria-modal="true" aria-labelledby="subsModalTitle" style="display:none;">
 	<div class="fb-modal-dialog" style="position:relative; background:var(--admin-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:780px; max-width:94%; max-height:90vh; overflow-y:auto; border:1px solid var(--admin-border); z-index:1001;">
 		<div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--admin-border); display:flex; align-items:center; justify-content:space-between;">
 			<div style="display:flex; align-items:center; gap:0.6rem;">
@@ -1114,8 +1200,7 @@
 <!--- =========================================================================
       Starter Templates Modal
       ========================================================================= --->
-<div class="fb-modal" id="modalTemplatesList" role="dialog" aria-modal="true" aria-labelledby="tplModalTitle" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:1000; align-items:center; justify-content:center;">
-	<div class="fb-modal-backdrop" style="position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px);"></div>
+<div class="admin-modal-backdrop fb-modal" id="modalTemplatesList" role="dialog" aria-modal="true" aria-labelledby="tplModalTitle" style="display:none;">
 	<div class="fb-modal-dialog" style="position:relative; background:var(--admin-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:860px; max-width:92%; max-height:90vh; overflow-y:auto; border:1px solid var(--admin-border); z-index:1001;">
 		<div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--admin-border); display:flex; align-items:center; justify-content:space-between;">
 			<div style="display:flex; align-items:center; gap:0.6rem;">
@@ -1278,8 +1363,297 @@
 	</div>
 </div>
 
+
+<!--- =========================================================================
+      Interactive Form Email Notifications & Citizen Templates Modal
+      ========================================================================= --->
+<div class="admin-modal-backdrop fb-modal" id="modalFormEmailSettings" role="dialog" aria-modal="true" aria-labelledby="emailModalTitle" style="display:none;">
+	<div class="fb-modal-dialog" style="position:relative; background:var(--admin-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:780px; max-width:94%; max-height:92vh; overflow-y:auto; border:1px solid var(--admin-border); z-index:1001; display:flex; flex-direction:column;">
+		
+		<!--- Modal Header --->
+		<div style="padding:1.15rem 1.5rem; border-bottom:1px solid var(--admin-border); display:flex; align-items:center; justify-content:space-between; background:var(--admin-bg);">
+			<div style="display:flex; align-items:center; gap:0.65rem;">
+				<div style="width:34px; height:34px; border-radius:var(--radius-sm); background:var(--admin-primary-light); color:var(--admin-primary); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+					<cfoutput>#svgIcon(name="mail", size=18)#</cfoutput>
+				</div>
+				<div>
+					<div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+						<h3 id="emailModalTitle" style="margin:0; font-size:1.1rem; color:var(--admin-text-main);">Email Notifications &amp; Templates</h3>
+						<span id="emailModalFormBadge" class="badge badge-primary" style="font-size:0.75rem;">Loading...</span>
+					</div>
+					<div style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:2px;">
+						Configure automated emails sent to department staff and citizen respondents upon submission.
+					</div>
+				</div>
+			</div>
+			<button type="button" class="btn btn-outline btn-sm btn-icon-only modal-close-btn" style="border:none;" aria-label="Close modal">&times;</button>
+		</div>
+
+		<!--- Tab Navigation Bar --->
+		<div style="display:flex; border-bottom:1px solid var(--admin-border); background:var(--admin-surface); padding:0 1.5rem; gap:0.5rem;">
+			<button type="button" class="email-tab-btn active" data-tab="staff" style="padding:0.75rem 1rem; border:none; background:none; font-weight:600; font-size:0.85rem; color:var(--admin-primary); border-bottom:2px solid var(--admin-primary); cursor:pointer; display:flex; align-items:center; gap:0.4rem;">
+				<span>Recipient Staff Alert</span>
+				<span id="badgeStaffEnabled" class="badge badge-success" style="font-size:0.65rem;">Active</span>
+			</button>
+			<button type="button" class="email-tab-btn" data-tab="user" style="padding:0.75rem 1rem; border:none; background:none; font-weight:500; font-size:0.85rem; color:var(--admin-text-muted); border-bottom:2px solid transparent; cursor:pointer; display:flex; align-items:center; gap:0.4rem;">
+				<span>Citizen Confirmation</span>
+				<span id="badgeUserEnabled" class="badge badge-success" style="font-size:0.65rem;">Active</span>
+			</button>
+			<button type="button" class="email-tab-btn" data-tab="preview" style="padding:0.75rem 1rem; border:none; background:none; font-weight:500; font-size:0.85rem; color:var(--admin-text-muted); border-bottom:2px solid transparent; cursor:pointer; display:flex; align-items:center; gap:0.4rem;">
+				<cfoutput>#svgIcon(name="eye", size=14)#</cfoutput>
+				<span>Live Email Preview</span>
+			</button>
+		</div>
+
+		<!--- Tab Panes Body --->
+		<div style="padding:1.5rem; flex:1;">
+			
+			<!--- Pane 1: Staff / Department Recipient Notifications --->
+			<div class="email-tab-pane" id="paneStaffEmail" style="display:flex; flex-direction:column; gap:1.15rem;">
+				
+				<div style="background:var(--admin-bg); border:1px solid var(--admin-border); border-radius:var(--radius-md); padding:1rem; display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;">
+					<div>
+						<div style="font-weight:600; font-size:0.9rem; color:var(--admin-text-main); margin-bottom:0.25rem;">
+							Enable Staff Email Notifications
+						</div>
+						<div style="font-size:0.775rem; color:var(--admin-text-muted); line-height:1.4;">
+							When enabled, each new submission automatically sends a comprehensive notification with submitter details and answers to designated staff.
+						</div>
+					</div>
+					<label style="position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0;">
+						<input type="checkbox" id="emailStaffEnabled" checked style="opacity:0; width:0; height:0;">
+						<span class="fb-toggle-slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:##cbd5e1; border-radius:24px; transition:0.3s;"></span>
+					</label>
+				</div>
+
+				<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+					<div>
+						<label for="emailStaffTo" style="display:block; font-weight:600; font-size:0.825rem; margin-bottom:0.35rem; color:var(--admin-text-main);">
+							Notification Recipient(s) <span style="color:var(--admin-danger);">*</span>
+						</label>
+						<input type="text" id="emailStaffTo" class="form-control" placeholder="staff@chelancounty.gov, dept@chelancounty.gov" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:0.55rem 0.75rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg);">
+						<div style="font-size:0.725rem; color:var(--admin-text-muted); margin-top:3px;">
+							Separate multiple addresses with commas.
+						</div>
+					</div>
+					<div>
+						<label for="emailStaffCc" style="display:block; font-weight:600; font-size:0.825rem; margin-bottom:0.35rem; color:var(--admin-text-main);">
+							CC Address(es) <span style="font-weight:normal; color:var(--admin-text-muted);">(Optional)</span>
+						</label>
+						<input type="text" id="emailStaffCc" class="form-control" placeholder="supervisor@chelancounty.gov" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:0.55rem 0.75rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg);">
+						<div style="font-size:0.725rem; color:var(--admin-text-muted); margin-top:3px;">
+							Optional copies for departmental supervisors or archival.
+						</div>
+					</div>
+				</div>
+
+				<div>
+					<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+						<label for="emailStaffSubject" style="font-weight:600; font-size:0.825rem; color:var(--admin-text-main); margin:0;">
+							Email Subject Line
+						</label>
+						<div style="display:flex; gap:0.25rem;">
+							<span style="font-size:0.7rem; color:var(--admin-text-muted); margin-right:4px;">Insert tag:</span>
+							<button type="button" class="btn-token-chip" data-target="emailStaffSubject" data-token="{{form_title}}">{{form_title}}</button>
+							<button type="button" class="btn-token-chip" data-target="emailStaffSubject" data-token="{{reference_id}}">{{reference_id}}</button>
+							<button type="button" class="btn-token-chip" data-target="emailStaffSubject" data-token="{{applicant_name}}">{{applicant_name}}</button>
+						</div>
+					</div>
+					<input type="text" id="emailStaffSubject" class="form-control" placeholder="[New Submission] {{form_title}} ({{reference_id}})" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:0.55rem 0.75rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg);">
+				</div>
+
+				<div>
+					<label for="emailStaffNotes" style="display:block; font-weight:600; font-size:0.825rem; margin-bottom:0.35rem; color:var(--admin-text-main);">
+						Internal Staff Instructions &amp; SLA Guidance <span style="font-weight:normal; color:var(--admin-text-muted);">(Included in internal alert)</span>
+					</label>
+					<textarea id="emailStaffNotes" class="form-control" rows="3" placeholder="e.g., Please review and assign to a case officer within 24 hours. Verify attached documents before approving permit..." style="width:100%; box-sizing:border-box; font-size:0.825rem; padding:0.6rem 0.75rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg); line-height:1.4;"></textarea>
+				</div>
+			</div>
+
+			<!--- Pane 2: Citizen Confirmation & Auto-Responder --->
+			<div class="email-tab-pane" id="paneUserEmail" style="display:none; flex-direction:column; gap:1.15rem;">
+				
+				<div style="background:var(--admin-bg); border:1px solid var(--admin-border); border-radius:var(--radius-md); padding:1rem; display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;">
+					<div>
+						<div style="font-weight:600; font-size:0.9rem; color:var(--admin-text-main); margin-bottom:0.25rem;">
+							Citizen Auto-Responder Confirmation
+						</div>
+						<div style="font-size:0.775rem; color:var(--admin-text-muted); line-height:1.4;">
+							Automatically sends a branded confirmation receipt to the email address provided by the citizen in the submission.
+						</div>
+					</div>
+					<label style="position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0;">
+						<input type="checkbox" id="emailUserEnabled" checked style="opacity:0; width:0; height:0;">
+						<span class="fb-toggle-slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:##cbd5e1; border-radius:24px; transition:0.3s;"></span>
+					</label>
+				</div>
+
+				<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+					<div>
+						<label for="emailUserFromName" style="display:block; font-weight:600; font-size:0.825rem; margin-bottom:0.35rem; color:var(--admin-text-main);">
+							Sender Display Name
+						</label>
+						<input type="text" id="emailUserFromName" class="form-control" placeholder="Chelan County Online Services" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:0.55rem 0.75rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg);">
+						<div style="font-size:0.725rem; color:var(--admin-text-muted); margin-top:3px;">
+							e.g., Chelan County Community Development or HRM
+						</div>
+					</div>
+					<div>
+						<label for="emailUserReplyTo" style="display:block; font-weight:600; font-size:0.825rem; margin-bottom:0.35rem; color:var(--admin-text-main);">
+							Reply-To Email Address
+						</label>
+						<input type="email" id="emailUserReplyTo" class="form-control" placeholder="forms@chelancounty.gov" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:0.55rem 0.75rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg);">
+						<div style="font-size:0.725rem; color:var(--admin-text-muted); margin-top:3px;">
+							Inquiries or resident questions will route to this email inbox.
+						</div>
+					</div>
+				</div>
+
+				<div>
+					<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+						<label for="emailUserSubject" style="font-weight:600; font-size:0.825rem; color:var(--admin-text-main); margin:0;">
+							Citizen Confirmation Subject Line
+						</label>
+						<div style="display:flex; gap:0.25rem;">
+							<span style="font-size:0.7rem; color:var(--admin-text-muted); margin-right:4px;">Insert tag:</span>
+							<button type="button" class="btn-token-chip" data-target="emailUserSubject" data-token="{{form_title}}">{{form_title}}</button>
+							<button type="button" class="btn-token-chip" data-target="emailUserSubject" data-token="{{reference_id}}">{{reference_id}}</button>
+							<button type="button" class="btn-token-chip" data-target="emailUserSubject" data-token="{{applicant_name}}">{{applicant_name}}</button>
+						</div>
+					</div>
+					<input type="text" id="emailUserSubject" class="form-control" placeholder="Confirmation: {{form_title}} Received ({{reference_id}})" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:0.55rem 0.75rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg);">
+				</div>
+
+				<div>
+					<label for="emailUserCustomMessage" style="display:block; font-weight:600; font-size:0.825rem; margin-bottom:0.35rem; color:var(--admin-text-main);">
+						Custom Confirmation Message / Citizen Instructions
+					</label>
+					<textarea id="emailUserCustomMessage" class="form-control" rows="4" placeholder="Thank you for contacting Chelan County. This email confirms that we have successfully received your submission. Our staff reviews requests within 1-2 business days..." style="width:100%; box-sizing:border-box; font-size:0.825rem; padding:0.6rem 0.75rem; border:1px solid var(--admin-border); border-radius:var(--radius-md); background:var(--admin-bg); line-height:1.4;"></textarea>
+					<div style="font-size:0.725rem; color:var(--admin-text-muted); margin-top:3px;">
+						Leave blank to use the standard Chelan County municipal confirmation greeting.
+					</div>
+				</div>
+
+				<div style="display:flex; align-items:center; gap:0.6rem; padding-top:0.25rem;">
+					<input type="checkbox" id="emailUserIncludeSummary" checked style="width:16px; height:16px; cursor:pointer;">
+					<label for="emailUserIncludeSummary" style="font-size:0.825rem; color:var(--admin-text-main); font-weight:500; cursor:pointer; margin:0;">
+						Include an itemized copy of submitted form fields in the resident's confirmation email
+					</label>
+				</div>
+			</div>
+
+			<!--- Pane 3: Interactive Live Preview --->
+			<div class="email-tab-pane" id="panePreviewEmail" style="display:none; flex-direction:column; gap:1rem;">
+				
+				<div style="display:flex; align-items:center; justify-content:space-between; background:var(--admin-bg); padding:0.5rem 0.75rem; border-radius:var(--radius-md); border:1px solid var(--admin-border);">
+					<span style="font-size:0.8rem; font-weight:600; color:var(--admin-text-muted);">Select preview view:</span>
+					<div style="display:flex; gap:0.25rem;">
+						<button type="button" class="btn btn-sm btn-preview-toggle btn-primary" data-mode="staff" style="font-size:0.75rem; padding:0.25rem 0.65rem;">
+							Recipient Staff Alert
+						</button>
+						<button type="button" class="btn btn-sm btn-preview-toggle btn-outline" data-mode="user" style="font-size:0.75rem; padding:0.25rem 0.65rem;">
+							Citizen Confirmation
+						</button>
+					</div>
+				</div>
+
+				<div id="emailLivePreviewContainer" style="background:##f1f5f9; padding:1.25rem; border-radius:8px; border:1px solid ##e2e8f0; max-height:480px; overflow-y:auto;">
+					<!--- Dynamic visual preview generated by JS --->
+				</div>
+			</div>
+
+		</div>
+
+		<!--- Modal Footer --->
+		<div style="padding:1rem 1.5rem; border-top:1px solid var(--admin-border); background:var(--admin-bg); display:flex; justify-content:space-between; align-items:center;">
+			<div style="font-size:0.75rem; color:var(--admin-text-muted); display:flex; align-items:center; gap:0.35rem;">
+				<cfoutput>#svgIcon(name="check", size=13)#</cfoutput>
+				<span>Changes apply immediately to new submissions.</span>
+			</div>
+			<div style="display:flex; gap:0.5rem;">
+				<button type="button" class="btn btn-secondary btn-sm modal-close-btn">Cancel</button>
+				<button type="button" class="btn btn-primary btn-sm" id="btnSaveEmailSettings">
+					<cfoutput>#svgIcon(name="save", size=14)#</cfoutput>
+					<span>Save Email Settings</span>
+				</button>
+			</div>
+		</div>
+
+	</div>
+</div>
+
+<style>
+	.btn-token-chip {
+		background: var(--admin-bg);
+		border: 1px solid var(--admin-border);
+		border-radius: 4px;
+		font-size: 0.68rem;
+		font-family: monospace;
+		padding: 2px 6px;
+		cursor: pointer;
+		color: var(--admin-primary);
+		transition: all 0.15s ease;
+	}
+	.btn-token-chip:hover {
+		background: var(--admin-primary-light);
+		border-color: var(--admin-primary);
+	}
+	[id="emailStaffEnabled"]:checked + .fb-toggle-slider,
+	[id="emailUserEnabled"]:checked + .fb-toggle-slider {
+		background: var(--admin-success) !important;
+	}
+	.fb-toggle-slider:before {
+		position: absolute;
+		content: "";
+		height: 18px;
+		width: 18px;
+		left: 3px;
+		bottom: 3px;
+		background: white;
+		border-radius: 50%;
+		transition: 0.3s;
+	}
+	[id="emailStaffEnabled"]:checked + .fb-toggle-slider:before,
+	[id="emailUserEnabled"]:checked + .fb-toggle-slider:before {
+		transform: translateX(20px);
+	}
+</style>
+
 <script>
 	document.addEventListener("DOMContentLoaded", function() {
+		// Universal Toast Notification Handler for Forms Directory
+		function showToast(msg, type = "success") {
+			let toast = document.getElementById("fbToast");
+			if (!toast) {
+				toast = document.createElement("div");
+				toast.id = "fbToast";
+				toast.className = "fb-toast";
+				document.body.appendChild(toast);
+			}
+			let normType = type;
+			if (type === true || type === "error") normType = "danger";
+			if (type === false) normType = "success";
+			if (!["success", "danger", "warning", "info"].includes(normType)) {
+				normType = "success";
+			}
+
+			toast.className = `fb-toast fb-toast--${normType}`;
+
+			const icons = {
+				success: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+				danger: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+				warning: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+				info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+			};
+
+			toast.innerHTML = `<span class="fb-toast-icon">${icons[normType] || icons.success}</span><span>${escapeHTML(msg)}</span>`;
+			toast.classList.add("show");
+			clearTimeout(toast._timer);
+			toast._timer = setTimeout(() => toast.classList.remove("show"), 3500);
+		}
+		window.showToast = showToast;
+		window.showToastNotification = showToast;
+
 		// 1. Detect if an active form exists in localStorage from the Form Builder Studio
 		try {
 			const saved = localStorage.getItem("cmsadmin_active_form");
@@ -1522,6 +1896,9 @@
 							<a href="${escapeHTML(previewUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm btn-icon-only" title="Preview Public Form">
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
 							</a>
+							<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-email-settings" data-id="${escapeHTML(formId)}" data-title="${escapeHTML(title)}" title="Email Notifications &amp; Citizen Templates">
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+							</button>
 							<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-delete-form" title="Delete form" aria-label="Delete ${escapeHTML(title)}" style="color:var(--admin-danger);" data-form-id="${escapeHTML(formId)}" data-delete-url="${escapeHTML(deleteUrl)}" data-title="${escapeHTML(title)}">
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
 							</button>
@@ -1598,8 +1975,54 @@
 			}
 		});
 
-		// 5. Share & Embed Modal Dialog Handler
+		// =========================================================================
+		// Universal Modal Controller (WCAG & Admin Theme Compliant Backdrop)
+		// =========================================================================
 		const shareModal = document.getElementById("modalShareEmbed");
+		const subsModal = document.getElementById("modalSubmissions");
+		const tplModal = document.getElementById("modalTemplatesList");
+		const modalEmail = document.getElementById("modalFormEmailSettings");
+
+		function openAdminModal(modal) {
+			if (!modal) return;
+			if (modal.parentNode !== document.body) {
+				document.body.appendChild(modal);
+			}
+			document.body.style.overflow = "hidden";
+			modal.style.display = "flex";
+			void modal.offsetWidth; // trigger reflow
+			modal.classList.add("open");
+			modal.classList.add("is-open");
+			modal.setAttribute("aria-hidden", "false");
+		}
+
+		function closeAdminModal(modal) {
+			if (!modal) return;
+			modal.classList.remove("open");
+			modal.classList.remove("is-open");
+			modal.setAttribute("aria-hidden", "true");
+			document.body.style.overflow = "";
+			setTimeout(() => {
+				if (!modal.classList.contains("open")) {
+					modal.style.display = "none";
+				}
+			}, 200);
+		}
+
+		function closeAllAdminModals() {
+			document.querySelectorAll(".admin-modal-backdrop, .fb-modal").forEach(m => {
+				closeAdminModal(m);
+			});
+		}
+
+		// Ensure modals are appended to body so viewport backdrops are never clipped
+		[shareModal, subsModal, tplModal, modalEmail].forEach(m => {
+			if (m && m.parentNode !== document.body) {
+				document.body.appendChild(m);
+			}
+		});
+
+		// 5. Share & Embed Modal Dialog Handler
 		document.addEventListener("click", function(e) {
 			const btn = e.target.closest(".btn-share-modal");
 			if (btn) {
@@ -1612,7 +2035,7 @@
 				document.getElementById("shareIframeCodeInput").value = `<iframe src="${url}" width="100%" height="800" frameborder="0" style="border:none; max-width:100%;" title="${title}"></iframe>`;
 				document.getElementById("shareShortcodeInput").value = `[chelan_form slug="${slug}"]`;
 
-				shareModal.style.display = "flex";
+				openAdminModal(shareModal);
 			}
 		});
 
@@ -1636,13 +2059,12 @@
 		});
 
 		// 6. Submissions Drawer Modal
-		const subsModal = document.getElementById("modalSubmissions");
 		document.addEventListener("click", function(e) {
 			const btn = e.target.closest(".btn-view-subs");
 			if (btn) {
 				const title = btn.getAttribute("data-title") || "Form Submissions";
 				document.getElementById("subsModalTitle").innerText = title;
-				subsModal.style.display = "flex";
+				openAdminModal(subsModal);
 			}
 		});
 
@@ -1654,68 +2076,593 @@
 		}
 
 		// 7. Starter Templates Modal
-		const tplModal = document.getElementById("modalTemplatesList");
 		const btnOpenTpl = document.getElementById("btnOpenTemplatesListModal");
 		if (btnOpenTpl) {
 			btnOpenTpl.addEventListener("click", () => {
-				tplModal.style.display = "flex";
+				openAdminModal(tplModal);
 			});
 		}
 
-		// Generic Modal Close Buttons & Backdrop clicks
-		document.querySelectorAll(".modal-close-btn, .fb-modal-backdrop").forEach(el => {
-			el.addEventListener("click", function() {
-				document.querySelectorAll(".fb-modal").forEach(m => m.style.display = "none");
-			});
+		// Generic Modal Close Buttons & Backdrop clicks (with document event delegation)
+		document.addEventListener("click", function(e) {
+			if (e.target.classList && (e.target.classList.contains("admin-modal-backdrop") || e.target.classList.contains("fb-modal") || e.target.closest(".modal-close-btn") || e.target.closest(".admin-modal-close"))) {
+				const targetModal = (e.target.classList.contains("admin-modal-backdrop") || e.target.classList.contains("fb-modal"))
+					? e.target
+					: (e.target.closest(".admin-modal-backdrop") || e.target.closest(".fb-modal"));
+				if (targetModal) {
+					closeAdminModal(targetModal);
+				} else {
+					closeAllAdminModals();
+				}
+			}
 		});
 
 		document.addEventListener("keydown", function(e) {
 			if (e.key === "Escape") {
-				document.querySelectorAll(".fb-modal").forEach(m => m.style.display = "none");
+				closeAllAdminModals();
 			}
 		});
 
-		// Toast Notification Utility
-		function showToast(msg, type = "success") {
-			if (typeof window.showToast === "function") {
-				window.showToast(msg, type);
-				return;
-			}
-			let toast = document.getElementById("cmsToast");
-			if (!toast) {
-				toast = document.createElement("div");
-				toast.id = "cmsToast";
-				toast.style.cssText = "position:fixed; bottom:24px; right:24px; background:#ffffff; color:#14532d; border:1px solid #bbf7d0; border-left:5px solid #15803d; padding:0.75rem 1.25rem; border-radius:6px; font-size:0.85rem; font-weight:600; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); z-index:99999; display:flex; align-items:center; gap:0.5rem; transition:opacity 0.2s;";
-				document.body.appendChild(toast);
-			}
-			toast.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${escapeHTML(msg)}</span>`;
-			toast.style.opacity = "1";
-			toast.style.display = "flex";
-			clearTimeout(toast._timer);
-			toast._timer = setTimeout(() => {
-				toast.style.opacity = "0";
-				setTimeout(() => { toast.style.display = "none"; }, 200);
-			}, 3000);
+		// -------------------------------------------------------------------------
+		// Form Email Notifications & Auto-Responder Templates Modal
+		// -------------------------------------------------------------------------
+		const badgeStaff = document.getElementById("badgeStaffEnabled");
+		const badgeUser = document.getElementById("badgeUserEnabled");
+		const tabBtns = document.querySelectorAll(".email-tab-btn");
+		const tabPanes = document.querySelectorAll(".email-tab-pane");
+		const btnSaveEmail = document.getElementById("btnSaveEmailSettings");
+		const livePreviewBox = document.getElementById("emailLivePreviewContainer");
+		const previewToggles = document.querySelectorAll(".btn-preview-toggle");
+
+		let currentFormId = null;
+		let currentFormData = null;
+		let currentEmailConfig = null;
+		let currentPreviewMode = "staff";
+		let lastConfigTab = "staff"; // Track whether user was actively configuring "staff" or "user"
+
+		// Helper to synchronize preview mode and toggle button states
+		function setPreviewMode(mode) {
+			currentPreviewMode = (mode === "user") ? "user" : "staff";
+			previewToggles.forEach(b => {
+				if (b.getAttribute("data-mode") === currentPreviewMode) {
+					b.classList.remove("btn-outline");
+					b.classList.add("btn-primary");
+				} else {
+					b.classList.remove("btn-primary");
+					b.classList.add("btn-outline");
+				}
+			});
+			renderLiveEmailPreview();
 		}
 
-		function fallbackCopyText(text) {
+		// Tab switching in email modal
+		tabBtns.forEach(btn => {
+			btn.addEventListener("click", function() {
+				tabBtns.forEach(b => {
+					b.classList.remove("active");
+					b.style.color = "var(--admin-text-muted)";
+					b.style.borderBottomColor = "transparent";
+					b.style.fontWeight = "500";
+				});
+				tabPanes.forEach(p => p.style.display = "none");
+
+				this.classList.add("active");
+				this.style.color = "var(--admin-primary)";
+				this.style.borderBottomColor = "var(--admin-primary)";
+				this.style.fontWeight = "600";
+
+				const tab = this.getAttribute("data-tab");
+				if (tab === "staff") {
+					lastConfigTab = "staff";
+					document.getElementById("paneStaffEmail").style.display = "flex";
+				} else if (tab === "user") {
+					lastConfigTab = "user";
+					document.getElementById("paneUserEmail").style.display = "flex";
+				} else if (tab === "preview") {
+					document.getElementById("panePreviewEmail").style.display = "flex";
+					// Synchronize preview mode with the active configuration tab
+					setPreviewMode(lastConfigTab);
+				}
+			});
+		});
+
+		// Preview mode toggle (staff vs user)
+		previewToggles.forEach(btn => {
+			btn.addEventListener("click", function() {
+				const mode = this.getAttribute("data-mode");
+				setPreviewMode(mode);
+			});
+		});
+
+		// Insert token chip into input
+		document.querySelectorAll(".btn-token-chip").forEach(chip => {
+			chip.addEventListener("click", function() {
+				const targetId = this.getAttribute("data-target");
+				const token = this.getAttribute("data-token");
+				const targetInput = document.getElementById(targetId);
+				if (!targetInput) return;
+
+				const start = targetInput.selectionStart || 0;
+				const end = targetInput.selectionEnd || 0;
+				const text = targetInput.value;
+				targetInput.value = text.substring(0, start) + token + text.substring(end);
+				targetInput.selectionStart = targetInput.selectionEnd = start + token.length;
+				targetInput.focus();
+				renderLiveEmailPreview();
+			});
+		});
+
+		// Update badges on toggle change
+		document.getElementById("emailStaffEnabled")?.addEventListener("change", function() {
+			if (badgeStaff) {
+				badgeStaff.className = this.checked ? "badge badge-success" : "badge badge-neutral";
+				badgeStaff.innerText = this.checked ? "Active" : "Disabled";
+			}
+			renderLiveEmailPreview();
+		});
+
+		document.getElementById("emailUserEnabled")?.addEventListener("change", function() {
+			if (badgeUser) {
+				badgeUser.className = this.checked ? "badge badge-success" : "badge badge-neutral";
+				badgeUser.innerText = this.checked ? "Active" : "Disabled";
+			}
+			renderLiveEmailPreview();
+		});
+
+		// Live inputs refresh preview immediately on any keystroke or change
+		[
+			"emailStaffTo", "emailStaffCc", "emailStaffSubject", "emailStaffNotes",
+			"emailUserFromName", "emailUserReplyTo", "emailUserSubject", "emailUserCustomMessage", "emailUserIncludeSummary"
+		].forEach(id => {
+			const el = document.getElementById(id);
+			if (el) {
+				el.addEventListener("input", renderLiveEmailPreview);
+				el.addEventListener("change", renderLiveEmailPreview);
+			}
+		});
+
+		// Event delegation to open Email Settings modal from Table rows or Grid cards
+		document.addEventListener("click", async function(e) {
+			const btn = e.target.closest(".btn-email-settings");
+			if (!btn) return;
+			e.preventDefault();
+
+			const row = btn.closest(".form-row");
+			let formId = btn.getAttribute("data-id") || btn.getAttribute("data-form-id");
+			if (!formId && row) {
+				formId = row.getAttribute("data-form-id");
+			}
+			const formTitle = btn.getAttribute("data-title") || (row ? row.getAttribute("data-title") : "") || "Form";
+			const deptName = row ? (row.getAttribute("data-dept-name") || "") : "";
+
+			if (!formId || formId.includes("{") || isNaN(parseInt(formId, 10)) || parseInt(formId, 10) <= 0) {
+				alert("Invalid form identifier selected (" + formId + "). Please ensure this form is saved in the database.");
+				return;
+			}
+
+			currentFormId = parseInt(formId, 10);
+			currentFormData = {
+				id: currentFormId,
+				title: formTitle,
+				deptName: deptName
+			};
+			lastConfigTab = "staff";
+
+			// Reset modal to initial loading state
+			document.getElementById("emailModalFormBadge").innerText = formTitle;
+			document.getElementById("emailModalFormBadge").className = "badge badge-primary";
+			
+			// Show modal
+			openAdminModal(modalEmail);
+
+			// Activate first tab (staff)
+			if (tabBtns[0]) tabBtns[0].click();
+
+			const endpoint = (row && row.getAttribute("data-email-settings-url")) 
+				? `${row.getAttribute("data-email-settings-url")}?id=${encodeURIComponent(currentFormId)}`
+				: `/forms/email-settings?id=${encodeURIComponent(currentFormId)}`;
+
 			try {
-				const ta = document.createElement("textarea");
-				ta.value = text;
-				ta.style.position = "fixed";
-				ta.style.top = "0";
-				ta.style.left = "0";
-				ta.style.opacity = "0";
-				document.body.appendChild(ta);
-				ta.focus();
-				ta.select();
-				const res = document.execCommand("copy");
-				document.body.removeChild(ta);
-				if (res) return Promise.resolve(true);
-			} catch (e) {}
-			window.prompt("Copy to clipboard (Ctrl+C):", text);
-			return Promise.resolve(true);
+				const res = await fetch(endpoint, {
+					method: "GET",
+					credentials: "same-origin",
+					headers: {
+						"Accept": "application/json",
+						"X-Requested-With": "XMLHttpRequest"
+					}
+				});
+
+				let data = null;
+				const text = await res.text();
+				try {
+					data = JSON.parse(text);
+				} catch(pe) {
+					console.error("Non-JSON response from server:", text);
+					alert(`Server error (${res.status}): Server returned non-JSON response. Please verify you are logged in.`);
+					closeAdminModal(modalEmail);
+					return;
+				}
+
+				if (!data.success) {
+					alert(data.message || `Error (${res.status}): Failed to load form email settings.`);
+					closeAdminModal(modalEmail);
+					return;
+				}
+
+				currentFormData = data.form;
+				currentEmailConfig = data.emailSettings;
+
+				document.getElementById("emailModalFormBadge").innerText = data.form.title;
+
+				// Populate Staff fields
+				const staffEnabled = data.emailSettings.staffNotificationEnabled !== false;
+				document.getElementById("emailStaffEnabled").checked = staffEnabled;
+				if (badgeStaff) {
+					badgeStaff.className = staffEnabled ? "badge badge-success" : "badge badge-neutral";
+					badgeStaff.innerText = staffEnabled ? "Active" : "Disabled";
+				}
+				document.getElementById("emailStaffTo").value = data.emailSettings.staffEmail || "";
+				document.getElementById("emailStaffCc").value = data.emailSettings.staffEmailCc || "";
+				document.getElementById("emailStaffSubject").value = data.emailSettings.staffSubject || "[New Submission] {{form_title}} ({{reference_id}})";
+				document.getElementById("emailStaffNotes").value = data.emailSettings.staffNotes || "";
+
+				// Populate Citizen fields
+				const userEnabled = data.emailSettings.userAutoresponderEnabled !== false;
+				document.getElementById("emailUserEnabled").checked = userEnabled;
+				if (badgeUser) {
+					badgeUser.className = userEnabled ? "badge badge-success" : "badge badge-neutral";
+					badgeUser.innerText = userEnabled ? "Active" : "Disabled";
+				}
+				document.getElementById("emailUserFromName").value = data.emailSettings.userFromName || "Chelan County Online Services";
+				document.getElementById("emailUserReplyTo").value = data.emailSettings.userReplyTo || "forms@chelancounty.gov";
+				document.getElementById("emailUserSubject").value = data.emailSettings.userSubject || "Confirmation: {{form_title}} Received ({{reference_id}})";
+				document.getElementById("emailUserCustomMessage").value = data.emailSettings.userCustomMessage || "";
+				document.getElementById("emailUserIncludeSummary").checked = data.emailSettings.userIncludeSummary !== false;
+
+				renderLiveEmailPreview();
+			} catch(err) {
+				console.error("Error loading email settings:", err);
+				alert("Error connecting to server: " + (err.message || err));
+				closeAdminModal(modalEmail);
+			}
+		});
+
+		// Save Email Settings
+		btnSaveEmail?.addEventListener("click", async function() {
+			if (!currentFormId) return;
+
+			const staffTo = document.getElementById("emailStaffTo").value.trim();
+			const staffEnabled = document.getElementById("emailStaffEnabled").checked;
+			if (staffEnabled && !staffTo) {
+				alert("Please provide at least one staff recipient email address or disable staff notifications.");
+				if (tabBtns[0]) tabBtns[0].click();
+				document.getElementById("emailStaffTo").focus();
+				return;
+			}
+
+			const origBtnText = btnSaveEmail.innerHTML;
+			btnSaveEmail.disabled = true;
+			btnSaveEmail.innerHTML = '<span>Saving...</span>';
+
+			const payload = {
+				id: currentFormId,
+				emailSettings: {
+					staffNotificationEnabled: staffEnabled,
+					staffEmail: staffTo,
+					staffEmailCc: document.getElementById("emailStaffCc").value.trim(),
+					staffSubject: document.getElementById("emailStaffSubject").value.trim(),
+					staffNotes: document.getElementById("emailStaffNotes").value.trim(),
+					userAutoresponderEnabled: document.getElementById("emailUserEnabled").checked,
+					userFromName: document.getElementById("emailUserFromName").value.trim(),
+					userReplyTo: document.getElementById("emailUserReplyTo").value.trim(),
+					userSubject: document.getElementById("emailUserSubject").value.trim(),
+					userCustomMessage: document.getElementById("emailUserCustomMessage").value.trim(),
+					userIncludeSummary: document.getElementById("emailUserIncludeSummary").checked
+				}
+			};
+
+			const saveEndpoint = "/forms/save-email-settings";
+
+			try {
+				const res = await fetch(saveEndpoint, {
+					method: "POST",
+					credentials: "same-origin",
+					headers: {
+						"Content-Type": "application/json",
+						"Accept": "application/json",
+						"X-Requested-With": "XMLHttpRequest"
+					},
+					body: JSON.stringify(payload)
+				});
+
+				let data = null;
+				const text = await res.text();
+				try {
+					data = JSON.parse(text);
+				} catch(pe) {
+					console.error("Non-JSON response from save endpoint:", text);
+					alert(`Server error (${res.status}): Server returned non-JSON response.`);
+					return;
+				}
+
+				if (data.success) {
+					closeAdminModal(modalEmail);
+					showToast("Email notification and template settings saved successfully!", "success");
+				} else {
+					alert(data.message || `Error (${res.status}): Failed to save email settings.`);
+				}
+			} catch(err) {
+				console.error("Save error:", err);
+				alert("An error occurred while saving email settings: " + (err.message || err));
+			} finally {
+				btnSaveEmail.disabled = false;
+				btnSaveEmail.innerHTML = origBtnText;
+			}
+		});
+
+		// Live email preview rendering
+		function renderLiveEmailPreview() {
+			if (!livePreviewBox) return;
+
+			const formTitle = currentFormData?.title || "Chelan County Online Form";
+			const deptName = currentFormData?.deptName || "County Administration";
+			const refId = "CC-9B8A7C6D";
+			const sampleDate = "October 22, 2026 at 9:15 AM";
+
+			let sampleApplicant = "Jane Doe";
+			let sampleEmail = "jane.doe@example.com";
+			let samplePhone = "(509) 555-0199";
+
+			// Dynamically populate applicant sample values from form fields if present
+			if (currentFormData?.fields && Array.isArray(currentFormData.fields)) {
+				const nameField = currentFormData.fields.find(f => {
+					const l = (f.label || "").toLowerCase();
+					const k = (f.key || "").toLowerCase();
+					return (l.includes("name") || k.includes("name")) && !k.includes("file");
+				});
+				if (nameField && nameField.sampleValue) sampleApplicant = nameField.sampleValue;
+
+				const emailField = currentFormData.fields.find(f => {
+					const l = (f.label || "").toLowerCase();
+					const k = (f.key || "").toLowerCase();
+					return f.type === "email" || l.includes("email") || k.includes("email");
+				});
+				if (emailField && emailField.sampleValue) sampleEmail = emailField.sampleValue;
+
+				const phoneField = currentFormData.fields.find(f => {
+					const l = (f.label || "").toLowerCase();
+					const k = (f.key || "").toLowerCase();
+					return f.type === "phone" || f.type === "tel" || l.includes("phone") || k.includes("phone");
+				});
+				if (phoneField && phoneField.sampleValue) samplePhone = phoneField.sampleValue;
+			}
+
+			function resolveTokens(tpl) {
+				return (tpl || "")
+					.replace(/{{form_title}}/g, escapeHTML(formTitle))
+					.replace(/{{reference_id}}/g, refId)
+					.replace(/{{department}}/g, escapeHTML(deptName))
+					.replace(/{{date}}/g, sampleDate)
+					.replace(/{{applicant_name}}/g, escapeHTML(sampleApplicant))
+					.replace(/{{applicant_email}}/g, escapeHTML(sampleEmail));
+			}
+
+			// Helper to render the actual submitted form fields itemized table
+			function buildFieldsTableHtml(fieldsList) {
+				if (!fieldsList || !fieldsList.length) {
+					return `
+						<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; font-size:12px; color:#64748b; font-style:italic; margin-bottom:16px;">
+							No interactive input fields configured for this form yet.
+						</div>
+					`;
+				}
+				let rowsHtml = "";
+				fieldsList.forEach((f, idx) => {
+					const isAlt = idx % 2 === 1;
+					const bg = isAlt ? "#f8fafc" : "#ffffff";
+					let valHtml = escapeHTML(f.sampleValue || "Completed");
+					const lk = (f.key || "").toLowerCase();
+					const ll = (f.label || "").toLowerCase();
+					const lt = (f.type || "").toLowerCase();
+
+					if (lt === "file" || lk.includes("photo") || ll.includes("photo") || lk.includes("file")) {
+						valHtml = `<span style="display:inline-flex; align-items:center; gap:6px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; padding:3px 8px; font-size:12px; font-weight:600; color:#0f172a;">📎 ${escapeHTML(f.sampleValue)}</span><div style="font-size:11px; color:#64748b; margin-top:2px;">Uploaded to secure county storage</div>`;
+					} else if (lt === "textarea" || lk.includes("desc") || ll.includes("description") || lk.includes("msg") || ll.includes("message")) {
+						valHtml = `<div style="background:#f8fafc; border-left:3px solid #0b231a; padding:8px 12px; font-size:12px; color:#1e293b; border-radius:0 4px 4px 0; white-space:pre-wrap; line-height:1.4;">${escapeHTML(f.sampleValue)}</div>`;
+					} else if (lt === "email") {
+						valHtml = `<a href="mailto:${escapeHTML(f.sampleValue)}" style="color:#0073aa; text-decoration:underline;">${escapeHTML(f.sampleValue)}</a>`;
+					} else if (lt === "phone" || lt === "tel") {
+						valHtml = `<a href="tel:${escapeHTML(f.sampleValue)}" style="color:#0f172a; text-decoration:none; font-weight:500;">${escapeHTML(f.sampleValue)}</a>`;
+					}
+					rowsHtml += `
+						<tr style="background:${bg}; border-bottom:1px solid #f1f5f9;">
+							<td style="padding:9px 12px; font-size:12px; font-weight:600; color:#334155; width:36%; vertical-align:top; border-bottom:1px solid #f1f5f9;">
+								${escapeHTML(f.label)}
+							</td>
+							<td style="padding:9px 12px; font-size:12px; color:#0f172a; vertical-align:top; border-bottom:1px solid #f1f5f9; word-break:break-word;">
+								${valHtml}
+							</td>
+						</tr>
+					`;
+				});
+
+				return `
+					<div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:18px;">
+						<div style="background:#f1f5f9; padding:8px 12px; font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+							<span>Submitted Form Fields</span>
+							<span style="font-size:10px; font-weight:600; color:#0f766e; background:#ccfbf1; padding:2px 6px; border-radius:3px;">${fieldsList.length} Fields</span>
+						</div>
+						<table style="width:100%; border-collapse:collapse;">
+							${rowsHtml}
+						</table>
+					</div>
+				`;
+			}
+
+			if (currentPreviewMode === "staff") {
+				const isEnabled = document.getElementById("emailStaffEnabled")?.checked;
+				const rawStaffTo = document.getElementById("emailStaffTo")?.value.trim();
+				const staffTo = rawStaffTo || currentEmailConfig?.staffEmail || currentFormData?.deptAlertEmail || "staff@chelancounty.gov";
+				const staffCc = document.getElementById("emailStaffCc")?.value.trim() || "";
+				const staffSubj = resolveTokens(document.getElementById("emailStaffSubject")?.value.trim() || "[New Submission] {{form_title}} ({{reference_id}})");
+				const staffNotes = resolveTokens(document.getElementById("emailStaffNotes")?.value.trim() || "");
+
+				let html = `
+					<!-- Staff Alert Notification Info Banner -->
+					<div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#1e40af; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+						<div style="display:flex; align-items:center; gap:8px;">
+							<span style="display:inline-flex; width:22px; height:22px; border-radius:50%; background:#2563eb; color:#fff; align-items:center; justify-content:center; font-weight:700; font-size:11px; flex-shrink:0;">1</span>
+							<span><strong>Intake Alert Notification Preview:</strong> Delivered to your designated county/department inbox whenever a citizen submits this form.</span>
+						</div>
+						<span class="badge badge-info" style="font-size:11px; white-space:nowrap;">Staff Recipient Alert</span>
+					</div>
+
+					<div style="background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; overflow:hidden; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; box-shadow:0 2px 4px rgba(0,0,0,0.04);">
+						<div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:10px 16px; font-size:12px; color:#475569; display:grid; grid-template-columns:80px 1fr; gap:6px 12px; align-items:center;">
+							<strong>To (Staff):</strong> <span style="font-weight:600; color:#0f172a;">${escapeHTML(staffTo)}</span>
+							${staffCc ? `<strong>Cc:</strong> <span>${escapeHTML(staffCc)}</span>` : ""}
+							<strong>From:</strong> <span>Chelan County Online Services &lt;forms@chelancounty.gov&gt;</span>
+							<strong>Reply-To:</strong> <span>${escapeHTML(sampleApplicant)} &lt;${escapeHTML(sampleEmail)}&gt; <span style="font-size:11px; color:#64748b; font-weight:normal;">(Replying in email client routes directly to applicant)</span></span>
+							<strong>Subject:</strong> <strong style="color:#0f172a;">${escapeHTML(staffSubj)}</strong>
+							${!isEnabled ? `<strong>Status:</strong> <span style="color:#dc2626; font-weight:bold;">Notifications currently DISABLED</span>` : ""}
+						</div>
+
+						<div style="background:#0b231a; color:#ffffff; padding:18px 24px; display:flex; align-items:center; justify-content:space-between;">
+							<div>
+								<div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#86efac; font-weight:700;">Chelan County Washington</div>
+								<div style="font-size:17px; font-weight:700; margin-top:3px; color:#ffffff;">${escapeHTML(formTitle)}</div>
+								<div style="font-size:12px; color:#cbd5e1; margin-top:2px;">Department: ${escapeHTML(deptName)}</div>
+							</div>
+							<div style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:4px; padding:6px 10px; text-align:right;">
+								<div style="font-size:10px; text-transform:uppercase; color:#86efac;">Reference No.</div>
+								<div style="font-size:13px; font-family:monospace; font-weight:700;">${refId}</div>
+							</div>
+						</div>
+
+						<div style="padding:20px 24px;">
+							${staffNotes ? `
+								<div style="background:#fef3c7; border-left:4px solid #b45309; padding:10px 14px; border-radius:4px; margin-bottom:16px;">
+									<div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#92400e; margin-bottom:2px;">Staff Processing Notice</div>
+									<div style="font-size:13px; color:#78350f; white-space:pre-wrap;">${escapeHTML(staffNotes)}</div>
+								</div>
+							` : ""}
+
+							<div style="margin-bottom:16px; font-size:13px; color:#334155;">
+								A new intake submission was received on <strong>${sampleDate}</strong>. Submitter details are provided below:
+							</div>
+
+							<table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:18px;">
+								<tr style="border-bottom:1px solid #f1f5f9;">
+									<td style="padding:7px 0; color:#64748b; width:35%;">Applicant Name</td>
+									<td style="padding:7px 0; color:#0f172a; font-weight:600;">${escapeHTML(sampleApplicant)}</td>
+								</tr>
+								<tr style="border-bottom:1px solid #f1f5f9;">
+									<td style="padding:7px 0; color:#64748b;">Applicant Email</td>
+									<td style="padding:7px 0; color:#0f172a; font-weight:600;">${escapeHTML(sampleEmail)}</td>
+								</tr>
+								<tr style="border-bottom:1px solid #f1f5f9;">
+									<td style="padding:7px 0; color:#64748b;">Applicant Phone</td>
+									<td style="padding:7px 0; color:#0f172a;">${escapeHTML(samplePhone)}</td>
+								</tr>
+								<tr style="border-bottom:1px solid #f1f5f9;">
+									<td style="padding:7px 0; color:#64748b;">Submission Source</td>
+									<td style="padding:7px 0; color:#0f172a;">Public Web Portal &bull; Verified Captcha</td>
+								</tr>
+							</table>
+
+							${buildFieldsTableHtml(currentFormData?.fields)}
+
+							<div style="margin-top:20px; text-align:center;">
+								<a href="/forms" target="_blank" style="display:inline-block; background:#0073aa; color:#ffffff; padding:10px 20px; border-radius:6px; font-size:13px; font-weight:600; text-decoration:none; box-shadow:0 2px 4px rgba(0,0,0,0.08);">
+									View in CMSAdmin Directory &rarr;
+								</a>
+								<div style="font-size:11px; color:#64748b; margin-top:6px;">
+									Direct review option in CMSAdmin to inspect submission history and update status
+								</div>
+							</div>
+						</div>
+
+						<div style="background:#f1f5f9; padding:12px 24px; font-size:11px; color:#64748b; text-align:center; border-top:1px solid #e2e8f0;">
+							Chelan County Official Government Intranet &bull; Automated System Notification
+						</div>
+					</div>
+				`;
+				livePreviewBox.innerHTML = html;
+			} else {
+				const isEnabled = document.getElementById("emailUserEnabled")?.checked;
+				const userFromName = document.getElementById("emailUserFromName")?.value.trim() || currentEmailConfig?.userFromName || currentFormData?.deptName || "Chelan County Online Services";
+				const rawUserReplyTo = document.getElementById("emailUserReplyTo")?.value.trim();
+				const userReplyTo = rawUserReplyTo || currentEmailConfig?.userReplyTo || currentEmailConfig?.staffEmail || currentFormData?.deptAlertEmail || "forms@chelancounty.gov";
+				const userSubj = resolveTokens(document.getElementById("emailUserSubject")?.value.trim() || "Confirmation: {{form_title}} Received ({{reference_id}})");
+				const userCustomMsg = resolveTokens(document.getElementById("emailUserCustomMessage")?.value.trim() || "Thank you for contacting Chelan County. This email confirms that we have successfully received your submission. Our staff reviews requests within 1-2 business days.");
+				const incSummary = document.getElementById("emailUserIncludeSummary")?.checked;
+
+				let html = `
+					<!-- Citizen Confirmation Auto-Responder Info Banner -->
+					<div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#065f46; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+						<div style="display:flex; align-items:center; gap:8px;">
+							<span style="display:inline-flex; width:22px; height:22px; border-radius:50%; background:#059669; color:#fff; align-items:center; justify-content:center; font-weight:700; font-size:11px; flex-shrink:0;">2</span>
+							<span><strong>Citizen Confirmation Preview:</strong> Automated receipt emailed directly to the resident / applicant who submitted the form.</span>
+						</div>
+						<span class="badge badge-success" style="font-size:11px; white-space:nowrap;">Citizen Auto-Responder</span>
+					</div>
+
+					<div style="background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; overflow:hidden; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; box-shadow:0 2px 4px rgba(0,0,0,0.04);">
+						<div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:10px 16px; font-size:12px; color:#475569; display:grid; grid-template-columns:80px 1fr; gap:6px 12px; align-items:center;">
+							<strong>To (Resident):</strong> <span>${escapeHTML(sampleApplicant)} &lt;${escapeHTML(sampleEmail)}&gt; <span style="font-size:11px; color:#64748b; font-weight:normal;">(Submitted email address)</span></span>
+							<strong>From:</strong> <span>${escapeHTML(userFromName)} &lt;forms@chelancounty.gov&gt;</span>
+							<strong>Reply-To:</strong> <span style="font-weight:600; color:#0f172a;">${escapeHTML(userReplyTo)} <span style="font-size:11px; color:#64748b; font-weight:normal;">(Citizen replies route to this inbox)</span></span>
+							<strong>Subject:</strong> <strong style="color:#0f172a;">${escapeHTML(userSubj)}</strong>
+							${!isEnabled ? `<strong>Status:</strong> <span style="color:#dc2626; font-weight:bold;">Citizen Auto-Responder currently DISABLED</span>` : ""}
+						</div>
+
+						<div style="background:#0b231a; color:#ffffff; padding:18px 24px; display:flex; align-items:center; justify-content:space-between;">
+							<div>
+								<div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#86efac; font-weight:700;">Chelan County Washington</div>
+								<div style="font-size:17px; font-weight:700; margin-top:3px; color:#ffffff;">Confirmation of Submission</div>
+								<div style="font-size:12px; color:#cbd5e1; margin-top:2px;">${escapeHTML(formTitle)}</div>
+							</div>
+							<div style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:4px; padding:6px 10px; text-align:right;">
+								<div style="font-size:10px; text-transform:uppercase; color:#86efac;">Your Reference No.</div>
+								<div style="font-size:13px; font-family:monospace; font-weight:700;">${refId}</div>
+							</div>
+						</div>
+
+						<div style="padding:20px 24px;">
+							<div style="font-size:14px; color:#0f172a; margin-bottom:12px; font-weight:600;">
+								Hello ${escapeHTML(sampleApplicant)},
+							</div>
+
+							<div style="font-size:13px; color:#334155; line-height:1.6; margin-bottom:16px; white-space:pre-wrap;">${escapeHTML(userCustomMsg)}</div>
+
+							<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:12px 16px; margin-bottom:16px;">
+								<div style="font-size:12px; font-weight:700; color:#166534; margin-bottom:4px;">Submission Details</div>
+								<div style="font-size:12px; color:#15803d; line-height:1.5;">
+									&bull; <strong>Form:</strong> ${escapeHTML(formTitle)}<br>
+									&bull; <strong>Date Received:</strong> ${sampleDate}<br>
+									&bull; <strong>Department:</strong> ${escapeHTML(deptName)}<br>
+									&bull; <strong>Reference ID:</strong> <code style="background:#ffffff; padding:1px 5px; border-radius:3px;">${refId}</code>
+								</div>
+							</div>
+
+							${incSummary ? `
+								<div style="margin-top:16px;">
+									<div style="font-size:12px; font-weight:700; color:#0f172a; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Summary of Information Submitted</div>
+									${buildFieldsTableHtml(currentFormData?.fields)}
+								</div>
+							` : ""}
+						</div>
+
+						<div style="background:#f1f5f9; padding:12px 24px; font-size:11px; color:#64748b; text-align:center; border-top:1px solid #e2e8f0;">
+							Chelan County Official Government Services &bull; 350 Orondo Ave, Wenatchee, WA 98801<br>
+							If you did not initiate this request, please contact <a href="mailto:${escapeHTML(userReplyTo)}" style="color:#0073aa;">${escapeHTML(userReplyTo)}</a>.
+						</div>
+					</div>
+				`;
+				livePreviewBox.innerHTML = html;
+			}
 		}
+
 
 		function escapeHTML(str) {
 			if (!str) return "";

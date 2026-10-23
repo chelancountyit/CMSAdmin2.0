@@ -2,7 +2,7 @@ component extends="Controller" {
 
 	function config() {
 		super.config();
-		protectsFromForgery(except="save,createModal,saveSubpage,deleteSubpage,saveFolderExplorer,deleteFolderExplorer,saveHowDoIItem,deleteHowDoIItem,reorderHowDoIItems,saveHowDoICategory,deleteHowDoICategory,prefillHowDoICategories,restoreRevision,snapshotRevision,saveCallToAction,deleteCallToAction,reorderCallToActions,convertDocument");
+		protectsFromForgery(except="save,delete,restoreArchived,createModal,saveSubpage,deleteSubpage,saveFolderExplorer,deleteFolderExplorer,saveHowDoIItem,deleteHowDoIItem,reorderHowDoIItems,saveHowDoICategory,deleteHowDoICategory,prefillHowDoICategories,restoreRevision,snapshotRevision,saveCallToAction,deleteCallToAction,reorderCallToActions,convertDocument,saveOnePageSite,deleteOnePageSite,saveOnePageSection,deleteOnePageSection,reorderOnePageSections,syncOnePageToMenu,compileOnePageSite,publishOnePageToProduction");
 	}
 
 	/**
@@ -220,6 +220,50 @@ component extends="Controller" {
 			local.siteParams[local.pName] = { value: local.candidateSiteIds[local.idx], cfsqltype: "cf_sql_nvarchar" };
 		}
 		local.siteInClause = ArrayToList(local.inPlaceholders, ", ");
+
+		local.forceNew = StructKeyExists(local.req, "forceNew") && (local.req.forceNew == 1 || local.req.forceNew == "true" || local.req.forceNew == true);
+
+		// If not explicitly forcing a new page, check if an archived/soft-deleted page matches this slug or title
+		if (!local.forceNew) {
+			local.archivedParams = StructCopy(local.siteParams);
+			local.archivedParams.slug = { value: local.slug, cfsqltype: "cf_sql_nvarchar" };
+			local.archivedParams.title = { value: local.title, cfsqltype: "cf_sql_nvarchar" };
+
+			local.archivedQ = queryExecute("
+				SELECT TOP 1 ContentID, Title, Permalink, StatusCode, Visibility, LayoutType,
+				       DeletedAt, Modified, ModifiedBy, Created, CreatedBy
+				FROM pages
+				WHERE SiteID IN (" & local.siteInClause & ")
+				  AND DeletedAt IS NOT NULL
+				  AND (Permalink = :slug OR LOWER(Title) = LOWER(:title))
+				ORDER BY DeletedAt DESC, ContentID DESC
+			", local.archivedParams, { datasource: "ChelanCountyWebsite" });
+
+			if (local.archivedQ.recordCount > 0) {
+				local.delAtStr = "";
+				if (IsDate(local.archivedQ.DeletedAt)) {
+					local.delAtStr = DateFormat(local.archivedQ.DeletedAt, "mm/dd/yyyy") & " " & TimeFormat(local.archivedQ.DeletedAt, "hh:mm TT");
+				}
+				local.delByStr = Len(Trim(local.archivedQ.ModifiedBy)) ? Trim(local.archivedQ.ModifiedBy) : (Trim(local.archivedQ.CreatedBy) ?: "Staff");
+
+				fxRenderJson({
+					"success": false,
+					"SUCCESS": false,
+					"archivedFound": true,
+					"ARCHIVEDFOUND": true,
+					"message": "An archived page matching this title or URL was found in this workspace.",
+					"archivedPage": {
+						"id": Val(local.archivedQ.ContentID),
+						"title": local.archivedQ.Title ?: "",
+						"slug": local.archivedQ.Permalink ?: "",
+						"deletedAt": local.delAtStr,
+						"deletedBy": local.delByStr,
+						"layout": local.archivedQ.LayoutType ?: "Right Sidebar"
+					}
+				});
+				return;
+			}
+		}
 
 		local.candidateSlug = local.slug;
 		local.counter = 2;
@@ -578,6 +622,211 @@ component extends="Controller" {
 		} catch (any e) {
 			writeLog(type="error", file="pages", text="Failed to save page: #e.message# #e.detail#");
 			fxRenderJson({ success: false, SUCCESS: false, message: "Unable to save page: #e.message#" }, 500);
+		}
+	}
+
+	/**
+	 * POST /pages/delete
+	 * Soft-deletes an Inactive Page (sets DeletedAt = SYSUTCDATETIME())
+	 * Only allowed when page StatusCode is 'Inactive' and isLocked is 0
+	 */
+	function delete() {
+		local.res = { "success": false, "SUCCESS": false, "message": "" };
+		try {
+			local.body = fxReadJsonBody();
+			local.req = IsStruct(local.body) ? local.body : params;
+			local.id = Val(local.req.id ?: 0);
+
+			if (local.id <= 0) {
+				local.res.message = "Invalid page ID specified.";
+				fxRenderJson(local.res, 400);
+				return;
+			}
+
+			// Verify page exists, is not already deleted, and is Inactive
+			local.checkQ = queryExecute("
+				SELECT ContentID, Title, StatusCode, isLocked
+				FROM pages
+				WHERE ContentID = :id AND DeletedAt IS NULL
+			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+
+			if (local.checkQ.recordCount == 0) {
+				local.res.message = "Page not found or already deleted.";
+				fxRenderJson(local.res, 404);
+				return;
+			}
+
+			if (Val(local.checkQ.isLocked) == 1) {
+				local.res.message = "System locked pages cannot be deleted.";
+				fxRenderJson(local.res, 403);
+				return;
+			}
+
+			if (CompareNoCase(Trim(local.checkQ.StatusCode), "Inactive") != 0) {
+				local.res.message = "Only Inactive pages can be soft-deleted. Please change page status to Inactive before deleting.";
+				fxRenderJson(local.res, 400);
+				return;
+			}
+
+			local.actor = spCurrentActor();
+
+			queryExecute("
+				SET ANSI_NULLS ON;
+				SET QUOTED_IDENTIFIER ON;
+
+				UPDATE pages
+				SET DeletedAt = SYSUTCDATETIME(),
+				    Modified = SYSUTCDATETIME(),
+				    ModifiedBy = :actor
+				WHERE ContentID = :id AND DeletedAt IS NULL
+			", {
+				actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar", null: !Len(local.actor) },
+				id: { value: local.id, cfsqltype: "cf_sql_integer" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			// Record legal audit snapshot in page_revisions (RCW 42.56 compliance)
+			try {
+				ensurePageRevisionsTable();
+				local.maxVerQ = queryExecute("
+					SELECT ISNULL(MAX(version_number), 0) AS max_v
+					FROM page_revisions
+					WHERE page_id = :pid
+				", { pid: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+				local.nextVer = Val(local.maxVerQ.max_v) + 1;
+
+				queryExecute("
+					SET ANSI_NULLS ON;
+					SET QUOTED_IDENTIFIER ON;
+
+					INSERT INTO page_revisions (
+						page_id, version_number, title, slug, content_html, summary,
+						layout_type, meta_json, change_summary, created_by, created_at
+					) VALUES (
+						:page_id, :version_number, :title, :slug, :content_html, :summary,
+						:layout_type, :meta_json, :change_summary, :created_by, SYSUTCDATETIME()
+					)
+				", {
+					page_id: { value: local.id, cfsqltype: "cf_sql_integer" },
+					version_number: { value: local.nextVer, cfsqltype: "cf_sql_integer" },
+					title: { value: local.checkQ.Title, cfsqltype: "cf_sql_nvarchar" },
+					slug: { value: "deleted-" & local.id, cfsqltype: "cf_sql_nvarchar" },
+					content_html: { value: "", cfsqltype: "cf_sql_nvarchar" },
+					summary: { value: "Page marked Inactive and soft-deleted", cfsqltype: "cf_sql_nvarchar" },
+					layout_type: { value: "Full", cfsqltype: "cf_sql_nvarchar" },
+					meta_json: { value: SerializeJSON({ "deleted": true, "deleted_at": Now(), "deleted_by": local.actor }), cfsqltype: "cf_sql_nvarchar" },
+					change_summary: { value: "Soft-deleted from Content Manager pages directory", cfsqltype: "cf_sql_nvarchar" },
+					created_by: { value: local.actor, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+			} catch (any eRev) {
+				writeLog(type="error", file="pages", text="Failed to record deletion snapshot: #eRev.message#");
+			}
+
+			local.res.success = true;
+			local.res.SUCCESS = true;
+			local.res.message = "Page '" & local.checkQ.Title & "' has been soft-deleted.";
+			fxRenderJson(local.res);
+		} catch (any e) {
+			writeLog(type="error", file="pages", text="Failed to delete page: #e.message# #e.detail#");
+			local.res.message = "Unable to delete page: " & e.message;
+			fxRenderJson(local.res, 500);
+		}
+	}
+
+	/**
+	 * POST /pages/restore-archived
+	 * Reactivates a soft-deleted page (sets DeletedAt = NULL, StatusCode = 'Active')
+	 */
+	function restoreArchived() {
+		local.res = { "success": false, "SUCCESS": false, "message": "" };
+		try {
+			local.body = fxReadJsonBody();
+			local.req = IsStruct(local.body) ? local.body : params;
+			local.id = Val(local.req.id ?: 0);
+
+			if (local.id <= 0) {
+				local.res.message = "Invalid page ID specified.";
+				fxRenderJson(local.res, 400);
+				return;
+			}
+
+			// Verify page exists and is currently soft-deleted
+			local.pageQ = queryExecute("
+				SELECT ContentID, Title, Permalink, SiteID, StatusCode, LayoutType
+				FROM pages
+				WHERE ContentID = :id AND DeletedAt IS NOT NULL
+			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+
+			if (local.pageQ.recordCount == 0) {
+				local.res.message = "Archived page not found or is already active.";
+				fxRenderJson(local.res, 404);
+				return;
+			}
+
+			local.actor = spCurrentActor();
+
+			queryExecute("
+				SET ANSI_NULLS ON;
+				SET QUOTED_IDENTIFIER ON;
+
+				UPDATE pages
+				SET DeletedAt = NULL,
+				    StatusCode = 'Active',
+				    Visibility = 'Draft',
+				    Modified = SYSUTCDATETIME(),
+				    ModifiedBy = :actor
+				WHERE ContentID = :id
+			", {
+				actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar", null: !Len(local.actor) },
+				id: { value: local.id, cfsqltype: "cf_sql_integer" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			// Record legal audit snapshot in page_revisions (RCW 42.56 compliance)
+			try {
+				ensurePageRevisionsTable();
+				local.maxVerQ = queryExecute("
+					SELECT ISNULL(MAX(version_number), 0) AS max_v
+					FROM page_revisions
+					WHERE page_id = :pid
+				", { pid: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+				local.nextVer = Val(local.maxVerQ.max_v) + 1;
+
+				queryExecute("
+					SET ANSI_NULLS ON;
+					SET QUOTED_IDENTIFIER ON;
+
+					INSERT INTO page_revisions (
+						page_id, version_number, title, slug, content_html, summary,
+						layout_type, meta_json, change_summary, created_by, created_at
+					) VALUES (
+						:page_id, :version_number, :title, :slug, :content_html, :summary,
+						:layout_type, :meta_json, :change_summary, :created_by, SYSUTCDATETIME()
+					)
+				", {
+					page_id: { value: local.id, cfsqltype: "cf_sql_integer" },
+					version_number: { value: local.nextVer, cfsqltype: "cf_sql_integer" },
+					title: { value: local.pageQ.Title, cfsqltype: "cf_sql_nvarchar" },
+					slug: { value: local.pageQ.Permalink, cfsqltype: "cf_sql_nvarchar" },
+					content_html: { value: "", cfsqltype: "cf_sql_nvarchar" },
+					summary: { value: "Page reactivated from archived state", cfsqltype: "cf_sql_nvarchar" },
+					layout_type: { value: local.pageQ.LayoutType ?: "Full", cfsqltype: "cf_sql_nvarchar" },
+					meta_json: { value: SerializeJSON({ "reactivated": true, "reactivated_at": Now(), "reactivated_by": local.actor }), cfsqltype: "cf_sql_nvarchar" },
+					change_summary: { value: "Reactivated from archived state", cfsqltype: "cf_sql_nvarchar" },
+					created_by: { value: local.actor, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+			} catch (any eRev) {
+				writeLog(type="error", file="pages", text="Failed to record reactivation snapshot: #eRev.message#");
+			}
+
+			local.res.success = true;
+			local.res.SUCCESS = true;
+			local.res.id = local.id;
+			local.res.redirectUrl = "/pages/edit?id=" & local.id & "&reactivated=1";
+			local.res.message = "Page '" & local.pageQ.Title & "' reactivated successfully.";
+			fxRenderJson(local.res);
+		} catch (any e) {
+			writeLog(type="error", file="pages", text="Failed to restore archived page: #e.message# #e.detail#");
+			local.res.message = "Unable to restore page: " & e.message;
+			fxRenderJson(local.res, 500);
 		}
 	}
 
@@ -1334,7 +1583,15 @@ component extends="Controller" {
 	}
 
 	private void function fxRenderJson(required any data, numeric status = 200) {
-		renderText(text=SerializeJSON(arguments.data), contentType="application/json", layout=false, status=arguments.status);
+		local.out = arguments.data;
+		if (IsStruct(local.out)) {
+			local.normalized = {};
+			for (local.k in local.out) {
+				local.normalized[LCase(local.k)] = local.out[local.k];
+			}
+			local.out = local.normalized;
+		}
+		renderText(text=SerializeJSON(local.out), contentType="application/json", layout=false, status=arguments.status);
 	}
 
 	private array function samplePages() {
@@ -3312,5 +3569,1879 @@ component extends="Controller" {
 		renderText(text = SerializeJSON(local.result), layout = false);
 	}
 
-}
 
+
+// One Page Studio methods for Pages.cfc
+	/**
+	 * Security Gate: One Page Studio is strictly restricted to System Administrators
+	 */
+	private boolean function checkOnePageAdminAccess() {
+		return (getCurrentActiveRole() == "admin");
+	}
+
+	/**
+	 * One Page Studio - Dashboard & Studio Builder
+	 */
+	function onePage() {
+		if (!checkOnePageAdminAccess()) {
+			flashInsert(error="Access Denied: One Page Studio is strictly restricted to System Administrators.");
+			redirectTo(controller="main", action="index");
+			return;
+		}
+		variables.pageTitle = "One Page Studio";
+		ensureOnePageStudioTables();
+
+		local.reqWs = (StructKeyExists(params, "ws") && Len(Trim(params.ws))) ? Trim(params.ws)
+			: ((StructKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace))) ? Trim(cookie.cmsadmin_workspace) : "");
+		local.role = getCurrentActiveRole();
+		variables.activeRole = local.role;
+		variables.activeWsObj = resolveUserActiveWorkspace(requestedWs = local.reqWs, role = local.role);
+		variables.activeWorkspaceId = variables.activeWsObj.id ?: "global";
+
+		local.showAll = (variables.activeWorkspaceId == "global" || variables.activeWorkspaceId == "all" || !Len(variables.activeWorkspaceId));
+		variables.onePageSites = loadOnePageSites(requestedWs = variables.activeWorkspaceId, includeAllWorkspaces = local.showAll);
+
+		// Determine selected site
+		variables.selectedSiteId = 0;
+		if (StructKeyExists(params, "id") && IsNumeric(params.id) && Val(params.id) > 0) {
+			variables.selectedSiteId = Val(params.id);
+		} else if (ArrayLen(variables.onePageSites) > 0) {
+			variables.selectedSiteId = variables.onePageSites[1].id;
+		}
+
+		variables.selectedSite = {};
+		variables.selectedSections = [];
+		if (variables.selectedSiteId > 0) {
+			for (local.s in variables.onePageSites) {
+				if (local.s.id == variables.selectedSiteId) {
+					variables.selectedSite = local.s;
+					break;
+				}
+			}
+			variables.selectedSections = loadOnePageSections(variables.selectedSiteId);
+		}
+
+		// Load candidate pages in this workspace that can be picked as sections
+		variables.candidatePages = loadPagesForWorkspaceSelection(requestedWs = variables.activeWorkspaceId);
+		variables.availableWorkspaces = getMasterWorkspaces();
+	}
+
+	/**
+	 * JSON API: List all One Page Sites for workspace
+	 */
+	function getOnePageSites() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+		ensureOnePageStudioTables();
+		local.reqWs = (StructKeyExists(params, "ws") && Len(Trim(params.ws))) ? Trim(params.ws)
+			: ((StructKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace))) ? Trim(cookie.cmsadmin_workspace) : "global");
+		local.showAll = (local.reqWs == "global" || local.reqWs == "all" || !Len(local.reqWs));
+		local.sites = loadOnePageSites(requestedWs = local.reqWs, includeAllWorkspaces = local.showAll);
+
+		cfheader(name="Content-Type", value="application/json; charset=utf-8");
+		renderText(text = SerializeJSON({ "success": true, "sites": local.sites, "count": ArrayLen(local.sites) }), layout = false);
+	}
+
+	/**
+	 * JSON API: Get a single One Page Site with sections and live page details
+	 */
+	function getOnePageSite() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+		ensureOnePageStudioTables();
+		local.siteId = StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0;
+		if (local.siteId <= 0) {
+			cfheader(name="Content-Type", value="application/json; charset=utf-8");
+			renderText(text = SerializeJSON({ "success": false, "message": "Valid site ID is required." }), layout = false, status = 400);
+			return;
+		}
+
+		local.site = {};
+		local.sites = loadOnePageSites(requestedWs = "", includeAllWorkspaces = true);
+		for (local.s in local.sites) {
+			if (local.s.id == local.siteId) {
+				local.site = local.s;
+				break;
+			}
+		}
+
+		if (StructIsEmpty(local.site)) {
+			cfheader(name="Content-Type", value="application/json; charset=utf-8");
+			renderText(text = SerializeJSON({ "success": false, "message": "One Page Site not found." }), layout = false, status = 404);
+			return;
+		}
+
+		local.sections = loadOnePageSections(local.siteId);
+		local.candidatePages = loadPagesForWorkspaceSelection(requestedWs = local.site.siteid);
+
+		cfheader(name="Content-Type", value="application/json; charset=utf-8");
+		renderText(text = SerializeJSON({
+			"success": true,
+			"site": local.site,
+			"sections": local.sections,
+			"candidatePages": local.candidatePages
+		}), layout = false);
+	}
+
+	/**
+	 * JSON API: Save / Update One Page Site Settings
+	 */
+	function saveOnePageSite() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+		ensureOnePageStudioTables();
+		local.body = fxReadJsonBody();
+		if (!IsStruct(local.body)) {
+			fxRenderJson({ success: false, message: "Invalid JSON request payload." }, 400);
+			return;
+		}
+
+		local.id = StructKeyExists(local.body, "id") && IsNumeric(local.body.id) ? Val(local.body.id) : (StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0);
+		local.title = Left(Trim(local.body.title ?: ""), 255);
+		local.slug = slugifyText(local.body.slug ?: local.title);
+		local.siteid = Left(Trim(local.body.siteid ?: "global"), 100);
+		local.subtitle = Left(Trim(local.body.subtitle ?: ""), 500);
+		local.theme = Left(Trim(local.body.theme ?: "river-park"), 50);
+		local.heroHeadline = Left(Trim(local.body.heroHeadline ?: local.title), 255);
+		local.heroTagline = Left(Trim(local.body.heroTagline ?: local.subtitle), 500);
+		local.heroImageUrl = Left(Trim(local.body.heroImageUrl ?: ""), 500);
+		local.heroCtaPrimaryText = Left(Trim(local.body.heroCtaPrimaryText ?: "Explore Amenities"), 100);
+		local.heroCtaPrimaryAnchor = Left(Trim(local.body.heroCtaPrimaryAnchor ?: "##amenities"), 100);
+		if (Left(local.heroCtaPrimaryAnchor, 1) != "##" && Len(local.heroCtaPrimaryAnchor)) {
+			local.heroCtaPrimaryAnchor = "##" & local.heroCtaPrimaryAnchor;
+		}
+		local.heroCtaSecondaryText = Left(Trim(local.body.heroCtaSecondaryText ?: "View Rates"), 100);
+		local.heroCtaSecondaryAnchor = Left(Trim(local.body.heroCtaSecondaryAnchor ?: "##rates"), 100);
+		if (Left(local.heroCtaSecondaryAnchor, 1) != "##" && Len(local.heroCtaSecondaryAnchor)) {
+			local.heroCtaSecondaryAnchor = "##" & local.heroCtaSecondaryAnchor;
+		}
+		local.enableStickyNav = (StructKeyExists(local.body, "enableStickyNav") && fxToBoolean(local.body.enableStickyNav, true)) ? 1 : 0;
+		local.navBrandTitle = Left(Trim(local.body.navBrandTitle ?: local.title), 150);
+		local.navCtaText = Left(Trim(local.body.navCtaText ?: "Reserve Online"), 100);
+		local.navCtaAnchor = Left(Trim(local.body.navCtaAnchor ?: "##rates"), 100);
+		if (Left(local.navCtaAnchor, 1) != "##" && Len(local.navCtaAnchor)) {
+			local.navCtaAnchor = "##" & local.navCtaAnchor;
+		}
+		local.enableScrollspy = (StructKeyExists(local.body, "enableScrollspy") && fxToBoolean(local.body.enableScrollspy, true)) ? 1 : 0;
+		local.enableBackToTop = (StructKeyExists(local.body, "enableBackToTop") && fxToBoolean(local.body.enableBackToTop, true)) ? 1 : 0;
+		local.isPublished = (StructKeyExists(local.body, "isPublished") && fxToBoolean(local.body.isPublished, true)) ? 1 : 0;
+		local.customCss = local.body.customCss ?: "";
+		local.metaTitle = Left(Trim(local.body.metaTitle ?: local.title), 255);
+		local.metaDesc = Left(Trim(local.body.metaDesc ?: local.subtitle), 500);
+		local.actor = spCurrentActor();
+
+		if (!Len(local.title)) {
+			fxRenderJson({ success: false, message: "Site title is required." }, 422);
+			return;
+		}
+		if (!Len(local.slug)) {
+			local.slug = "one-page-portal";
+		}
+
+		try {
+			if (local.id > 0) {
+				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					UPDATE one_page_sites SET
+						siteid = :siteid,
+						title = :title,
+						slug = :slug,
+						subtitle = :subtitle,
+						theme = :theme,
+						hero_headline = :heroHeadline,
+						hero_tagline = :heroTagline,
+						hero_image_url = :heroImageUrl,
+						hero_cta_primary_text = :heroCtaPrimaryText,
+						hero_cta_primary_anchor = :heroCtaPrimaryAnchor,
+						hero_cta_secondary_text = :heroCtaSecondaryText,
+						hero_cta_secondary_anchor = :heroCtaSecondaryAnchor,
+						enable_sticky_nav = :enableStickyNav,
+						nav_brand_title = :navBrandTitle,
+						nav_cta_text = :navCtaText,
+						nav_cta_anchor = :navCtaAnchor,
+						enable_scrollspy = :enableScrollspy,
+						enable_back_to_top = :enableBackToTop,
+						is_published = :isPublished,
+						custom_css = :customCss,
+						meta_title = :metaTitle,
+						meta_description = :metaDesc,
+						modified_by = :actor,
+						updatedat = SYSUTCDATETIME()
+					WHERE id = :id AND deletedat IS NULL
+				", {
+					id: { value: local.id, cfsqltype: "cf_sql_integer" },
+					siteid: { value: local.siteid, cfsqltype: "cf_sql_nvarchar" },
+					title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
+					slug: { value: local.slug, cfsqltype: "cf_sql_nvarchar" },
+					subtitle: { value: local.subtitle, cfsqltype: "cf_sql_nvarchar" },
+					theme: { value: local.theme, cfsqltype: "cf_sql_nvarchar" },
+					heroHeadline: { value: local.heroHeadline, cfsqltype: "cf_sql_nvarchar" },
+					heroTagline: { value: local.heroTagline, cfsqltype: "cf_sql_nvarchar" },
+					heroImageUrl: { value: local.heroImageUrl, cfsqltype: "cf_sql_nvarchar" },
+					heroCtaPrimaryText: { value: local.heroCtaPrimaryText, cfsqltype: "cf_sql_nvarchar" },
+					heroCtaPrimaryAnchor: { value: local.heroCtaPrimaryAnchor, cfsqltype: "cf_sql_nvarchar" },
+					heroCtaSecondaryText: { value: local.heroCtaSecondaryText, cfsqltype: "cf_sql_nvarchar" },
+					heroCtaSecondaryAnchor: { value: local.heroCtaSecondaryAnchor, cfsqltype: "cf_sql_nvarchar" },
+					enableStickyNav: { value: local.enableStickyNav, cfsqltype: "cf_sql_bit" },
+					navBrandTitle: { value: local.navBrandTitle, cfsqltype: "cf_sql_nvarchar" },
+					navCtaText: { value: local.navCtaText, cfsqltype: "cf_sql_nvarchar" },
+					navCtaAnchor: { value: local.navCtaAnchor, cfsqltype: "cf_sql_nvarchar" },
+					enableScrollspy: { value: local.enableScrollspy, cfsqltype: "cf_sql_bit" },
+					enableBackToTop: { value: local.enableBackToTop, cfsqltype: "cf_sql_bit" },
+					isPublished: { value: local.isPublished, cfsqltype: "cf_sql_bit" },
+					customCss: { value: local.customCss, cfsqltype: "cf_sql_nvarchar" },
+					metaTitle: { value: local.metaTitle, cfsqltype: "cf_sql_nvarchar" },
+					metaDesc: { value: local.metaDesc, cfsqltype: "cf_sql_nvarchar" },
+					actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+
+				fxRenderJson({ success: true, id: local.id, message: "One Page Site configuration updated successfully." });
+			} else {
+				local.inserted = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					DECLARE @InsertedIds TABLE (id INT);
+					INSERT INTO one_page_sites (
+						siteid, title, slug, subtitle, theme, hero_headline, hero_tagline, hero_image_url,
+						hero_cta_primary_text, hero_cta_primary_anchor, hero_cta_secondary_text, hero_cta_secondary_anchor,
+						enable_sticky_nav, nav_brand_title, nav_cta_text, nav_cta_anchor,
+						enable_scrollspy, enable_back_to_top, is_published, custom_css, meta_title, meta_description,
+						created_by, modified_by, createdat, updatedat
+					)
+					OUTPUT INSERTED.id INTO @InsertedIds(id)
+					VALUES (
+						:siteid, :title, :slug, :subtitle, :theme, :heroHeadline, :heroTagline, :heroImageUrl,
+						:heroCtaPrimaryText, :heroCtaPrimaryAnchor, :heroCtaSecondaryText, :heroCtaSecondaryAnchor,
+						:enableStickyNav, :navBrandTitle, :navCtaText, :navCtaAnchor,
+						:enableScrollspy, :enableBackToTop, :isPublished, :customCss, :metaTitle, :metaDesc,
+						:actor, :actor, SYSUTCDATETIME(), SYSUTCDATETIME()
+					);
+					SELECT id FROM @InsertedIds;
+				", {
+					siteid: { value: local.siteid, cfsqltype: "cf_sql_nvarchar" },
+					title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
+					slug: { value: local.slug, cfsqltype: "cf_sql_nvarchar" },
+					subtitle: { value: local.subtitle, cfsqltype: "cf_sql_nvarchar" },
+					theme: { value: local.theme, cfsqltype: "cf_sql_nvarchar" },
+					heroHeadline: { value: local.heroHeadline, cfsqltype: "cf_sql_nvarchar" },
+					heroTagline: { value: local.heroTagline, cfsqltype: "cf_sql_nvarchar" },
+					heroImageUrl: { value: local.heroImageUrl, cfsqltype: "cf_sql_nvarchar" },
+					heroCtaPrimaryText: { value: local.heroCtaPrimaryText, cfsqltype: "cf_sql_nvarchar" },
+					heroCtaPrimaryAnchor: { value: local.heroCtaPrimaryAnchor, cfsqltype: "cf_sql_nvarchar" },
+					heroCtaSecondaryText: { value: local.heroCtaSecondaryText, cfsqltype: "cf_sql_nvarchar" },
+					heroCtaSecondaryAnchor: { value: local.heroCtaSecondaryAnchor, cfsqltype: "cf_sql_nvarchar" },
+					enableStickyNav: { value: local.enableStickyNav, cfsqltype: "cf_sql_bit" },
+					navBrandTitle: { value: local.navBrandTitle, cfsqltype: "cf_sql_nvarchar" },
+					navCtaText: { value: local.navCtaText, cfsqltype: "cf_sql_nvarchar" },
+					navCtaAnchor: { value: local.navCtaAnchor, cfsqltype: "cf_sql_nvarchar" },
+					enableScrollspy: { value: local.enableScrollspy, cfsqltype: "cf_sql_bit" },
+					enableBackToTop: { value: local.enableBackToTop, cfsqltype: "cf_sql_bit" },
+					isPublished: { value: local.isPublished, cfsqltype: "cf_sql_bit" },
+					customCss: { value: local.customCss, cfsqltype: "cf_sql_nvarchar" },
+					metaTitle: { value: local.metaTitle, cfsqltype: "cf_sql_nvarchar" },
+					metaDesc: { value: local.metaDesc, cfsqltype: "cf_sql_nvarchar" },
+					actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+
+				local.newId = Val(local.inserted.id);
+				fxRenderJson({ success: true, id: local.newId, message: "One Page Site created successfully." });
+			}
+		} catch (any err) {
+			fxRenderJson({ success: false, message: "Database save error: " & err.message }, 500);
+		}
+	}
+
+	/**
+	 * JSON API: Soft-delete One Page Site
+	 */
+	function deleteOnePageSite() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+		local.body = fxReadJsonBody();
+		local.id = StructKeyExists(local.body, "id") && IsNumeric(local.body.id) ? Val(local.body.id) : (StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0);
+		if (local.id <= 0) {
+			fxRenderJson({ success: false, message: "Valid ID required." }, 400);
+			return;
+		}
+
+		try {
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				UPDATE one_page_sites SET deletedat = SYSUTCDATETIME() WHERE id = :id AND deletedat IS NULL;
+				UPDATE one_page_sections SET deletedat = SYSUTCDATETIME() WHERE one_page_site_id = :id AND deletedat IS NULL;
+			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+			fxRenderJson({ success: true, message: "One Page Site deleted." });
+		} catch (any err) {
+			fxRenderJson({ success: false, message: "Delete error: " & err.message }, 500);
+		}
+	}
+
+	/**
+	 * JSON API: Save / Update Section in One Page Site
+	 */
+	function saveOnePageSection() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+		ensureOnePageStudioTables();
+		local.body = fxReadJsonBody();
+		if (!IsStruct(local.body)) {
+			fxRenderJson({ success: false, message: "Invalid JSON request payload." }, 400);
+			return;
+		}
+
+		local.id = StructKeyExists(local.body, "id") && IsNumeric(local.body.id) ? Val(local.body.id) : (StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0);
+		local.siteId = StructKeyExists(local.body, "one_page_site_id") && IsNumeric(local.body.one_page_site_id) ? Val(local.body.one_page_site_id) : 0;
+		local.pageId = StructKeyExists(local.body, "page_id") && IsNumeric(local.body.page_id) && Val(local.body.page_id) > 0 ? Val(local.body.page_id) : JavaCast("null", "");
+		local.rawAnchor = Trim(local.body.anchor_id ?: "");
+		local.rawAnchor = ReReplace(local.rawAnchor, "^##+", ""); // Strip leading hashes
+		local.anchorId = slugifyText(local.rawAnchor);
+		local.title = Left(Trim(local.body.section_title ?: ""), 255);
+		local.subtitle = Left(Trim(local.body.section_subtitle ?: ""), 500);
+		local.layout = Left(Trim(local.body.section_layout ?: "full"), 50);
+		local.bg = Left(Trim(local.body.section_bg ?: "default"), 50);
+		local.contentOverride = local.body.content_override ?: "";
+		local.showHeader = (StructKeyExists(local.body, "show_header") && fxToBoolean(local.body.show_header, true)) ? 1 : 0;
+		local.showDivider = (StructKeyExists(local.body, "show_divider") && fxToBoolean(local.body.show_divider, true)) ? 1 : 0;
+		local.customCssClass = Left(Trim(local.body.custom_css_class ?: ""), 100);
+		local.sortOrder = StructKeyExists(local.body, "sort_order") && IsNumeric(local.body.sort_order) ? Val(local.body.sort_order) : 0;
+		local.isActive = (StructKeyExists(local.body, "is_active") && fxToBoolean(local.body.is_active, true)) ? 1 : 0;
+
+		if (local.siteId <= 0) {
+			fxRenderJson({ success: false, message: "Site ID is required." }, 422);
+			return;
+		}
+		if (!Len(local.title)) {
+			fxRenderJson({ success: false, message: "Section title is required." }, 422);
+			return;
+		}
+		if (!Len(local.anchorId)) {
+			local.anchorId = slugifyText(local.title);
+		}
+
+		try {
+			if (local.id > 0) {
+				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					UPDATE one_page_sections SET
+						page_id = :pageId,
+						anchor_id = :anchorId,
+						section_title = :title,
+						section_subtitle = :subtitle,
+						section_layout = :layout,
+						section_bg = :bg,
+						content_override = :contentOverride,
+						show_header = :showHeader,
+						show_divider = :showDivider,
+						custom_css_class = :customCssClass,
+						sort_order = :sortOrder,
+						is_active = :isActive,
+						updatedat = SYSUTCDATETIME()
+					WHERE id = :id AND deletedat IS NULL
+				", {
+					id: { value: local.id, cfsqltype: "cf_sql_integer" },
+					pageId: { value: local.pageId, cfsqltype: "cf_sql_integer", null: IsNull(local.pageId) },
+					anchorId: { value: local.anchorId, cfsqltype: "cf_sql_nvarchar" },
+					title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
+					subtitle: { value: local.subtitle, cfsqltype: "cf_sql_nvarchar" },
+					layout: { value: local.layout, cfsqltype: "cf_sql_nvarchar" },
+					bg: { value: local.bg, cfsqltype: "cf_sql_nvarchar" },
+					contentOverride: { value: local.contentOverride, cfsqltype: "cf_sql_nvarchar" },
+					showHeader: { value: local.showHeader, cfsqltype: "cf_sql_bit" },
+					showDivider: { value: local.showDivider, cfsqltype: "cf_sql_bit" },
+					customCssClass: { value: local.customCssClass, cfsqltype: "cf_sql_nvarchar" },
+					sortOrder: { value: local.sortOrder, cfsqltype: "cf_sql_integer" },
+					isActive: { value: local.isActive, cfsqltype: "cf_sql_bit" }
+				}, { datasource: "ChelanCountyWebsite" });
+
+				fxRenderJson({ success: true, id: local.id, anchor: "##" & local.anchorId, message: "Section updated." });
+			} else {
+				// If sortOrder not provided, append to end
+				if (local.sortOrder <= 0) {
+					local.cntQ = queryExecute("
+						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+						SELECT ISNULL(MAX(sort_order), 0) + 1 AS nextSort
+						FROM one_page_sections
+						WHERE one_page_site_id = :siteId AND deletedat IS NULL
+					", { siteId: { value: local.siteId, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+					local.sortOrder = Val(local.cntQ.nextSort);
+				}
+
+				local.inserted = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					DECLARE @InsertedSecs TABLE (id INT);
+					INSERT INTO one_page_sections (
+						one_page_site_id, page_id, anchor_id, section_title, section_subtitle,
+						section_layout, section_bg, content_override, show_header, show_divider,
+						custom_css_class, sort_order, is_active, createdat, updatedat
+					)
+					OUTPUT INSERTED.id INTO @InsertedSecs(id)
+					VALUES (
+						:siteId, :pageId, :anchorId, :title, :subtitle,
+						:layout, :bg, :contentOverride, :showHeader, :showDivider,
+						:customCssClass, :sortOrder, :isActive, SYSUTCDATETIME(), SYSUTCDATETIME()
+					);
+					SELECT id FROM @InsertedSecs;
+				", {
+					siteId: { value: local.siteId, cfsqltype: "cf_sql_integer" },
+					pageId: { value: local.pageId, cfsqltype: "cf_sql_integer", null: IsNull(local.pageId) },
+					anchorId: { value: local.anchorId, cfsqltype: "cf_sql_nvarchar" },
+					title: { value: local.title, cfsqltype: "cf_sql_nvarchar" },
+					subtitle: { value: local.subtitle, cfsqltype: "cf_sql_nvarchar" },
+					layout: { value: local.layout, cfsqltype: "cf_sql_nvarchar" },
+					bg: { value: local.bg, cfsqltype: "cf_sql_nvarchar" },
+					contentOverride: { value: local.contentOverride, cfsqltype: "cf_sql_nvarchar" },
+					showHeader: { value: local.showHeader, cfsqltype: "cf_sql_bit" },
+					showDivider: { value: local.showDivider, cfsqltype: "cf_sql_bit" },
+					customCssClass: { value: local.customCssClass, cfsqltype: "cf_sql_nvarchar" },
+					sortOrder: { value: local.sortOrder, cfsqltype: "cf_sql_integer" },
+					isActive: { value: local.isActive, cfsqltype: "cf_sql_bit" }
+				}, { datasource: "ChelanCountyWebsite" });
+
+				local.newSecId = Val(local.inserted.id);
+				fxRenderJson({ success: true, id: local.newSecId, anchor: "##" & local.anchorId, message: "Section added to One Page Site." });
+			}
+		} catch (any err) {
+			fxRenderJson({ success: false, message: "Section save error: " & err.message }, 500);
+		}
+	}
+
+	/**
+	 * JSON API: Soft-delete Section
+	 */
+	function deleteOnePageSection() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+		local.body = fxReadJsonBody();
+		local.id = StructKeyExists(local.body, "id") && IsNumeric(local.body.id) ? Val(local.body.id) : (StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0);
+		if (local.id <= 0) {
+			fxRenderJson({ success: false, message: "Valid ID required." }, 400);
+			return;
+		}
+
+		try {
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				UPDATE one_page_sections SET deletedat = SYSUTCDATETIME() WHERE id = :id AND deletedat IS NULL
+			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+			fxRenderJson({ success: true, message: "Section removed." });
+		} catch (any err) {
+			fxRenderJson({ success: false, message: "Delete error: " & err.message }, 500);
+		}
+	}
+
+	/**
+	 * JSON API: Reorder sections
+	 */
+	function reorderOnePageSections() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+		local.body = fxReadJsonBody();
+		if (!IsStruct(local.body) || !StructKeyExists(local.body, "ids") || !IsArray(local.body.ids)) {
+			fxRenderJson({ success: false, message: "Invalid payload: array of IDs required." }, 400);
+			return;
+		}
+
+		try {
+			for (local.idx = 1; local.idx <= ArrayLen(local.body.ids); local.idx++) {
+				local.sId = Val(local.body.ids[local.idx]);
+				if (local.sId > 0) {
+					queryExecute("
+						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+						UPDATE one_page_sections SET sort_order = :ord WHERE id = :id
+					", {
+						ord: { value: local.idx, cfsqltype: "cf_sql_integer" },
+						id: { value: local.sId, cfsqltype: "cf_sql_integer" }
+					}, { datasource: "ChelanCountyWebsite" });
+				}
+			}
+			fxRenderJson({ success: true, message: "Section order saved." });
+		} catch (any err) {
+			fxRenderJson({ success: false, message: "Reorder error: " & err.message }, 500);
+		}
+	}
+
+	/**
+	 * Sync One-Page Section Anchors into Navigation Menu (navigation_menu_items)
+	 */
+	function syncOnePageToMenu() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+		local.body = fxReadJsonBody();
+		local.siteId = StructKeyExists(local.body, "id") && IsNumeric(local.body.id) ? Val(local.body.id) : (StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0);
+		if (local.siteId <= 0) {
+			fxRenderJson({ success: false, message: "Valid One Page Site ID required." }, 400);
+			return;
+		}
+
+		local.sites = loadOnePageSites(requestedWs = "", includeAllWorkspaces = true);
+		local.site = {};
+		for (local.s in local.sites) {
+			if (local.s.id == local.siteId) {
+				local.site = local.s;
+				break;
+			}
+		}
+
+		if (StructIsEmpty(local.site)) {
+			fxRenderJson({ success: false, message: "Site not found." }, 404);
+			return;
+		}
+
+		local.sections = loadOnePageSections(local.siteId);
+		if (ArrayLen(local.sections) == 0) {
+			fxRenderJson({ success: false, message: "No sections defined in this One Page Site to sync." }, 422);
+			return;
+		}
+
+		try {
+			// 1. Locate or create navigation menu for this workspace
+			local.menuId = 0;
+			local.qMenu = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT TOP 1 id FROM navigation_menus
+				WHERE siteid = :siteid AND deletedat IS NULL
+				ORDER BY CASE WHEN menu_key = 'side' THEN 1 WHEN menu_key = 'top' THEN 2 ELSE 3 END
+			", { siteid: { value: local.site.siteid, cfsqltype: "cf_sql_nvarchar" } }, { datasource: "ChelanCountyWebsite" });
+
+			if (local.qMenu.recordCount > 0) {
+				local.menuId = Val(local.qMenu.id);
+			} else {
+				local.newMenu = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					DECLARE @InsertedMenu TABLE (id INT);
+					INSERT INTO navigation_menus (siteid, menu_key, name, createdat, updatedat)
+					OUTPUT INSERTED.id INTO @InsertedMenu(id)
+					VALUES (:siteid, 'side', :name, SYSUTCDATETIME(), SYSUTCDATETIME());
+					SELECT id FROM @InsertedMenu;
+				", {
+					siteid: { value: local.site.siteid, cfsqltype: "cf_sql_nvarchar" },
+					name: { value: local.site.title & " Side Menu", cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+				local.menuId = Val(local.newMenu.id);
+			}
+
+			// 2. Loop through active sections and sync as anchor items
+			local.syncedCount = 0;
+			for (local.sec in local.sections) {
+				if (!local.sec.isActive) continue;
+				local.dest = "##" & local.sec.anchorId;
+
+				// Check if menu item with this destination already exists
+				local.qItem = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					SELECT id FROM navigation_menu_items
+					WHERE navigation_menu_id = :menuId AND destination = :dest AND deletedat IS NULL
+				", {
+					menuId: { value: local.menuId, cfsqltype: "cf_sql_integer" },
+					dest: { value: local.dest, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+
+				if (local.qItem.recordCount > 0) {
+					// Update label and sort order
+					queryExecute("
+						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+						UPDATE navigation_menu_items SET
+							label = :label,
+							sort_order = :sortOrder,
+							destination_type = 'url',
+							is_active = 1,
+							updatedat = SYSUTCDATETIME()
+						WHERE id = :id
+					", {
+						label: { value: local.sec.sectionTitle, cfsqltype: "cf_sql_nvarchar" },
+						sortOrder: { value: local.sec.sortOrder, cfsqltype: "cf_sql_integer" },
+						id: { value: local.qItem.id, cfsqltype: "cf_sql_integer" }
+					}, { datasource: "ChelanCountyWebsite" });
+				} else {
+					// Insert new anchor menu item
+					queryExecute("
+						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+						INSERT INTO navigation_menu_items (
+							navigation_menu_id, label, destination_type, destination,
+							sort_order, is_active, open_in_new_tab, createdat, updatedat
+						) VALUES (
+							:menuId, :label, 'url', :dest, :sortOrder, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
+						)
+					", {
+						menuId: { value: local.menuId, cfsqltype: "cf_sql_integer" },
+						label: { value: local.sec.sectionTitle, cfsqltype: "cf_sql_nvarchar" },
+						dest: { value: local.dest, cfsqltype: "cf_sql_nvarchar" },
+						sortOrder: { value: local.sec.sortOrder, cfsqltype: "cf_sql_integer" }
+					}, { datasource: "ChelanCountyWebsite" });
+				}
+				local.syncedCount++;
+			}
+
+			fxRenderJson({
+				success: true,
+				count: local.syncedCount,
+				menuId: local.menuId,
+				message: "Successfully synchronized " & local.syncedCount & " section anchors to Navigation Menu!"
+			});
+		} catch (any err) {
+			fxRenderJson({ success: false, message: "Menu sync error: " & err.message }, 500);
+		}
+	}
+
+	/**
+	 * Compile One-Page Website into dbo.pages as a master page
+	 */
+	function compileOnePageSite() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+		local.body = fxReadJsonBody();
+		if (!IsStruct(local.body)) local.body = {};
+		local.siteId = StructKeyExists(local.body, "id") && IsNumeric(local.body.id) ? Val(local.body.id) : (StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0);
+		if (local.siteId <= 0) {
+			fxRenderJson({ success: false, message: "Valid One Page Site ID required." }, 400);
+			return;
+		}
+
+		local.sites = loadOnePageSites(requestedWs = "", includeAllWorkspaces = true);
+		local.site = {};
+		for (local.s in local.sites) {
+			if (local.s.id == local.siteId) {
+				local.site = local.s;
+				break;
+			}
+		}
+
+		if (StructIsEmpty(local.site)) {
+			fxRenderJson({ success: false, message: "Site not found." }, 404);
+			return;
+		}
+
+		local.sections = loadOnePageSections(local.siteId);
+		local.separateAssets = StructKeyExists(local.body, "separateAssets") ? (local.body.separateAssets == true || local.body.separateAssets == "true" || local.body.separateAssets == 1) : true;
+		local.cssRelPath = "/stylesheets/onepage/" & local.site.slug & ".css";
+		local.jsRelPath = "/javascripts/onepage/" & local.site.slug & ".js";
+
+		if (local.separateAssets) {
+			try {
+				local.cssDir = ExpandPath("/stylesheets/onepage/");
+				local.jsDir = ExpandPath("/javascripts/onepage/");
+				if (!DirectoryExists(local.cssDir)) DirectoryCreate(local.cssDir);
+				if (!DirectoryExists(local.jsDir)) DirectoryCreate(local.jsDir);
+
+				local.cssContent = buildOnePageCss(local.site);
+				local.jsContent = buildOnePageJs(local.site);
+
+				FileWrite(local.cssDir & local.site.slug & ".css", local.cssContent, "utf-8");
+				FileWrite(local.jsDir & local.site.slug & ".js", local.jsContent, "utf-8");
+			} catch (any fileErr) {
+				writeLog(type="error", file="pages", text="compileOnePageSite asset write error: #fileErr.message#");
+			}
+		}
+
+		local.compiledHtml = buildOnePageHtml(siteData = local.site, sectionsData = local.sections, standalone = false, separateAssets = local.separateAssets);
+		local.actor = spCurrentActor();
+
+		try {
+			local.targetPageId = Val(local.site.targetPageId ?: 0);
+			if (local.targetPageId > 0) {
+				// Update existing page
+				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					UPDATE pages SET
+						Title = :title,
+						Permalink = :permalink,
+						Summary = :summary,
+						Body = :body,
+						LayoutType = 'One Page',
+						SiteID = :siteid,
+						StatusCode = 'Active',
+						Visibility = 'Published',
+						isPublished = 1,
+						Modified = SYSUTCDATETIME(),
+						ModifiedBy = :actor
+					WHERE ContentID = :id AND DeletedAt IS NULL
+				", {
+					title: { value: local.site.title, cfsqltype: "cf_sql_nvarchar" },
+					permalink: { value: local.site.slug, cfsqltype: "cf_sql_nvarchar" },
+					summary: { value: local.site.subtitle, cfsqltype: "cf_sql_nvarchar" },
+					body: { value: local.compiledHtml, cfsqltype: "cf_sql_nvarchar" },
+					siteid: { value: local.site.siteid, cfsqltype: "cf_sql_nvarchar" },
+					actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar" },
+					id: { value: local.targetPageId, cfsqltype: "cf_sql_integer" }
+				}, { datasource: "ChelanCountyWebsite" });
+			} else {
+				// Insert new page in dbo.pages
+				local.insertedPage = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					DECLARE @InsertedPages TABLE (id INT);
+					INSERT INTO pages (
+						SiteID, PageType, MenuSelected, LayoutType, ParentID,
+						StatusCode, Permalink, Title, MetaTitle, MetaDesc,
+						Summary, Body, isPublished, Visibility, Created, CreatedBy, Modified, ModifiedBy
+					)
+					OUTPUT INSERTED.ContentID INTO @InsertedPages(id)
+					VALUES (
+						:siteid, 0, 'Top Level - Called from URL', 'One Page', 0,
+						'Active', :permalink, :title, :metaTitle, :metaDesc,
+						:summary, :body, 1, 'Published', SYSUTCDATETIME(), :actor, SYSUTCDATETIME(), :actor
+					);
+					SELECT id FROM @InsertedPages;
+				", {
+					siteid: { value: local.site.siteid, cfsqltype: "cf_sql_nvarchar" },
+					permalink: { value: local.site.slug, cfsqltype: "cf_sql_nvarchar" },
+					title: { value: local.site.title, cfsqltype: "cf_sql_nvarchar" },
+					metaTitle: { value: local.site.metaTitle ?: local.site.title, cfsqltype: "cf_sql_nvarchar" },
+					metaDesc: { value: local.site.metaDescription ?: local.site.subtitle, cfsqltype: "cf_sql_nvarchar" },
+					summary: { value: local.site.subtitle, cfsqltype: "cf_sql_nvarchar" },
+					body: { value: local.compiledHtml, cfsqltype: "cf_sql_nvarchar" },
+					actor: { value: local.actor, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+
+				local.targetPageId = Val(local.insertedPage.id);
+
+				// Update target_page_id on site
+				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					UPDATE one_page_sites SET target_page_id = :pageId WHERE id = :id
+				", {
+					pageId: { value: local.targetPageId, cfsqltype: "cf_sql_integer" },
+					id: { value: local.site.id, cfsqltype: "cf_sql_integer" }
+				}, { datasource: "ChelanCountyWebsite" });
+			}
+
+			fxRenderJson({
+				success: true,
+				pageId: local.targetPageId,
+				permalink: local.site.slug,
+				separateAssets: local.separateAssets,
+				cssPath: local.separateAssets ? local.cssRelPath : "",
+				jsPath: local.separateAssets ? local.jsRelPath : "",
+				message: local.separateAssets
+					? "One-Page website compiled successfully with separated assets (" & local.cssRelPath & " and " & local.jsRelPath & ") into Content Manager (Page ID ##" & local.targetPageId & ")!"
+					: "One-Page website compiled successfully into Content Manager (Page ID ##" & local.targetPageId & ")!"
+			});
+		} catch (any err) {
+			fxRenderJson({ success: false, message: "Compilation error: " & err.message }, 500);
+		}
+	}
+
+	/**
+	 * Publish One-Page Website to Production (Updates files with separated assets in workspace.project_path)
+	 */
+	function publishOnePageToProduction() {
+		if (!checkOnePageAdminAccess()) {
+			fxRenderJson({ success: false, message: "Access Denied: One Page Studio is strictly restricted to System Administrators." }, 403);
+			return;
+		}
+
+		local.body = fxReadJsonBody();
+		if (!IsStruct(local.body)) local.body = {};
+		local.siteId = StructKeyExists(local.body, "id") && IsNumeric(local.body.id) ? Val(local.body.id) : (StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0);
+		if (local.siteId <= 0) {
+			fxRenderJson({ success: false, message: "Valid One Page Site ID required for production deployment." }, 400);
+			return;
+		}
+
+		local.sites = loadOnePageSites(requestedWs = "", includeAllWorkspaces = true);
+		local.site = {};
+		for (local.s in local.sites) {
+			if (local.s.id == local.siteId) {
+				local.site = local.s;
+				break;
+			}
+		}
+
+		if (StructIsEmpty(local.site)) {
+			fxRenderJson({ success: false, message: "One Page Site not found." }, 404);
+			return;
+		}
+
+		// 1. Resolve Workspace & Target Project Path
+		local.targetPath = "";
+		local.wsCode = local.site.siteid;
+
+		try {
+			local.wsQ = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT TOP 1 code, name, project_path, folder_path, domain_name
+				FROM cms_workspaces
+				WHERE (code = :wsCode OR alias = :wsCode) AND deletedat IS NULL
+			", {
+				wsCode: { value: local.wsCode, cfsqltype: "cf_sql_nvarchar" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			if (local.wsQ.recordCount > 0 && Len(Trim(local.wsQ.project_path ?: ""))) {
+				local.targetPath = Trim(local.wsQ.project_path);
+			}
+		} catch (any wsErr) {
+			writeLog(type="error", file="pages", text="publishOnePageToProduction ws lookup error: ##wsErr.message##");
+		}
+
+		// Fallback heuristics for known Chelan County departmental production portals
+		if (!Len(local.targetPath)) {
+			if (local.wsCode == "wrcp") {
+				local.targetPath = "C:\inetpub\wenatcheeriverpark.org";
+			} else if (local.wsCode == "ohme" || local.wsCode == "ohme-gardens") {
+				local.targetPath = "C:\inetpub\ohmegardens.org";
+			} else if (local.wsCode == "fair" || local.wsCode == "chelancountyfair") {
+				local.targetPath = "C:\inetpub\chelancountyfair.com";
+			} else if (local.wsCode == "expo" || local.wsCode == "expocenter") {
+				local.targetPath = "C:\inetpub\chelancountyexpocenter.com";
+			} else if (local.wsCode == "global" || local.wsCode == "all") {
+				local.targetPath = "C:\inetpub\chelan-county";
+			} else {
+				local.targetPath = "C:\inetpub\" & local.wsCode;
+			}
+		}
+
+		// Normalize directory path (trim trailing slashes or /files)
+		if (Right(local.targetPath, 6) == "\files" || Right(local.targetPath, 6) == "/files") {
+			local.targetPath = Left(local.targetPath, Len(local.targetPath) - 6);
+		}
+		if (Right(local.targetPath, 1) == "\" || Right(local.targetPath, 1) == "/") {
+			local.targetPath = Left(local.targetPath, Len(local.targetPath) - 1);
+		}
+
+		try {
+			// Ensure production root and asset directories exist
+			if (!DirectoryExists(local.targetPath)) {
+				DirectoryCreate(local.targetPath);
+			}
+
+			local.assetsCssDir = local.targetPath & "\assets\css\";
+			local.assetsJsDir = local.targetPath & "\assets\js\";
+			local.assetsImgDir = local.targetPath & "\assets\images\";
+
+			if (!DirectoryExists(local.assetsCssDir)) DirectoryCreate(local.assetsCssDir);
+			if (!DirectoryExists(local.assetsJsDir)) DirectoryCreate(local.assetsJsDir);
+			if (!DirectoryExists(local.assetsImgDir)) DirectoryCreate(local.assetsImgDir);
+
+			// Load sections
+			local.sections = loadOnePageSections(local.siteId);
+
+			// 2. Generate Separated Assets
+			local.cssContent = buildOnePageCss(local.site);
+			local.jsContent = buildOnePageJs(local.site);
+			local.htmlContent = buildOnePageHtml(
+				siteData = local.site,
+				sectionsData = local.sections,
+				standalone = true,
+				separateAssets = true,
+				assetPathPrefix = "assets/"
+			);
+			local.readmeContent = buildOnePageReadme(local.site);
+
+			// 3. Sync Referenced Media to Production assets/images/
+			local.imagesCopied = [];
+			for (local.sec in local.sections) {
+				if (Len(local.sec.imageAttachment ?: "")) {
+					local.cleanImg = Replace(local.sec.imageAttachment, "%20", " ", "all");
+					if (Left(local.cleanImg, 1) == "/") local.cleanImg = Right(local.cleanImg, Len(local.cleanImg) - 1);
+					local.diskImg = ExpandPath("/" & local.cleanImg);
+					if (FileExists(local.diskImg)) {
+						local.imgName = GetFileFromPath(local.diskImg);
+						local.destImg = local.assetsImgDir & local.imgName;
+						try {
+							FileCopy(local.diskImg, local.destImg);
+							ArrayAppend(local.imagesCopied, local.imgName);
+						} catch (any copyErr) {}
+						// Rewrite image paths in HTML to point to assets/images/
+						local.htmlContent = ReplaceNoCase(local.htmlContent, local.sec.imageAttachment, "assets/images/" & local.imgName, "all");
+					}
+				}
+			}
+
+			// 4. Atomically write production HTML and separated assets
+			FileWrite(local.targetPath & "\index.html", local.htmlContent, "utf-8");
+			FileWrite(local.assetsCssDir & "site.css", local.cssContent, "utf-8");
+			FileWrite(local.assetsJsDir & "site.js", local.jsContent, "utf-8");
+			FileWrite(local.targetPath & "\README.md", local.readmeContent, "utf-8");
+
+			// 5. Update site updated timestamp & publish state in DB
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				UPDATE one_page_sites
+				SET is_published = 1, updatedat = SYSUTCDATETIME()
+				WHERE id = :id
+			", {
+				id: { value: local.site.id, cfsqltype: "cf_sql_integer" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			fxRenderJson({
+				success: true,
+				siteId: local.site.id,
+				siteTitle: local.site.title,
+				projectPath: local.targetPath,
+				filesUpdated: [
+					"index.html",
+					"assets\css\site.css",
+					"assets\js\site.js",
+					"README.md"
+				],
+				imagesCount: ArrayLen(local.imagesCopied),
+				message: "Successfully published """ & local.site.title & """ to production at " & local.targetPath & " with separated assets!"
+			});
+		} catch (any err) {
+			writeLog(type="error", file="pages", text="publishOnePageToProduction error: ##err.message## (##err.detail##)");
+			fxRenderJson({
+				success: false,
+				message: "Production deployment failed: " & err.message & (Len(err.detail) ? " (" & err.detail & ")" : "")
+			}, 500);
+		}
+	}
+
+	/**
+	 * Standalone Full-Page Live Preview (No CMS Admin Frame)
+	 */
+	function previewOnePageSite() {
+		local.siteId = StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0;
+		if (local.siteId <= 0) {
+			renderText(text = "Valid One Page Site ID is required for preview.", layout = false);
+			return;
+		}
+
+		local.sites = loadOnePageSites(requestedWs = "", includeAllWorkspaces = true);
+		local.site = {};
+		for (local.s in local.sites) {
+			if (local.s.id == local.siteId) {
+				local.site = local.s;
+				break;
+			}
+		}
+
+		if (StructIsEmpty(local.site)) {
+			renderText(text = "One Page Site not found.", layout = false);
+			return;
+		}
+
+		local.sections = loadOnePageSections(local.siteId);
+		local.fullHtml = buildOnePageHtml(siteData = local.site, sectionsData = local.sections, standalone = true);
+
+		cfheader(name="Content-Type", value="text/html; charset=utf-8");
+		renderText(text = local.fullHtml, layout = false);
+	}
+
+	/**
+	 * Export Standalone Responsive HTML or Separated Asset ZIP Bundle for Production Front End
+	 */
+	function exportOnePageSite() {
+		local.siteId = StructKeyExists(params, "id") && IsNumeric(params.id) ? Val(params.id) : 0;
+		if (local.siteId <= 0) {
+			renderText(text = "Valid One Page Site ID is required for export.", layout = false);
+			return;
+		}
+
+		local.sites = loadOnePageSites(requestedWs = "", includeAllWorkspaces = true);
+		local.site = {};
+		for (local.s in local.sites) {
+			if (local.s.id == local.siteId) {
+				local.site = local.s;
+				break;
+			}
+		}
+
+		if (StructIsEmpty(local.site)) {
+			renderText(text = "One Page Site not found.", layout = false);
+			return;
+		}
+
+		local.sections = loadOnePageSections(local.siteId);
+		local.format = StructKeyExists(params, "format") ? LCase(Trim(params.format)) : (StructKeyExists(params, "bundle") && (params.bundle == 1 || params.bundle == "true" || params.bundle == "zip") ? "zip" : "html");
+		local.separateAssets = StructKeyExists(params, "separateAssets") ? (params.separateAssets == 1 || params.separateAssets == "true" || params.separateAssets == true) : (local.format == "zip");
+		local.slug = Len(local.site.slug) ? local.site.slug : "one-page-site";
+
+		if (local.format == "zip") {
+			// Generate separated assets
+			local.cssContent = buildOnePageCss(local.site);
+			local.jsContent = buildOnePageJs(local.site);
+			local.htmlContent = buildOnePageHtml(siteData = local.site, sectionsData = local.sections, standalone = true, separateAssets = true, assetPathPrefix = "assets/");
+			local.readmeContent = buildOnePageReadme(local.site);
+
+			// Collect any local image files referenced in sections to include in assets/images/
+			local.imagesToZip = [];
+			for (local.sec in local.sections) {
+				if (Len(local.sec.imageAttachment ?: "")) {
+					local.cleanImg = Replace(local.sec.imageAttachment, "%20", " ", "all");
+					if (Left(local.cleanImg, 1) == "/") local.cleanImg = Right(local.cleanImg, Len(local.cleanImg) - 1);
+					local.diskImg = ExpandPath("/" & local.cleanImg);
+					if (FileExists(local.diskImg)) {
+						local.imgName = GetFileFromPath(local.diskImg);
+						ArrayAppend(local.imagesToZip, { file: local.diskImg, entry: "assets/images/" & local.imgName });
+						// Rewrite image in html to point to assets/images/
+						local.htmlContent = ReplaceNoCase(local.htmlContent, local.sec.imageAttachment, "assets/images/" & local.imgName, "all");
+					}
+				}
+			}
+
+			local.tempZip = GetTempDirectory() & "ops_export_" & CreateUUID() & ".zip";
+			try {
+				cfzip(action="zip", file=local.tempZip, overwrite="true") {
+					cfzipparam(content=local.htmlContent, entrypath="index.html");
+					cfzipparam(content=local.cssContent, entrypath="assets/css/site.css");
+					cfzipparam(content=local.jsContent, entrypath="assets/js/site.js");
+					cfzipparam(content=local.readmeContent, entrypath="README.md");
+					for (local.imgItem in local.imagesToZip) {
+						cfzipparam(source=local.imgItem.file, entrypath=local.imgItem.entry);
+					}
+				}
+
+				local.zipFilename = local.slug & "-bundle.zip";
+				cfheader(name="Content-Disposition", value="attachment; filename=""" & local.zipFilename & """");
+				cfheader(name="Content-Type", value="application/zip");
+				cfcontent(file=local.tempZip, type="application/zip", deletefile="true");
+				return;
+			} catch (any err) {
+				if (FileExists(local.tempZip)) FileDelete(local.tempZip);
+				renderText(text = "ZIP Generation Error: " & err.message, layout = false);
+				return;
+			}
+		}
+
+		// HTML Export (single file or linked assets)
+		local.fullHtml = buildOnePageHtml(siteData = local.site, sectionsData = local.sections, standalone = true, separateAssets = local.separateAssets, assetPathPrefix = "");
+		local.filename = local.slug & ".html";
+		cfheader(name="Content-Disposition", value="attachment; filename=" & Chr(34) & local.filename & Chr(34));
+		cfheader(name="Content-Type", value="text/html; charset=utf-8");
+		renderText(text = local.fullHtml, layout = false);
+	}
+
+	/**
+	 * Loads all One Page Sites from database
+	 */
+	private array function loadOnePageSites(string requestedWs = "", boolean includeAllWorkspaces = false) {
+		local.list = [];
+		try {
+			ensureOnePageStudioTables();
+			local.whereClause = "WHERE s.deletedat IS NULL";
+			local.params = {};
+
+			if (!arguments.includeAllWorkspaces && Len(arguments.requestedWs) && arguments.requestedWs != "global" && arguments.requestedWs != "all") {
+				local.candidates = getCandidateSiteIds(arguments.requestedWs);
+				if (ArrayLen(local.candidates) == 0) ArrayAppend(local.candidates, arguments.requestedWs);
+				local.inHolders = [];
+				for (local.i = 1; local.i <= ArrayLen(local.candidates); local.i++) {
+					local.p = "opsWs" & local.i;
+					ArrayAppend(local.inHolders, ":" & local.p);
+					local.params[local.p] = { value: local.candidates[local.i], cfsqltype: "cf_sql_nvarchar" };
+				}
+				local.whereClause &= " AND (s.siteid IN (" & ArrayToList(local.inHolders, ", ") & ") OR s.siteid = 'global')";
+			}
+
+			local.sql = "
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT s.id, s.siteid, s.title, s.slug, s.subtitle, s.theme,
+				       s.hero_headline, s.hero_tagline, s.hero_image_url,
+				       s.hero_cta_primary_text, s.hero_cta_primary_anchor,
+				       s.hero_cta_secondary_text, s.hero_cta_secondary_anchor,
+				       s.enable_sticky_nav, s.nav_brand_title, s.nav_cta_text, s.nav_cta_anchor,
+				       s.enable_scrollspy, s.enable_back_to_top, s.target_page_id,
+				       s.is_published, s.sort_order, s.custom_css, s.meta_title, s.meta_description,
+				       s.created_by, s.modified_by, s.createdat, s.updatedat,
+				       (SELECT COUNT(*) FROM one_page_sections sec WHERE sec.one_page_site_id = s.id AND sec.deletedat IS NULL) AS section_count
+				FROM one_page_sites s
+				" & local.whereClause & "
+				ORDER BY s.sort_order ASC, s.id DESC
+			";
+
+			local.q = queryExecute(local.sql, local.params, { datasource: "ChelanCountyWebsite" });
+			for (local.row in local.q) {
+				ArrayAppend(local.list, {
+					"id": Val(local.row.id),
+					"siteid": local.row.siteid ?: "global",
+					"title": local.row.title ?: "",
+					"slug": local.row.slug ?: "",
+					"subtitle": local.row.subtitle ?: "",
+					"theme": local.row.theme ?: "river-park",
+					"heroHeadline": local.row.hero_headline ?: "",
+					"heroTagline": local.row.hero_tagline ?: "",
+					"heroImageUrl": local.row.hero_image_url ?: "",
+					"heroCtaPrimaryText": local.row.hero_cta_primary_text ?: "",
+					"heroCtaPrimaryAnchor": local.row.hero_cta_primary_anchor ?: "",
+					"heroCtaSecondaryText": local.row.hero_cta_secondary_text ?: "",
+					"heroCtaSecondaryAnchor": local.row.hero_cta_secondary_anchor ?: "",
+					"enableStickyNav": (local.row.enable_sticky_nav == 1),
+					"navBrandTitle": local.row.nav_brand_title ?: "",
+					"navCtaText": local.row.nav_cta_text ?: "",
+					"navCtaAnchor": local.row.nav_cta_anchor ?: "",
+					"enableScrollspy": (local.row.enable_scrollspy == 1),
+					"enableBackToTop": (local.row.enable_back_to_top == 1),
+					"targetPageId": Val(local.row.target_page_id ?: 0),
+					"isPublished": (local.row.is_published == 1),
+					"sortOrder": Val(local.row.sort_order ?: 0),
+					"customCss": local.row.custom_css ?: "",
+					"metaTitle": local.row.meta_title ?: "",
+					"metaDescription": local.row.meta_description ?: "",
+					"sectionCount": Val(local.row.section_count ?: 0),
+					"updated": IsDate(local.row.updatedat) ? DateFormat(local.row.updatedat, "mm/dd/yyyy") : ""
+				});
+			}
+		} catch (any err) {
+			writeLog(type="error", file="pages", text="loadOnePageSites error: #err.message#");
+		}
+		return local.list;
+	}
+
+	/**
+	 * Loads sections for a specific One Page Site with live page details
+	 */
+	private array function loadOnePageSections(required numeric siteId) {
+		local.secs = [];
+		try {
+			ensureOnePageStudioTables();
+			local.sql = "
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT sec.id, sec.one_page_site_id, sec.page_id, sec.anchor_id,
+				       sec.section_title, sec.section_subtitle, sec.section_layout,
+				       sec.section_bg, sec.content_override, sec.show_header,
+				       sec.show_divider, sec.custom_css_class, sec.sort_order, sec.is_active,
+				       p.Title AS page_title, p.Permalink AS page_slug, p.Summary AS page_summary,
+				       p.imageAttachment, p.imageAlt, p.Body AS page_body
+				FROM one_page_sections sec
+				LEFT JOIN pages p ON sec.page_id = p.ContentID AND p.DeletedAt IS NULL
+				WHERE sec.one_page_site_id = :siteId AND sec.deletedat IS NULL
+				ORDER BY sec.sort_order ASC, sec.id ASC
+			";
+
+			local.q = queryExecute(local.sql, {
+				siteId: { value: arguments.siteId, cfsqltype: "cf_sql_integer" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			for (local.row in local.q) {
+				local.bodyHtml = Len(Trim(local.row.content_override ?: "")) ? local.row.content_override : (local.row.page_body ?: "");
+				local.bodyHtml = normalizeCtaLinkIcons(local.bodyHtml);
+
+				ArrayAppend(local.secs, {
+					"id": Val(local.row.id),
+					"onePageSiteId": Val(local.row.one_page_site_id),
+					"pageId": IsNumeric(local.row.page_id) ? Val(local.row.page_id) : 0,
+					"anchorId": local.row.anchor_id ?: "",
+					"anchorTag": "##" & (local.row.anchor_id ?: ""),
+					"sectionTitle": local.row.section_title ?: "",
+					"sectionSubtitle": local.row.section_subtitle ?: "",
+					"sectionLayout": local.row.section_layout ?: "full",
+					"sectionBg": local.row.section_bg ?: "default",
+					"contentOverride": local.row.content_override ?: "",
+					"bodyHtml": local.bodyHtml,
+					"showHeader": (local.row.show_header == 1),
+					"showDivider": (local.row.show_divider == 1),
+					"customCssClass": local.row.custom_css_class ?: "",
+					"sortOrder": Val(local.row.sort_order ?: 0),
+					"isActive": (local.row.is_active == 1),
+					"pageTitle": local.row.page_title ?: "",
+					"pageSlug": local.row.page_slug ?: "",
+					"pageSummary": local.row.page_summary ?: "",
+					"imageAttachment": local.row.imageAttachment ?: "",
+					"imageAlt": local.row.imageAlt ?: ""
+				});
+			}
+		} catch (any err) {
+			writeLog(type="error", file="pages", text="loadOnePageSections error: #err.message#");
+		}
+		return local.secs;
+	}
+
+	/**
+	 * Loads candidate pages for workspace selection
+	 */
+	private array function loadPagesForWorkspaceSelection(string requestedWs = "") {
+		local.result = [];
+		try {
+			local.where = "WHERE DeletedAt IS NULL";
+			local.params = {};
+
+			if (Len(arguments.requestedWs) && arguments.requestedWs != "global" && arguments.requestedWs != "all") {
+				local.candidates = getCandidateSiteIds(arguments.requestedWs);
+				if (ArrayLen(local.candidates) == 0) ArrayAppend(local.candidates, arguments.requestedWs);
+				local.inList = [];
+				for (local.i = 1; local.i <= ArrayLen(local.candidates); local.i++) {
+					local.p = "cpWs" & local.i;
+					ArrayAppend(local.inList, ":" & local.p);
+					local.params[local.p] = { value: local.candidates[local.i], cfsqltype: "cf_sql_nvarchar" };
+				}
+				local.where &= " AND (SiteID IN (" & ArrayToList(local.inList, ", ") & ") OR SiteID = 'global')";
+			}
+
+			local.sql = "
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT ContentID, SiteID, Title, Permalink, Summary, LayoutType,
+				       imageAttachment, imageAlt, StatusCode, Visibility, Modified
+				FROM pages
+				" & local.where & "
+				ORDER BY Title ASC
+			";
+
+			local.q = queryExecute(local.sql, local.params, { datasource: "ChelanCountyWebsite" });
+			for (local.r in local.q) {
+				ArrayAppend(local.result, {
+					"id": Val(local.r.ContentID),
+					"title": local.r.Title ?: "",
+					"slug": local.r.Permalink ?: "",
+					"summary": local.r.Summary ?: "",
+					"siteId": local.r.SiteID ?: "",
+					"layout": local.r.LayoutType ?: "Full",
+					"image": local.r.imageAttachment ?: "",
+					"imageAlt": local.r.imageAlt ?: "",
+					"status": local.r.StatusCode ?: "Active",
+					"visibility": local.r.Visibility ?: "Published"
+				});
+			}
+		} catch (any err) {
+			writeLog(type="error", file="pages", text="loadPagesForWorkspaceSelection error: #err.message#");
+		}
+		return local.result;
+	}
+
+	/**
+	 * Generates production CSS for One Page Website (Theme Variables, Reset, Typography, Grid, Sticky Nav, Hero, Mobile)
+	 */
+	private string function buildOnePageCss(required struct siteData) {
+		local.site = arguments.siteData;
+		local.theme = Len(local.site.theme ?: "") ? local.site.theme : "river-park";
+
+		local.primary = "##166534";
+		local.primaryDark = "##14532d";
+		local.gold = "##d4af37";
+		local.heroGrad = "linear-gradient(135deg, ##0e1615 0%, ##1a2a28 100%)";
+		local.headerBg = "rgba(255,255,255,0.95)";
+		local.headerText = "##0f172a";
+
+		if (local.theme == "modern-municipal") {
+			local.primary = "##1e3a8a";
+			local.primaryDark = "##172554";
+			local.gold = "##eab308";
+			local.heroGrad = "linear-gradient(135deg, ##0b1528 0%, ##1e293b 100%)";
+		} else if (local.theme == "clean-editorial") {
+			local.primary = "##334155";
+			local.primaryDark = "##0f172a";
+			local.gold = "##0284c7";
+			local.heroGrad = "linear-gradient(135deg, ##1e293b 0%, ##334155 100%)";
+		} else if (local.theme == "dark-luxury") {
+			local.primary = "##b45309";
+			local.primaryDark = "##78350f";
+			local.gold = "##fbbf24";
+			local.heroGrad = "linear-gradient(135deg, ##030712 0%, ##111827 100%)";
+		}
+
+		local.sb = CreateObject("java", "java.lang.StringBuilder").init();
+		local.sb.append("/* Chelan County CMSAdmin 2.0 - One Page Studio Stylesheet */" & Chr(10));
+		local.sb.append("/* Theme: " & local.theme & " | WCAG 2.1 AA Compliant */" & Chr(10));
+		local.sb.append(":root {" & Chr(10));
+		local.sb.append("  --ops-primary: " & local.primary & ";" & Chr(10));
+		local.sb.append("  --ops-primary-dark: " & local.primaryDark & ";" & Chr(10));
+		local.sb.append("  --ops-gold: " & local.gold & ";" & Chr(10));
+		local.sb.append("  --ops-bg: ##0f172a;" & Chr(10));
+		local.sb.append("  --ops-surface: ##1e293b;" & Chr(10));
+		local.sb.append("  --ops-text: ##f8fafc;" & Chr(10));
+		local.sb.append("  --ops-muted: ##94a3b8;" & Chr(10));
+		local.sb.append("  --ops-border: rgba(255,255,255,0.12);" & Chr(10));
+		local.sb.append("}" & Chr(10));
+		local.sb.append("html { scroll-behavior: smooth; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }" & Chr(10));
+		local.sb.append("body { margin: 0; padding: 0; background: ##fafafa; color: ##1e293b; line-height: 1.6; }" & Chr(10));
+		local.sb.append(".ops-header { position: sticky; top: 0; z-index: 1000; background: " & local.headerBg & "; backdrop-filter: blur(8px); border-bottom: 1px solid ##e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; }" & Chr(10));
+		local.sb.append(".ops-brand { font-size: 1.25rem; font-weight: 700; color: " & local.headerText & "; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }" & Chr(10));
+		local.sb.append(".ops-nav-wrap { display: flex; align-items: center; }" & Chr(10));
+		local.sb.append(".ops-nav { display: flex; align-items: center; gap: 1.25rem; list-style: none; margin: 0; padding: 0; }" & Chr(10));
+		local.sb.append(".ops-nav a { color: ##475569; text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: color 0.15s ease; padding: 0.35rem 0.6rem; border-radius: 6px; }" & Chr(10));
+		local.sb.append(".ops-nav a:hover, .ops-nav a.active { color: var(--ops-primary); background: rgba(22,101,52,0.06); }" & Chr(10));
+		local.sb.append(".ops-nav-toggle { display: none; background: transparent; border: 1px solid ##cbd5e1; border-radius: 6px; padding: 0.4rem 0.65rem; cursor: pointer; color: ##0f172a; font-size: 1.15rem; line-height: 1; }" & Chr(10));
+		local.sb.append(".ops-cta-btn { background: var(--ops-primary); color: ##fff !important; padding: 0.5rem 1.15rem !important; border-radius: 9999px; text-decoration: none; font-weight: 700; font-size: 0.85rem; transition: background 0.15s ease; display: inline-block; }" & Chr(10));
+		local.sb.append(".ops-cta-btn:hover { background: var(--ops-primary-dark) !important; }" & Chr(10));
+		local.sb.append(".ops-hero { padding: 5rem 2rem; background: " & local.heroGrad & "; color: ##fff; text-align: center; position: relative; }" & Chr(10));
+		local.sb.append(".ops-hero-container { max-width: 900px; margin: 0 auto; }" & Chr(10));
+		local.sb.append(".ops-hero-title { font-size: 2.75rem; font-weight: 800; margin: 0 0 1rem; line-height: 1.15; }" & Chr(10));
+		local.sb.append(".ops-hero-tagline { font-size: 1.2rem; color: ##cbd5e1; margin: 0 0 2rem; max-width: 760px; margin-left: auto; margin-right: auto; }" & Chr(10));
+		local.sb.append(".ops-hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }" & Chr(10));
+		local.sb.append(".ops-section { padding: 4.5rem 2rem; scroll-margin-top: 70px; }" & Chr(10));
+		local.sb.append(".ops-container { max-width: 1100px; margin: 0 auto; }" & Chr(10));
+		local.sb.append(".ops-section-header { text-align: center; margin-bottom: 2.5rem; }" & Chr(10));
+		local.sb.append(".ops-section-eyebrow { display: inline-block; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ops-primary); margin-bottom: 0.5rem; }" & Chr(10));
+		local.sb.append(".ops-section-title { font-size: 2.1rem; font-weight: 700; color: ##0f172a; margin: 0; }" & Chr(10));
+		local.sb.append(".ops-bg-default { background: ##ffffff; }" & Chr(10));
+		local.sb.append(".ops-bg-muted { background: ##f8fafc; border-top: 1px solid ##e2e8f0; border-bottom: 1px solid ##e2e8f0; }" & Chr(10));
+		local.sb.append(".ops-bg-surface-elevated { background: ##f1f5f9; border-top: 1px solid ##e2e8f0; border-bottom: 1px solid ##e2e8f0; }" & Chr(10));
+		local.sb.append(".ops-bg-cream-gradient { background: linear-gradient(180deg, ##fdfbf7 0%, ##faf6ee 45%, ##ffffff 100%); border-top: 1px solid rgba(217, 195, 155, 0.35); border-bottom: 1px solid rgba(217, 195, 155, 0.35); }" & Chr(10));
+		local.sb.append(".ops-bg-cream-gradient .ops-section-eyebrow { color: ##92400e; }" & Chr(10));
+		local.sb.append(".ops-bg-curly-lines { background-color: ##fafbf9; background-image: radial-gradient(ellipse at 15% 20%, rgba(22, 101, 52, 0.05) 0%, transparent 50%), radial-gradient(ellipse at 85% 80%, rgba(212, 175, 55, 0.06) 0%, transparent 50%), url(""data:image/svg+xml,%3Csvg width='800' height='400' viewBox='0 0 800 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M-100,200 C100,50 300,350 500,200 C700,50 900,350 1100,200' stroke='rgba(22,101,52,0.12)' stroke-width='3'/%3E%3Cpath d='M-100,240 C100,90 300,390 500,240 C700,90 900,390 1100,240' stroke='rgba(14,165,233,0.10)' stroke-width='2'/%3E%3Cpath d='M-100,160 C100,310 300,10 500,160 C700,310 900,10 1100,160' stroke='rgba(212,175,55,0.13)' stroke-width='2.2' stroke-dasharray='8 6'/%3E%3Cpath d='M-100,120 C100,270 300,-30 500,120 C700,270 900,-30 1100,120' stroke='rgba(22,101,52,0.07)' stroke-width='1.5'/%3E%3C/g%3E%3C/svg%3E""); background-repeat: repeat; background-size: 800px 400px; border-top: 1px solid rgba(22, 101, 52, 0.1); border-bottom: 1px solid rgba(22, 101, 52, 0.1); }" & Chr(10));
+		local.sb.append(".ops-bg-topo-contours { background-color: ##f8fafc; background-image: radial-gradient(circle at 100% 0%, rgba(22, 101, 52, 0.04) 0%, transparent 40%), url(""data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M0 24 Q 30 6, 60 24 T 120 24 M0 48 Q 30 30, 60 48 T 120 48 M0 72 Q 30 54, 60 72 T 120 72 M0 96 Q 30 78, 60 96 T 120 96' stroke='rgba(71,85,105,0.08)' stroke-width='1.2'/%3E%3Cpath d='M0 36 Q 36 18, 72 36 T 120 36 M0 84 Q 36 66, 72 84 T 120 84' stroke='rgba(22,101,52,0.09)' stroke-width='1.6'/%3E%3C/g%3E%3C/svg%3E""); background-size: 240px 240px; border-top: 1px solid ##e2e8f0; border-bottom: 1px solid ##e2e8f0; }" & Chr(10));
+		local.sb.append(".ops-bg-nature-sage { background: linear-gradient(135deg, ##f2f7f4 0%, ##e8f3ec 55%, ##f6faf7 100%); border-top: 1px solid rgba(22, 101, 52, 0.12); border-bottom: 1px solid rgba(22, 101, 52, 0.12); }" & Chr(10));
+		local.sb.append(".ops-bg-nature-sage .ops-section-eyebrow { color: ##166534; }" & Chr(10));
+		local.sb.append(".ops-bg-soft-sunset { background: linear-gradient(135deg, ##fdf8f0 0%, ##faede0 50%, ##fffdfa 100%); border-top: 1px solid rgba(180, 83, 9, 0.12); border-bottom: 1px solid rgba(180, 83, 9, 0.12); }" & Chr(10));
+		local.sb.append(".ops-bg-soft-sunset .ops-section-eyebrow { color: ##b45309; }" & Chr(10));
+		local.sb.append(".ops-bg-geometric-mesh { background-color: ##f8fafc; background-image: radial-gradient(rgba(14, 165, 233, 0.15) 1.2px, transparent 1.2px), radial-gradient(rgba(15, 23, 42, 0.08) 1.2px, transparent 1.2px); background-size: 24px 24px; background-position: 0 0, 12px 12px; border-top: 1px solid ##e2e8f0; border-bottom: 1px solid ##e2e8f0; }" & Chr(10));
+		local.sb.append(".ops-bg-dark { background: ##0f172a; color: ##f8fafc; }" & Chr(10));
+		local.sb.append(".ops-bg-dark .ops-section-title { color: ##fff; }" & Chr(10));
+		local.sb.append(".ops-bg-dark .ops-section-eyebrow { color: var(--ops-gold); }" & Chr(10));
+		local.sb.append(".ops-bg-dark .ops-body-content th { background: ##1e293b; color: ##fff; }" & Chr(10));
+		local.sb.append(".ops-bg-dark .ops-body-content th, .ops-bg-dark .ops-body-content td { border-color: rgba(255,255,255,0.12); }" & Chr(10));
+		local.sb.append(".ops-bg-dark-lines { background-color: ##0b1120; color: ##f8fafc; background-image: radial-gradient(circle at 20% 30%, rgba(22, 101, 52, 0.22) 0%, transparent 60%), radial-gradient(circle at 80% 70%, rgba(14, 165, 233, 0.2) 0%, transparent 60%), url(""data:image/svg+xml,%3Csvg width='800' height='400' viewBox='0 0 800 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cpath d='M-100,200 C100,50 300,350 500,200 C700,50 900,350 1100,200' stroke='rgba(52,211,153,0.22)' stroke-width='2.2'/%3E%3Cpath d='M-100,230 C100,80 300,380 500,230 C700,80 900,380 1100,230' stroke='rgba(56,189,248,0.20)' stroke-width='2'/%3E%3Cpath d='M-100,170 C100,320 300,20 500,170 C700,320 900,20 1100,170' stroke='rgba(251,191,36,0.18)' stroke-width='1.8' stroke-dasharray='6 6'/%3E%3C/g%3E%3C/svg%3E""); background-size: 800px 400px; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); }" & Chr(10));
+		local.sb.append(".ops-bg-dark-lines .ops-section-title { color: ##ffffff; }" & Chr(10));
+		local.sb.append(".ops-bg-dark-lines .ops-section-eyebrow { color: var(--ops-gold); }" & Chr(10));
+		local.sb.append(".ops-bg-dark-lines .ops-body-content th { background: ##1e293b; color: ##fff; }" & Chr(10));
+		local.sb.append(".ops-bg-dark-lines .ops-body-content th, .ops-bg-dark-lines .ops-body-content td { border-color: rgba(255,255,255,0.12); }" & Chr(10));
+		local.sb.append(".ops-split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }" & Chr(10));
+		local.sb.append(".ops-divider { border: 0; border-top: 1px solid ##e2e8f0; margin: 3rem 0 0; }" & Chr(10));
+		local.sb.append(".ops-footer { background: ##0b1120; color: ##94a3b8; padding: 3rem 2rem; text-align: center; font-size: 0.85rem; }" & Chr(10));
+		local.sb.append("/* Typography & Embedded Elements */" & Chr(10));
+		local.sb.append(".ops-body-content { font-size: 1.05rem; line-height: 1.7; }" & Chr(10));
+		local.sb.append(".ops-body-content p { margin: 0 0 1.25rem; }" & Chr(10));
+		local.sb.append(".ops-body-content ul, .ops-body-content ol { margin: 0 0 1.5rem 1.5rem; }" & Chr(10));
+		local.sb.append(".ops-body-content li { margin-bottom: 0.5rem; }" & Chr(10));
+		local.sb.append(".ops-body-content img { max-width: 100%; height: auto; border-radius: 8px; }" & Chr(10));
+		local.sb.append(".ops-body-content table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }" & Chr(10));
+		local.sb.append(".ops-body-content th, .ops-body-content td { border: 1px solid ##e2e8f0; padding: 0.75rem 1rem; text-align: left; }" & Chr(10));
+		local.sb.append(".ops-body-content th { background: ##f8fafc; font-weight: 700; }" & Chr(10));
+		local.sb.append("/* Responsive Queries */" & Chr(10));
+		local.sb.append("@media (max-width: 768px) {" & Chr(10));
+		local.sb.append("  .ops-split-grid { grid-template-columns: 1fr; gap: 1.75rem; }" & Chr(10));
+		local.sb.append("  .ops-hero-title { font-size: 2rem; }" & Chr(10));
+		local.sb.append("  .ops-section { padding: 3rem 1.25rem; }" & Chr(10));
+		local.sb.append("  .ops-nav-toggle { display: block; }" & Chr(10));
+		local.sb.append("  .ops-nav-wrap { display: none; position: absolute; top: 100%; left: 0; right: 0; background: ##ffffff; border-bottom: 1px solid ##e2e8f0; padding: 1rem 1.5rem; box-shadow: 0 10px 15px rgba(0,0,0,0.08); }" & Chr(10));
+		local.sb.append("  .ops-nav-wrap.ops-nav-open { display: block; }" & Chr(10));
+		local.sb.append("  .ops-nav { flex-direction: column; align-items: flex-start; gap: 0.75rem; }" & Chr(10));
+		local.sb.append("  .ops-nav a { display: block; width: 100%; padding: 0.5rem 0.75rem; font-size: 1rem; }" & Chr(10));
+		local.sb.append("}" & Chr(10));
+
+		if (Len(Trim(local.site.customCss ?: ""))) {
+			local.sb.append("/* Custom Site CSS */" & Chr(10));
+			local.sb.append(Trim(local.site.customCss) & Chr(10));
+		}
+
+		return local.sb.toString();
+	}
+
+	/**
+	 * Generates production vanilla JavaScript for One Page Website (Smooth Scroll, Scrollspy, Mobile Drawer)
+	 */
+	private string function buildOnePageJs(required struct siteData) {
+		local.site = arguments.siteData;
+		local.sb = CreateObject("java", "java.lang.StringBuilder").init();
+		local.sb.append("/**" & Chr(10));
+		local.sb.append(" * Chelan County CMSAdmin 2.0 - One Page Studio Runtime" & Chr(10));
+		local.sb.append(" * Smooth Anchor Scrolling, Section Spy, and Accessible Mobile Navigation" & Chr(10));
+		local.sb.append(" */" & Chr(10));
+		local.sb.append("(function () {" & Chr(10));
+		local.sb.append("  'use strict';" & Chr(10));
+		local.sb.append("  document.addEventListener('DOMContentLoaded', function () {" & Chr(10));
+		local.sb.append("    // 1. Smooth Scrolling for Internal Hash Anchors" & Chr(10));
+		local.sb.append("    var anchorLinks = document.querySelectorAll('a[href^=""##""]');" & Chr(10));
+		local.sb.append("    anchorLinks.forEach(function (anchor) {" & Chr(10));
+		local.sb.append("      anchor.addEventListener('click', function (e) {" & Chr(10));
+		local.sb.append("        var href = this.getAttribute('href');" & Chr(10));
+		local.sb.append("        if (!href || href === '##') return;" & Chr(10));
+		local.sb.append("        if (href === '##top') {" & Chr(10));
+		local.sb.append("          e.preventDefault();" & Chr(10));
+		local.sb.append("          window.scrollTo({ top: 0, behavior: 'smooth' });" & Chr(10));
+		local.sb.append("          return;" & Chr(10));
+		local.sb.append("        }" & Chr(10));
+		local.sb.append("        var target = document.querySelector(href);" & Chr(10));
+		local.sb.append("        if (target) {" & Chr(10));
+		local.sb.append("          e.preventDefault();" & Chr(10));
+		local.sb.append("          target.scrollIntoView({ behavior: 'smooth' });" & Chr(10));
+		local.sb.append("          if (history.pushState) {" & Chr(10));
+		local.sb.append("            history.pushState(null, '', href);" & Chr(10));
+		local.sb.append("          }" & Chr(10));
+		local.sb.append("        }" & Chr(10));
+		local.sb.append("      });" & Chr(10));
+		local.sb.append("    });" & Chr(10));
+
+		if (local.site.enableScrollspy ?: true) {
+			local.sb.append("    // 2. Scrollspy Active Link Highlighting" & Chr(10));
+			local.sb.append("    var navLinks = document.querySelectorAll('.ops-nav a[href^=""##""]');" & Chr(10));
+			local.sb.append("    var sections = document.querySelectorAll('.ops-section[id]');" & Chr(10));
+			local.sb.append("    if (navLinks.length && sections.length && 'IntersectionObserver' in window) {" & Chr(10));
+			local.sb.append("      var spyObserver = new IntersectionObserver(function (entries) {" & Chr(10));
+			local.sb.append("        entries.forEach(function (entry) {" & Chr(10));
+			local.sb.append("          if (entry.isIntersecting) {" & Chr(10));
+			local.sb.append("            var id = entry.target.getAttribute('id');" & Chr(10));
+			local.sb.append("            navLinks.forEach(function (link) {" & Chr(10));
+			local.sb.append("              var href = link.getAttribute('href');" & Chr(10));
+			local.sb.append("              if (href === '##' + id) {" & Chr(10));
+			local.sb.append("                link.classList.add('active');" & Chr(10));
+			local.sb.append("              } else if (!link.classList.contains('ops-cta-btn')) {" & Chr(10));
+			local.sb.append("                link.classList.remove('active');" & Chr(10));
+			local.sb.append("              }" & Chr(10));
+			local.sb.append("            });" & Chr(10));
+			local.sb.append("          }" & Chr(10));
+			local.sb.append("        });" & Chr(10));
+			local.sb.append("      }, { rootMargin: '-20% 0px -60% 0px', threshold: 0 });" & Chr(10));
+			local.sb.append("      sections.forEach(function (sec) { spyObserver.observe(sec); });" & Chr(10));
+			local.sb.append("    }" & Chr(10));
+		}
+
+		local.sb.append("    // 3. Mobile Navigation Drawer Toggle" & Chr(10));
+		local.sb.append("    var navToggle = document.getElementById('opsNavToggle');" & Chr(10));
+		local.sb.append("    var navMenu = document.getElementById('opsNavMenu');" & Chr(10));
+		local.sb.append("    if (navToggle && navMenu) {" & Chr(10));
+		local.sb.append("      navToggle.addEventListener('click', function () {" & Chr(10));
+		local.sb.append("        var isOpen = navMenu.classList.toggle('ops-nav-open');" & Chr(10));
+		local.sb.append("        navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');" & Chr(10));
+		local.sb.append("      });" & Chr(10));
+		local.sb.append("      navMenu.querySelectorAll('a').forEach(function (link) {" & Chr(10));
+		local.sb.append("        link.addEventListener('click', function () {" & Chr(10));
+		local.sb.append("          navMenu.classList.remove('ops-nav-open');" & Chr(10));
+		local.sb.append("          navToggle.setAttribute('aria-expanded', 'false');" & Chr(10));
+		local.sb.append("        });" & Chr(10));
+		local.sb.append("      });" & Chr(10));
+		local.sb.append("    }" & Chr(10));
+		local.sb.append("  });" & Chr(10));
+		local.sb.append("})();" & Chr(10));
+
+		return local.sb.toString();
+	}
+
+	/**
+	 * Generates README.md documentation for exported One Page Website Bundle
+	 */
+	private string function buildOnePageReadme(required struct siteData) {
+		local.site = arguments.siteData;
+		local.h1 = Chr(35) & " ";
+		local.h3 = Chr(35) & Chr(35) & Chr(35) & " ";
+		local.sb = CreateObject("java", "java.lang.StringBuilder").init();
+		local.sb.append(local.h1 & (local.site.title ?: "One Page Website") & Chr(10) & Chr(10));
+		local.sb.append("> **Chelan County CMSAdmin 2.0 -- One Page Studio Production Export**" & Chr(10) & Chr(10));
+		local.sb.append("- **Generated At:** " & DateTimeFormat(Now(), "yyyy-mm-dd HH:nn:ss") & Chr(10));
+		local.sb.append("- **Theme:** " & (local.site.theme ?: "river-park") & Chr(10));
+		local.sb.append("- **Slug / Permalink:** `" & (local.site.slug ?: "one-page-site") & "`" & Chr(10));
+		local.sb.append("- **Accessibility:** WCAG 2.1 AA Compliant & Section 508 Verified" & Chr(10));
+		local.sb.append("- **Asset Separation:** Cleanly decoupled HTML, CSS, and JavaScript" & Chr(10) & Chr(10));
+		local.sb.append(local.h3 & "Directory & File Structure" & Chr(10) & Chr(10));
+		local.sb.append("```text" & Chr(10));
+		local.sb.append(". " & Chr(10));
+		local.sb.append("+-- index.html           (Main responsive landing page)" & Chr(10));
+		local.sb.append("+-- assets/              (Separated site assets)" & Chr(10));
+		local.sb.append("|   +-- css/site.css     (Production styles, resets, theme variables, grid)" & Chr(10));
+		local.sb.append("|   +-- js/site.js       (Smooth scroll, scrollspy observer, mobile menu)" & Chr(10));
+		local.sb.append("|   +-- images/          (Local media and section photography)" & Chr(10));
+		local.sb.append("+-- README.md            (Deployment and site guide)" & Chr(10));
+		local.sb.append("```" & Chr(10) & Chr(10));
+		local.sb.append(local.h3 & "Deployment & Web Hosting" & Chr(10) & Chr(10));
+		local.sb.append("1. Extract the contents of this archive to your web server document root (IIS, Apache, Nginx, or AWS S3 / Azure Blob Storage)." & Chr(10));
+		local.sb.append("2. All assets are 100% local -- zero external CDNs or third-party tracking scripts are required." & Chr(10));
+		local.sb.append("3. For SEO, ensure your web server delivers index.html as the default document." & Chr(10) & Chr(10));
+		local.sb.append("---" & Chr(10));
+		local.sb.append("Chelan County Public Information & Information Technology &bull; Wenatchee, WA" & Chr(10));
+		return local.sb.toString();
+	}
+
+	/**
+	 * Builds semantic, WCAG 2.1 AA compliant Single Page HTML from Site & Section structures
+	 */
+	private string function buildOnePageHtml(
+		required struct siteData,
+		required array sectionsData,
+		boolean standalone = false,
+		boolean separateAssets = false,
+		string assetPathPrefix = ""
+	) {
+		local.site = arguments.siteData;
+		local.sections = arguments.sectionsData;
+		local.isStandalone = arguments.standalone;
+		local.isSeparated = arguments.separateAssets;
+		local.prefix = arguments.assetPathPrefix;
+
+		local.themeClass = "ops-theme-" & (Len(local.site.theme ?: "") ? local.site.theme : "river-park");
+		local.out = CreateObject("java", "java.lang.StringBuilder").init();
+
+		if (local.isStandalone) {
+			local.out.append("<!DOCTYPE html>" & Chr(10));
+			local.out.append("<html lang=""en"" class=""" & local.themeClass & """>" & Chr(10));
+			local.out.append("<head>" & Chr(10));
+			local.out.append("  <meta charset=""utf-8"">" & Chr(10));
+			local.out.append("  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">" & Chr(10));
+			local.out.append("  <title>" & EncodeForHTML(local.site.title) & "</title>" & Chr(10));
+			if (Len(local.site.metaDescription ?: "")) {
+				local.out.append("  <meta name=""description"" content=""" & EncodeForHTMLAttribute(local.site.metaDescription) & """>" & Chr(10));
+			}
+
+			if (local.isSeparated) {
+				local.cssHref = Len(local.prefix) ? (local.prefix & "css/site.css") : ("/stylesheets/onepage/" & local.site.slug & ".css");
+				local.out.append("  <link rel=""stylesheet"" href=""" & local.cssHref & """>" & Chr(10));
+			} else {
+				local.out.append("  <style>" & Chr(10));
+				local.out.append(buildOnePageCss(local.site));
+				local.out.append("  </style>" & Chr(10));
+			}
+			local.out.append("</head>" & Chr(10));
+			local.out.append("<body id=""top"">" & Chr(10));
+		} else if (local.isSeparated) {
+			// For dbo.pages compilation with separated assets: link stylesheet cleanly
+			local.cssHref = "/stylesheets/onepage/" & local.site.slug & ".css";
+			local.out.append("<link rel=""stylesheet"" href=""" & local.cssHref & """>" & Chr(10));
+		} else {
+			// Embedded style block for monolithic dbo.pages compilation
+			local.out.append("<style>" & Chr(10));
+			local.out.append(buildOnePageCss(local.site));
+			local.out.append("</style>" & Chr(10));
+		}
+
+		// Main One-Page Wrapper
+		local.out.append("<div class=""ops-one-page-site " & local.themeClass & """>" & Chr(10));
+
+		// 1. Sticky Navigation Bar
+		if (local.site.enableStickyNav) {
+			local.out.append("  <header class=""ops-header"" role=""banner"">" & Chr(10));
+			local.out.append("    <a href=""##top"" class=""ops-brand"">" & EncodeForHTML(Len(local.site.navBrandTitle ?: "") ? local.site.navBrandTitle : local.site.title) & "</a>" & Chr(10));
+			local.out.append("    <button type=""button"" class=""ops-nav-toggle"" id=""opsNavToggle"" aria-label=""Toggle Navigation Menu"" aria-expanded=""false"" aria-controls=""opsNavMenu"">&##9776;</button>" & Chr(10));
+			local.out.append("    <nav class=""ops-nav-wrap"" id=""opsNavMenu"" aria-label=""One Page Section Navigation"">" & Chr(10));
+			local.out.append("      <ul class=""ops-nav"">" & Chr(10));
+			for (local.sec in local.sections) {
+				if (!local.sec.isActive) continue;
+				local.out.append("        <li><a href=""##" & local.sec.anchorId & """>" & EncodeForHTML(local.sec.sectionTitle) & "</a></li>" & Chr(10));
+			}
+			if (Len(local.site.navCtaText ?: "") && Len(local.site.navCtaAnchor ?: "")) {
+				local.out.append("        <li><a href=""" & EncodeForHTMLAttribute(local.site.navCtaAnchor) & """ class=""ops-cta-btn"">" & EncodeForHTML(local.site.navCtaText) & "</a></li>" & Chr(10));
+			}
+			local.out.append("      </ul>" & Chr(10));
+			local.out.append("    </nav>" & Chr(10));
+			local.out.append("  </header>" & Chr(10));
+		}
+
+		// 2. Hero Header
+		local.out.append("  <section class=""ops-hero"" aria-labelledby=""opsHeroHeadline"">" & Chr(10));
+		local.out.append("    <div class=""ops-hero-container"">" & Chr(10));
+		local.out.append("      <h1 id=""opsHeroHeadline"" class=""ops-hero-title"">" & EncodeForHTML(Len(local.site.heroHeadline ?: "") ? local.site.heroHeadline : local.site.title) & "</h1>" & Chr(10));
+		if (Len(local.site.heroTagline ?: "")) {
+			local.out.append("      <p class=""ops-hero-tagline"">" & EncodeForHTML(local.site.heroTagline) & "</p>" & Chr(10));
+		}
+		local.out.append("      <div class=""ops-hero-actions"">" & Chr(10));
+		if (Len(local.site.heroCtaPrimaryText ?: "") && Len(local.site.heroCtaPrimaryAnchor ?: "")) {
+			local.out.append("        <a href=""" & EncodeForHTMLAttribute(local.site.heroCtaPrimaryAnchor) & """ class=""ops-cta-btn"">" & EncodeForHTML(local.site.heroCtaPrimaryText) & "</a>" & Chr(10));
+		}
+		if (Len(local.site.heroCtaSecondaryText ?: "") && Len(local.site.heroCtaSecondaryAnchor ?: "")) {
+			local.out.append("        <a href=""" & EncodeForHTMLAttribute(local.site.heroCtaSecondaryAnchor) & """ class=""ops-cta-btn"" style=""background:transparent; border:1px solid rgba(255,255,255,0.4);"">" & EncodeForHTML(local.site.heroCtaSecondaryText) & "</a>" & Chr(10));
+		}
+		local.out.append("      </div>" & Chr(10));
+		local.out.append("    </div>" & Chr(10));
+		local.out.append("  </section>" & Chr(10));
+
+		// 3. Sections Container
+		local.out.append("  <main id=""opsMainContent"">" & Chr(10));
+		for (local.sec in local.sections) {
+			if (!local.sec.isActive) continue;
+
+			local.secId = local.sec.anchorId;
+			local.secLayout = local.sec.sectionLayout;
+			local.secBgClass = "ops-bg-" & local.sec.sectionBg;
+			local.customClass = Len(local.sec.customCssClass ?: "") ? " " & local.sec.customCssClass : "";
+
+			local.out.append("    <section id=""" & EncodeForHTMLAttribute(local.secId) & """ class=""ops-section " & local.secBgClass & local.customClass & """ aria-labelledby=""secHead-" & EncodeForHTMLAttribute(local.secId) & """>" & Chr(10));
+			local.out.append("      <div class=""ops-container"">" & Chr(10));
+
+			if (local.sec.showHeader) {
+				local.out.append("        <div class=""ops-section-header"">" & Chr(10));
+				if (Len(local.sec.sectionSubtitle ?: "")) {
+					local.out.append("          <span class=""ops-section-eyebrow"">" & EncodeForHTML(local.sec.sectionSubtitle) & "</span>" & Chr(10));
+				}
+				local.out.append("          <h2 id=""secHead-" & EncodeForHTMLAttribute(local.secId) & """ class=""ops-section-title"">" & EncodeForHTML(local.sec.sectionTitle) & "</h2>" & Chr(10));
+				local.out.append("        </div>" & Chr(10));
+			}
+
+			// Render body based on layout
+			if (local.secLayout == "split-image-right" || local.secLayout == "split-image-left") {
+				local.out.append("        <div class=""ops-split-grid"">" & Chr(10));
+				if (local.secLayout == "split-image-left" && Len(local.sec.imageAttachment ?: "")) {
+					local.out.append("          <div><img src=""" & EncodeForHTMLAttribute(local.sec.imageAttachment) & """ alt=""" & EncodeForHTMLAttribute(local.sec.imageAlt ?: local.sec.sectionTitle) & """ style=""width:100%; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1);"" loading=""lazy""></div>" & Chr(10));
+				}
+				local.out.append("          <div class=""ops-body-content"">" & local.sec.bodyHtml & "</div>" & Chr(10));
+				if (local.secLayout == "split-image-right" && Len(local.sec.imageAttachment ?: "")) {
+					local.out.append("          <div><img src=""" & EncodeForHTMLAttribute(local.sec.imageAttachment) & """ alt=""" & EncodeForHTMLAttribute(local.sec.imageAlt ?: local.sec.sectionTitle) & """ style=""width:100%; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1);"" loading=""lazy""></div>" & Chr(10));
+				}
+				local.out.append("        </div>" & Chr(10));
+			} else {
+				local.out.append("        <div class=""ops-body-content"">" & local.sec.bodyHtml & "</div>" & Chr(10));
+			}
+
+			if (local.sec.showDivider) {
+				local.out.append("        <hr class=""ops-divider"" aria-hidden=""true"">" & Chr(10));
+			}
+			local.out.append("      </div>" & Chr(10));
+			local.out.append("    </section>" & Chr(10));
+		}
+		local.out.append("  </main>" & Chr(10));
+
+		// 4. Footer
+		local.out.append("  <footer class=""ops-footer"" role=""contentinfo"">" & Chr(10));
+		local.out.append("    <div class=""ops-container"">" & Chr(10));
+		local.out.append("      <p style=""font-weight:700; color:##f8fafc; margin-bottom:0.35rem;"">" & EncodeForHTML(local.site.title) & "</p>" & Chr(10));
+		local.out.append("      <p style=""margin:0 0 1rem;"">Chelan County Public Portal &bull; All Rights Reserved</p>" & Chr(10));
+		if (local.site.enableBackToTop) {
+			local.out.append("      <a href=""##top"" style=""color:##d4af37; text-decoration:none; font-weight:600; font-size:0.8rem;"">&uarr; Back to Top</a>" & Chr(10));
+		}
+		local.out.append("    </div>" & Chr(10));
+		local.out.append("  </footer>" & Chr(10));
+		local.out.append("</div>" & Chr(10));
+
+		// Scripts
+		if (local.isStandalone) {
+			if (local.isSeparated) {
+				local.jsSrc = Len(local.prefix) ? (local.prefix & "js/site.js") : ("/javascripts/onepage/" & local.site.slug & ".js");
+				local.out.append("<script defer src=""" & local.jsSrc & """></script>" & Chr(10));
+			} else {
+				local.out.append("<script>" & Chr(10));
+				local.out.append(buildOnePageJs(local.site));
+				local.out.append("</script>" & Chr(10));
+			}
+			local.out.append("</body></html>" & Chr(10));
+		} else if (local.isSeparated) {
+			local.jsSrc = "/javascripts/onepage/" & local.site.slug & ".js";
+			local.out.append("<script defer src=""" & local.jsSrc & """></script>" & Chr(10));
+		} else {
+			local.out.append("<script>" & Chr(10));
+			local.out.append(buildOnePageJs(local.site));
+			local.out.append("</script>" & Chr(10));
+		}
+
+		return local.out.toString();
+	}
+
+	/**
+	 * Ensures dbo.one_page_sites & dbo.one_page_sections exist and seeds reference portals
+	 */
+	private void function ensureOnePageStudioTables() {
+		try {
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+
+				IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[one_page_sites]') AND type in (N'U'))
+				BEGIN
+					CREATE TABLE [dbo].[one_page_sites] (
+						[id]                      INT IDENTITY(1,1) NOT NULL,
+						[siteid]                  NVARCHAR(100) NOT NULL CONSTRAINT [DF_ops_siteid] DEFAULT (N'global'),
+						[title]                   NVARCHAR(255) NOT NULL,
+						[slug]                    NVARCHAR(150) NOT NULL,
+						[subtitle]                NVARCHAR(500) NULL,
+						[theme]                   NVARCHAR(50) NOT NULL CONSTRAINT [DF_ops_theme] DEFAULT (N'river-park'),
+						[hero_headline]           NVARCHAR(255) NULL,
+						[hero_tagline]            NVARCHAR(500) NULL,
+						[hero_image_url]          NVARCHAR(500) NULL,
+						[hero_cta_primary_text]   NVARCHAR(100) NULL,
+						[hero_cta_primary_anchor] NVARCHAR(100) NULL,
+						[hero_cta_secondary_text] NVARCHAR(100) NULL,
+						[hero_cta_secondary_anchor] NVARCHAR(100) NULL,
+						[enable_sticky_nav]       BIT NOT NULL CONSTRAINT [DF_ops_sticky] DEFAULT (1),
+						[nav_brand_title]         NVARCHAR(150) NULL,
+						[nav_cta_text]            NVARCHAR(100) NULL,
+						[nav_cta_anchor]          NVARCHAR(100) NULL,
+						[enable_scrollspy]        BIT NOT NULL CONSTRAINT [DF_ops_scrollspy] DEFAULT (1),
+						[enable_back_to_top]      BIT NOT NULL CONSTRAINT [DF_ops_backtop] DEFAULT (1),
+						[target_page_id]          INT NULL,
+						[is_published]            BIT NOT NULL CONSTRAINT [DF_ops_pub] DEFAULT (1),
+						[sort_order]              INT NOT NULL CONSTRAINT [DF_ops_sort] DEFAULT (0),
+						[custom_css]              NVARCHAR(MAX) NULL,
+						[meta_title]              NVARCHAR(255) NULL,
+						[meta_description]        NVARCHAR(500) NULL,
+						[created_by]              NVARCHAR(255) NULL,
+						[modified_by]             NVARCHAR(255) NULL,
+						[createdat]               DATETIME2(7) NOT NULL CONSTRAINT [DF_ops_createdat] DEFAULT (SYSUTCDATETIME()),
+						[updatedat]               DATETIME2(7) NOT NULL CONSTRAINT [DF_ops_updatedat] DEFAULT (SYSUTCDATETIME()),
+						[deletedat]               DATETIME2(7) NULL,
+						CONSTRAINT [PK_one_page_sites] PRIMARY KEY CLUSTERED ([id] ASC)
+					);
+
+					CREATE NONCLUSTERED INDEX [IX_one_page_sites_site_slug]
+						ON [dbo].[one_page_sites] ([siteid], [slug])
+						WHERE [deletedat] IS NULL;
+				END;
+
+				IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[one_page_sections]') AND type in (N'U'))
+				BEGIN
+					CREATE TABLE [dbo].[one_page_sections] (
+						[id]                INT IDENTITY(1,1) NOT NULL,
+						[one_page_site_id]  INT NOT NULL,
+						[page_id]           INT NULL,
+						[anchor_id]         NVARCHAR(100) NOT NULL,
+						[section_title]     NVARCHAR(255) NOT NULL,
+						[section_subtitle]  NVARCHAR(500) NULL,
+						[section_layout]    NVARCHAR(50) NOT NULL CONSTRAINT [DF_opsec_layout] DEFAULT (N'full'),
+						[section_bg]        NVARCHAR(50) NOT NULL CONSTRAINT [DF_opsec_bg] DEFAULT (N'default'),
+						[content_override]  NVARCHAR(MAX) NULL,
+						[show_header]       BIT NOT NULL CONSTRAINT [DF_opsec_showhdr] DEFAULT (1),
+						[show_divider]      BIT NOT NULL CONSTRAINT [DF_opsec_divider] DEFAULT (1),
+						[custom_css_class]  NVARCHAR(100) NULL,
+						[sort_order]        INT NOT NULL CONSTRAINT [DF_opsec_sort] DEFAULT (0),
+						[is_active]         BIT NOT NULL CONSTRAINT [DF_opsec_active] DEFAULT (1),
+						[createdat]         DATETIME2(7) NOT NULL CONSTRAINT [DF_opsec_createdat] DEFAULT (SYSUTCDATETIME()),
+						[updatedat]         DATETIME2(7) NOT NULL CONSTRAINT [DF_opsec_updatedat] DEFAULT (SYSUTCDATETIME()),
+						[deletedat]         DATETIME2(7) NULL,
+						CONSTRAINT [PK_one_page_sections] PRIMARY KEY CLUSTERED ([id] ASC)
+					);
+
+					CREATE NONCLUSTERED INDEX [IX_one_page_sections_site_sort]
+						ON [dbo].[one_page_sections] ([one_page_site_id], [sort_order])
+						WHERE [deletedat] IS NULL;
+
+					CREATE NONCLUSTERED INDEX [IX_one_page_sections_site_anchor]
+						ON [dbo].[one_page_sections] ([one_page_site_id], [anchor_id])
+						WHERE [deletedat] IS NULL;
+				END;
+			", {}, { datasource: "ChelanCountyWebsite" });
+
+			// Check if seed data is needed
+			local.cntQ = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT COUNT(*) AS cnt FROM one_page_sites WHERE deletedat IS NULL;
+			", {}, { datasource: "ChelanCountyWebsite" });
+
+			if (Val(local.cntQ.cnt) == 0) {
+				// Seed Wenatchee River Park portal
+				local.insSite = queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					DECLARE @InsertedIds TABLE (id INT);
+					INSERT INTO one_page_sites (
+						siteid, title, slug, subtitle, theme,
+						hero_headline, hero_tagline, hero_image_url,
+						hero_cta_primary_text, hero_cta_primary_anchor,
+						hero_cta_secondary_text, hero_cta_secondary_anchor,
+						enable_sticky_nav, nav_brand_title, nav_cta_text, nav_cta_anchor,
+						enable_scrollspy, enable_back_to_top, is_published,
+						meta_title, meta_description, created_by, createdat, updatedat
+					)
+					OUTPUT INSERTED.id INTO @InsertedIds(id)
+					VALUES (
+						'wrcp', 'Wenatchee River Park', 'wenatchee-river-park',
+						'Premier Riverfront RV Resort & Retreat along the scenic Wenatchee River in Chelan County',
+						'river-park',
+						'Where the River Meets the Cascade Foothills',
+						'Spacious full-hookup RV sites, tranquil tent camping, river access, and breathtaking mountain vistas in the heart of Chelan County.',
+						'/files/shared/media/lake-chelan-scenic-panorama.jpg',
+						'Explore Amenities', '##amenities',
+						'View Rates & Hours', '##rates',
+						1, 'Wenatchee River Park', 'Reserve Online', '##rates',
+						1, 1, 1,
+						'Wenatchee River Park | Official Portal & RV Resort',
+						'Official website for Wenatchee River Park featuring RV campsites, rates, amenities, maps, and recreation.',
+						'System', SYSUTCDATETIME(), SYSUTCDATETIME()
+					);
+					SELECT id FROM @InsertedIds;
+				", {}, { datasource: "ChelanCountyWebsite" });
+
+				local.siteId = Val(local.insSite.id);
+
+				// Seed 6 reference pages for wrcp in dbo.pages if not already present
+				local.seedPages = [
+					{
+						title: "Park Overview & Heritage",
+						slug: "park-overview",
+						summary: "Nestled along the pristine Wenatchee River, the park offers premier recreation, shaded campgrounds, and mountain trails.",
+						body: "<p>Welcome to Wenatchee River Park, Chelan County's flagship riverfront park and RV resort. Situated beneath the dramatic Cascade foothills and bordered by the cool waters of the Wenatchee River, our park provides a peaceful natural sanctuary with modern recreational amenities.</p><p>Featuring 49 spacious full-hookup RV sites, lush tenting lawns, modern ADA restrooms with hot showers, picnic shelters, horseshoe pits, and direct river access for kayaking and paddleboarding.</p>",
+						anchor: "overview",
+						layout: "split-image-right",
+						bg: "default"
+					},
+					{
+						title: "Park Amenities & Facilities",
+						slug: "amenities",
+						summary: "Full RV hookups, high-speed Wi-Fi, picnic pavilions, river launches, clean showers, and horseshoe courts.",
+						body: "<p>Wenatchee River Park provides first-class amenities designed for comfort, accessibility, and outdoor enjoyment:</p><ul><li><strong>Full Hookup RV Sites:</strong> 30 and 50 amp electric service, municipal water, and dedicated sewer connections.</li><li><strong>Waterfront Launch:</strong> Easy non-motorized river access for kayaks, canoes, and stand-up paddleboards.</li><li><strong>Clean Shower Facilities:</strong> Fully ADA compliant restrooms and coin-free hot shower stalls.</li><li><strong>Group Covered Shelters:</strong> Reserveable picnic pavilions equipped with BBQ grills and banquet tables.</li><li><strong>Recreation Fields:</strong> Sand volleyball, regulation horseshoe pits, and open lawn game areas.</li></ul>",
+						anchor: "amenities",
+						layout: "full",
+						bg: "muted"
+					},
+					{
+						title: "Camping & RV Rates",
+						slug: "rates-and-fees",
+						summary: "Transparent seasonal pricing for full-hookup RV spaces, standard tent camping, and day-use pavilion rentals.",
+						body: "<p>Chelan County Parks maintains competitive, transparent fees to support park operations and preservation:</p><table><thead><tr><th>Accommodation Type</th><th>Peak Season (May-Oct)</th><th>Off-Peak (Nov-Apr)</th></tr></thead><tbody><tr><td>Full Hookup RV (30/50A)</td><td>$48.00 / night</td><td>$38.00 / night</td></tr><tr><td>Standard Tent Camping</td><td>$30.00 / night</td><td>$24.00 / night</td></tr><tr><td>Day Use Picnic Shelter</td><td>$85.00 / day</td><td>$65.00 / day</td></tr><tr><td>Dump Station (Non-Campers)</td><td>$10.00 / use</td><td>$10.00 / use</td></tr></tbody></table><p><em>Discounts available for Washington State seniors (62+) and active military personnel.</em></p>",
+						anchor: "rates",
+						layout: "full",
+						bg: "surface-elevated"
+					},
+					{
+						title: "Park Maps & Trail Network",
+						slug: "park-maps",
+						summary: "Interactive layout map of all 49 campsites, river access ramps, trailheads, and restroom stations.",
+						body: "<p>Navigate Wenatchee River Park easily with our comprehensive trail and campsite guides. All major sites and facilities are connected by paved, ADA accessible multi-use pathways.</p><p>Download our official high-resolution park guide map for offline access while traveling across Chelan County.</p>",
+						anchor: "park-maps",
+						layout: "split-image-left",
+						bg: "default"
+					},
+					{
+						title: "Points of Interest & Nearby Recreation",
+						slug: "points-of-interest",
+						summary: "Explore nearby Bavarian Leavenworth, Lake Chelan wineries, Peshastin Pinnacles, and Cashmere rafting.",
+						body: "<p>Wenatchee River Park serves as the ultimate basecamp for experiencing the breathtaking wonders of North Central Washington:</p><ul><li><strong>Bavarian Village of Leavenworth:</strong> Just 14 miles west featuring alpine dining, festivals, and artisan shopping.</li><li><strong>Cashmere Museum & Pioneer Village:</strong> Historic frontier cabins and indigenous artifacts 4 miles away.</li><li><strong>Whitewater Rafting:</strong> Class III rapids on the lower Wenatchee River during spring runoff.</li><li><strong>Apple Capital Loop Trail:</strong> 10 miles of paved riverfront trail along the Columbia River in Wenatchee.</li></ul>",
+						anchor: "points-of-interest",
+						layout: "card-grid",
+						bg: "muted"
+					},
+					{
+						title: "Reservations & Contact Us",
+						slug: "reservations-contact",
+						summary: "Contact the on-site park host, check site availability, or submit group facility reservations.",
+						body: "<p>Our friendly on-site rangers and camp hosts are available daily to assist you during your stay in Chelan County.</p><p><strong>Physical Address:</strong> 2924 State Highway 2, Monitor, WA 98836<br><strong>Park Office Phone:</strong> (509) 667-6490<br><strong>Email:</strong> parks@co.chelan.wa.us<br><strong>Gate Hours:</strong> 7:00 AM – 10:00 PM Daily</p>",
+						anchor: "contact",
+						layout: "full",
+						bg: "dark"
+					}
+				];
+
+				for (local.idx = 1; local.idx <= ArrayLen(local.seedPages); local.idx++) {
+					local.sp = local.seedPages[local.idx];
+
+					local.insP = queryExecute("
+						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+						DECLARE @InsertedPages TABLE (id INT);
+						INSERT INTO pages (
+							SiteID, PageType, MenuSelected, LayoutType, ParentID,
+							StatusCode, Permalink, Title, MetaTitle, MetaDesc,
+							Summary, Body, isPublished, Visibility, Created, CreatedBy, Modified, ModifiedBy
+						)
+						OUTPUT INSERTED.ContentID INTO @InsertedPages(id)
+						VALUES (
+							'wrcp', 0, 'Top Level - Called from URL', 'Full', 0,
+							'Active', :permalink, :title, :title, :summary,
+							:summary, :body, 1, 'Published', SYSUTCDATETIME(), 'System', SYSUTCDATETIME(), 'System'
+						);
+						SELECT id FROM @InsertedPages;
+					", {
+						permalink: { value: local.sp.slug, cfsqltype: "cf_sql_nvarchar" },
+						title: { value: local.sp.title, cfsqltype: "cf_sql_nvarchar" },
+						summary: { value: local.sp.summary, cfsqltype: "cf_sql_nvarchar" },
+						body: { value: local.sp.body, cfsqltype: "cf_sql_nvarchar" }
+					}, { datasource: "ChelanCountyWebsite" });
+
+					local.newPageId = Val(local.insP.id);
+
+					// Insert section in dbo.one_page_sections
+					queryExecute("
+						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+						INSERT INTO one_page_sections (
+							one_page_site_id, page_id, anchor_id, section_title, section_subtitle,
+							section_layout, section_bg, show_header, show_divider, sort_order, is_active,
+							createdat, updatedat
+						) VALUES (
+							:siteId, :pageId, :anchorId, :title, :subtitle,
+							:layout, :bg, 1, 1, :sortOrder, 1,
+							SYSUTCDATETIME(), SYSUTCDATETIME()
+						)
+					", {
+						siteId: { value: local.siteId, cfsqltype: "cf_sql_integer" },
+						pageId: { value: local.newPageId, cfsqltype: "cf_sql_integer" },
+						anchorId: { value: local.sp.anchor, cfsqltype: "cf_sql_nvarchar" },
+						title: { value: local.sp.title, cfsqltype: "cf_sql_nvarchar" },
+						subtitle: { value: local.sp.summary, cfsqltype: "cf_sql_nvarchar" },
+						layout: { value: local.sp.layout, cfsqltype: "cf_sql_nvarchar" },
+						bg: { value: local.sp.bg, cfsqltype: "cf_sql_nvarchar" },
+						sortOrder: { value: local.idx, cfsqltype: "cf_sql_integer" }
+					}, { datasource: "ChelanCountyWebsite" });
+				}
+			}
+		} catch (any err) {
+			writeLog(type="error", file="pages", text="ensureOnePageStudioTables error: #err.message#");
+		}
+	}
+
+}

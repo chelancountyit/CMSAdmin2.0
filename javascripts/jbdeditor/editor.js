@@ -245,6 +245,8 @@ export class CustomEditor {
     this.initDOM();
     this.initEvents();
     this.initContent();
+      this.initImageInteractions();
+      this.initTableInteractions();
 
     // AutoSave
     if (this.options.autoSaveKey) {
@@ -849,39 +851,1105 @@ export class CustomEditor {
     });
   }
 
-openImageModal() {
+  buildImageHTML({ src, alt, isDecorative, caption, credit, align, width, height, borderRadius, borderStyle, shadow, linkUrl, linkTarget, isZoomable }) {
+    const alignClass = align === 'inline' ? 'jbd-image-inline' : (align === 'left' ? 'jbd-image-left' : (align === 'right' ? 'jbd-image-right' : (align === 'full' ? 'jbd-image-full' : 'jbd-image-center')));
+    const radiusClass = (borderRadius && borderRadius !== 'default' && borderRadius !== 'none') ? `jbd-image-${borderRadius}` : (borderRadius === 'none' ? 'jbd-image-sharp' : '');
+    const borderClass = (borderStyle && borderStyle !== 'none') ? `jbd-image-${borderStyle}` : '';
+    const shadowClass = (shadow && shadow !== 'none') ? `jbd-image-${shadow}` : '';
+    const classes = ['jbd-image', alignClass, radiusClass, borderClass, shadowClass].filter(Boolean).join(' ');
+    const altAttr = isDecorative ? 'alt="" role="presentation" aria-hidden="true"' : `alt="${escapeHTML(alt || caption || 'Image')}"`;
+    const zoomAttr = isZoomable ? ' data-zoomable="true"' : '';
+    const hVal = (height && height !== 'auto') ? height : 'auto';
+
+    if (align === 'inline') {
+      const inlineImg = `<img src="${escapeHTML(src)}" ${altAttr} class="${['jbd-image-inline', radiusClass, borderClass, shadowClass].filter(Boolean).join(' ')}" style="width: ${width || 'auto'}; height: ${hVal}; vertical-align: middle;" loading="lazy"${zoomAttr} />`;
+      if (linkUrl) {
+        const target = linkTarget ? ` target="${linkTarget}" rel="noopener noreferrer"` : '';
+        return `<a href="${escapeHTML(linkUrl)}"${target}>${inlineImg}</a>`;
+      }
+      return inlineImg;
+    }
+
+    let imgTag = `<img src="${escapeHTML(src)}" ${altAttr} style="width: 100%; height: ${hVal};" loading="lazy"${zoomAttr} />`;
+    if (linkUrl) {
+      const target = linkTarget ? ` target="${linkTarget}" rel="noopener noreferrer"` : '';
+      imgTag = `<a href="${escapeHTML(linkUrl)}"${target}>${imgTag}</a>`;
+    }
+
+    let captionHtml = '';
+    if (caption || credit) {
+      captionHtml = `\\n    <figcaption class="jbd-image-caption">${caption ? `<span>${escapeHTML(caption)}</span>` : ''}${credit ? `<span class="jbd-image-credit">Photo: ${escapeHTML(credit)}</span>` : ''}</figcaption>`;
+    }
+
+    return `<figure class="${classes}" style="width: ${width || '100%'}; max-width: 100%;">${imgTag}${captionHtml}\\n</figure>`;
+  }
+
+  openImageModal(existingImage = null) {
     if (this.isSourceMode) return;
+    this.savedSelectionRange = saveSelection(this.contentArea);
+
+    let currentData = null;
+    if (existingImage) {
+      const figure = existingImage.closest('figure.jbd-image') || existingImage.closest('.jbd-image');
+      const link = existingImage.closest('a');
+      const figcaption = figure ? figure.querySelector('figcaption') : null;
+      const creditSpan = figcaption ? figcaption.querySelector('.jbd-image-credit') : null;
+
+      let captionText = '';
+      if (figcaption) {
+        const clone = figcaption.cloneNode(true);
+        const cred = clone.querySelector('.jbd-image-credit');
+        if (cred) cred.remove();
+        captionText = clone.textContent.trim();
+      }
+
+      let align = 'center';
+      if (figure) {
+        if (figure.classList.contains('jbd-image-left')) align = 'left';
+        else if (figure.classList.contains('jbd-image-right')) align = 'right';
+        else if (figure.classList.contains('jbd-image-full')) align = 'full';
+        else if (figure.classList.contains('jbd-image-center')) align = 'center';
+      } else if (existingImage.classList.contains('jbd-image-inline')) {
+        align = 'inline';
+      }
+
+      let borderRadius = 'default';
+      const targetForStyles = figure || existingImage;
+      if (targetForStyles.classList.contains('jbd-image-circle')) borderRadius = 'circle';
+      else if (targetForStyles.classList.contains('jbd-image-rounded-lg')) borderRadius = 'rounded-lg';
+      else if (targetForStyles.classList.contains('jbd-image-sharp')) borderRadius = 'none';
+
+      let borderStyle = 'none';
+      if (targetForStyles.classList.contains('jbd-image-frame')) borderStyle = 'frame';
+      else if (targetForStyles.classList.contains('jbd-image-bordered')) borderStyle = 'bordered';
+
+      let shadow = 'none';
+      if (targetForStyles.classList.contains('jbd-image-shadow-lg')) shadow = 'shadow-lg';
+      else if (targetForStyles.classList.contains('jbd-image-shadow-md')) shadow = 'shadow-md';
+      else if (targetForStyles.classList.contains('jbd-image-shadow-sm')) shadow = 'shadow-sm';
+
+      currentData = {
+        src: existingImage.getAttribute('src') || '',
+        alt: existingImage.getAttribute('alt') || '',
+        isDecorative: existingImage.getAttribute('alt') === '' || existingImage.getAttribute('role') === 'presentation',
+        caption: captionText,
+        credit: creditSpan ? creditSpan.textContent.replace(/^Photo:\\s*/i, '').trim() : '',
+        align: align,
+        width: (figure && figure.style.width) || existingImage.style.width || '100%',
+        height: existingImage.style.height || 'auto',
+        borderRadius: borderRadius,
+        borderStyle: borderStyle,
+        shadow: shadow,
+        linkUrl: link ? (link.getAttribute('href') || '') : '',
+        linkTarget: link ? (link.getAttribute('target') || '') : '',
+        isZoomable: existingImage.hasAttribute('data-zoomable')
+      };
+    }
+
     Dialog.openImageDialog({
-      onConfirm: ({ src, alt, caption, align, width }) => {
-        let alignClass = '';
-        if (align === 'left') alignClass = 'jbd-image-left';
-        if (align === 'center') alignClass = 'jbd-image-center';
-        if (align === 'right') alignClass = 'jbd-image-right';
-
-        let html = '';
-        if (caption) {
-          html = `<figure class="jbd-image ${alignClass}" style="max-width: ${width};">
-            <img src="${src}" alt="${alt || caption}" style="width: 100%; height: auto;" />
-            <figcaption>${caption}</figcaption>
-          </figure>`;
+      currentData,
+      onConfirm: (data) => {
+        if (existingImage) {
+          this.updateExistingImage(existingImage, data);
         } else {
-          html = `<div class="jbd-image ${alignClass}" style="max-width: ${width};">
-            <img src="${src}" alt="${alt}" style="width: 100%; height: auto;" />
-          </div>`;
+          this.insertNewImage(data);
         }
-
-        insertAtCursor(this.contentArea, html, this.savedSelectionRange);
-        this._handleInput();
       }
     });
   }
 
-  openTableModal() {
+  insertNewImage(data) {
+    this.contentArea.focus();
+    if (this.savedSelectionRange) {
+      restoreSelection(this.savedSelectionRange);
+    }
+    const html = this.buildImageHTML(data);
+    insertAtCursor(this.contentArea, html, this.savedSelectionRange);
+
+    const allImgs = Array.from(this.contentArea.querySelectorAll('img'));
+    const newImg = allImgs.find(img => img.getAttribute('src') === data.src) || allImgs[allImgs.length - 1];
+    if (newImg) {
+      this.selectImage(newImg);
+    }
+    this.history.record(this.getHTML());
+    this._handleInput();
+  }
+
+  updateExistingImage(existingImg, data) {
+    const figure = existingImg.closest('figure.jbd-image') || existingImg.closest('.jbd-image');
+    const html = this.buildImageHTML(data);
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const newEl = temp.firstElementChild;
+
+    const targetToReplace = figure || existingImg.closest('a') || existingImg;
+    if (targetToReplace && targetToReplace.parentNode) {
+      targetToReplace.parentNode.replaceChild(newEl, targetToReplace);
+      const updatedImg = newEl.tagName === 'IMG' ? newEl : newEl.querySelector('img');
+      if (updatedImg) {
+        this.selectImage(updatedImg);
+      }
+    }
+    this.history.record(this.getHTML());
+    this._handleInput();
+  }
+
+  initImageInteractions() {
+    if (typeof document === 'undefined') return;
+
+    this.selectedImage = null;
+    this.selectedFigure = null;
+
+    // Build floating resizer overlay
+    this.imageResizerOverlay = createElement('div', {
+      className: 'jbd-image-resizer-overlay',
+      role: 'region',
+      'aria-label': 'Image controls'
+    });
+
+    this.imageResizerOverlay.innerHTML = `
+      <div class="jbd-image-resizer-handle jbd-image-handle-nw" data-handle="nw" title="Resize NW"></div>
+      <div class="jbd-image-resizer-handle jbd-image-handle-ne" data-handle="ne" title="Resize NE"></div>
+      <div class="jbd-image-resizer-handle jbd-image-handle-se" data-handle="se" title="Resize SE"></div>
+      <div class="jbd-image-resizer-handle jbd-image-handle-sw" data-handle="sw" title="Resize SW"></div>
+      <div class="jbd-image-resizer-handle jbd-image-handle-n" data-handle="n" title="Resize Height"></div>
+      <div class="jbd-image-resizer-handle jbd-image-handle-s" data-handle="s" title="Resize Height"></div>
+      <div class="jbd-image-resizer-handle jbd-image-handle-e" data-handle="e" title="Resize Width"></div>
+      <div class="jbd-image-resizer-handle jbd-image-handle-w" data-handle="w" title="Resize Width"></div>
+      <div class="jbd-image-size-badge" id="jbd-image-size-badge"></div>
+      <div class="jbd-image-bubble-toolbar" role="toolbar" aria-label="Image Quick Tools">
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="align-left" title="Float Left">◀ Left</button>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="align-center" title="Center">⏺ Center</button>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="align-right" title="Float Right">▶ Right</button>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="align-full" title="Full Width">⛶ Full</button>
+        <div class="jbd-image-bubble-divider"></div>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="size-25" title="25% Width">25%</button>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="size-50" title="50% Width">50%</button>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="size-75" title="75% Width">75%</button>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="size-100" title="100% Width">100%</button>
+        <div class="jbd-image-bubble-divider"></div>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="caption" title="Add / Edit Caption">💬 Caption</button>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="link" title="Hyperlink Image">🔗 Link</button>
+        <button type="button" class="jbd-image-bubble-btn" data-img-action="edit" title="Settings & Presentation">⚙️ Edit</button>
+        <button type="button" class="jbd-image-bubble-btn jbd-image-bubble-btn-danger" data-img-action="delete" title="Delete Image">🗑️</button>
+      </div>
+    `;
+
+    this.wrapper.appendChild(this.imageResizerOverlay);
+
+    // Bubble toolbar button actions
+    this.imageResizerOverlay.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-img-action]');
+      if (!btn || !this.selectedImage) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const action = btn.getAttribute('data-img-action');
+      if (action === 'align-left') this.setImageAlignment('left');
+      else if (action === 'align-center') this.setImageAlignment('center');
+      else if (action === 'align-right') this.setImageAlignment('right');
+      else if (action === 'align-full') this.setImageAlignment('full');
+      else if (action === 'size-25') this.setImageSize('25%');
+      else if (action === 'size-50') this.setImageSize('50%');
+      else if (action === 'size-75') this.setImageSize('75%');
+      else if (action === 'size-100') this.setImageSize('100%');
+      else if (action === 'caption') this.toggleImageCaption();
+      else if (action === 'link') this.promptImageLink();
+      else if (action === 'edit') this.openImageModal(this.selectedImage);
+      else if (action === 'delete') this.removeSelectedImage();
+    });
+
+    // Drag handles logic
+    this.imageResizerOverlay.addEventListener('mousedown', (e) => {
+      const handle = e.target.closest('[data-handle]');
+      if (!handle || !this.selectedImage) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const handleType = handle.getAttribute('data-handle');
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const imgRect = this.selectedImage.getBoundingClientRect();
+      const startWidth = imgRect.width;
+      const startHeight = imgRect.height;
+      const naturalAspect = (this.selectedImage.naturalWidth && this.selectedImage.naturalHeight)
+        ? (this.selectedImage.naturalWidth / this.selectedImage.naturalHeight)
+        : (startWidth / startHeight);
+      const contentWidth = this.contentArea.clientWidth;
+      const badge = this.imageResizerOverlay.querySelector('#jbd-image-size-badge');
+
+      this.imageResizerOverlay.classList.add('resizing');
+
+      const onMouseMove = (moveEvt) => {
+        const dx = moveEvt.clientX - startX;
+        const dy = moveEvt.clientY - startY;
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+
+        if (handleType === 'se' || handleType === 'e') {
+          newWidth = Math.max(50, Math.min(contentWidth, startWidth + dx));
+          newHeight = Math.round(newWidth / naturalAspect);
+        } else if (handleType === 'sw' || handleType === 'w') {
+          newWidth = Math.max(50, Math.min(contentWidth, startWidth - dx));
+          newHeight = Math.round(newWidth / naturalAspect);
+        } else if (handleType === 'ne') {
+          newWidth = Math.max(50, Math.min(contentWidth, startWidth + dx));
+          newHeight = Math.round(newWidth / naturalAspect);
+        } else if (handleType === 'nw') {
+          newWidth = Math.max(50, Math.min(contentWidth, startWidth - dx));
+          newHeight = Math.round(newWidth / naturalAspect);
+        } else if (handleType === 's') {
+          newHeight = Math.max(40, startHeight + dy);
+          newWidth = Math.round(newHeight * naturalAspect);
+        } else if (handleType === 'n') {
+          newHeight = Math.max(40, startHeight - dy);
+          newWidth = Math.round(newHeight * naturalAspect);
+        }
+
+        const pct = Math.round((newWidth / contentWidth) * 100);
+
+        if (this.selectedFigure) {
+          this.selectedFigure.style.width = `${newWidth}px`;
+          this.selectedFigure.style.maxWidth = '100%';
+        }
+        this.selectedImage.style.width = '100%';
+        this.selectedImage.style.height = 'auto';
+
+        this.updateImageOverlayPosition();
+
+        if (badge) {
+          badge.textContent = `${Math.round(newWidth)} × ${Math.round(newHeight)} px (${pct}%)`;
+        }
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        this.imageResizerOverlay.classList.remove('resizing');
+        this.updateImageOverlayPosition();
+        this.history.record(this.getHTML());
+        this._handleInput();
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    // Image selection on click
+    this._handleImageAreaClick = (e) => {
+      const targetImg = e.target.tagName === 'IMG' ? e.target : (e.target.classList && e.target.classList.contains('jbd-image') ? e.target.querySelector('img') : null);
+      if (targetImg && this.contentArea.contains(targetImg)) {
+        this.selectImage(targetImg);
+        return;
+      }
+
+      if (this.selectedImage && !e.target.closest('.jbd-image-resizer-overlay')) {
+        this.deselectImage();
+      }
+    };
+    this.contentArea.addEventListener('click', this._handleImageAreaClick);
+
+    // Double-click image to open modal
+    this._handleImageDblClick = (e) => {
+      const targetImg = e.target.tagName === 'IMG' ? e.target : null;
+      if (targetImg && this.contentArea.contains(targetImg)) {
+        e.preventDefault();
+        this.selectImage(targetImg);
+        this.openImageModal(targetImg);
+      }
+    };
+    this.contentArea.addEventListener('dblclick', this._handleImageDblClick);
+
+    // Reposition on scroll and resize
+    this._handleImageReposition = () => {
+      if (this.selectedImage) {
+        this.updateImageOverlayPosition();
+      }
+    };
+    this.contentArea.addEventListener('scroll', this._handleImageReposition, { passive: true });
+    window.addEventListener('scroll', this._handleImageReposition, { passive: true });
+    window.addEventListener('resize', this._handleImageReposition, { passive: true });
+
+    // Click outside deselect
+    this._handleDocMousedown = (e) => {
+      if (this.selectedImage && !this.wrapper.contains(e.target) && !document.querySelector('.jbd-dialog-overlay')) {
+        this.deselectImage();
+      }
+    };
+    document.addEventListener('mousedown', this._handleDocMousedown);
+
+    // Drag and drop image files directly onto editor
+    this._handleDragOver = (e) => {
+      if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) {
+        e.preventDefault();
+      }
+    };
+    this._handleDrop = (e) => {
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+          e.preventDefault();
+          const reader = new FileReader();
+          reader.onload = (loadEvt) => {
+            const alt = file.name.replace(/\\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+            const html = this.buildImageHTML({
+              src: loadEvt.target.result,
+              alt: alt,
+              align: 'center',
+              width: '100%'
+            });
+            insertAtCursor(this.contentArea, html, saveSelection(this.contentArea));
+            this._handleInput();
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    };
+    this.contentArea.addEventListener('dragover', this._handleDragOver);
+    this.contentArea.addEventListener('drop', this._handleDrop);
+  }
+
+  selectImage(img) {
+    if (!img || !this.contentArea.contains(img)) {
+      this.deselectImage();
+      return;
+    }
+    this.deselectImage();
+
+    this.selectedImage = img;
+    this.selectedFigure = img.closest('figure.jbd-image') || img.closest('.jbd-image');
+
+    if (this.selectedFigure) {
+      this.selectedFigure.classList.add('jbd-image-active');
+    } else {
+      img.classList.add('jbd-image-active');
+    }
+
+    this.updateImageOverlayPosition();
+    this.updateBubbleToolbarStates();
+  }
+
+  deselectImage() {
+    if (this.selectedFigure) {
+      this.selectedFigure.classList.remove('jbd-image-active');
+    }
+    if (this.selectedImage) {
+      this.selectedImage.classList.remove('jbd-image-active');
+    }
+    this.selectedImage = null;
+    this.selectedFigure = null;
+
+    if (this.imageResizerOverlay) {
+      this.imageResizerOverlay.classList.remove('active', 'resizing');
+    }
+  }
+
+  updateImageOverlayPosition() {
+    if (!this.selectedImage || !this.selectedImage.isConnected) {
+      this.deselectImage();
+      return;
+    }
+
+    const targetEl = this.selectedFigure || this.selectedImage;
+    const imgRect = targetEl.getBoundingClientRect();
+    const wrapRect = this.wrapper.getBoundingClientRect();
+
+    const top = imgRect.top - wrapRect.top;
+    const left = imgRect.left - wrapRect.left;
+
+    this.imageResizerOverlay.style.top = `${top}px`;
+    this.imageResizerOverlay.style.left = `${left}px`;
+    this.imageResizerOverlay.style.width = `${imgRect.width}px`;
+    this.imageResizerOverlay.style.height = `${imgRect.height}px`;
+    this.imageResizerOverlay.classList.add('active');
+  }
+
+  updateBubbleToolbarStates() {
+    if (!this.imageResizerOverlay || !this.selectedImage) return;
+    const figure = this.selectedFigure;
+    let align = 'center';
+    if (figure) {
+      if (figure.classList.contains('jbd-image-left')) align = 'left';
+      else if (figure.classList.contains('jbd-image-right')) align = 'right';
+      else if (figure.classList.contains('jbd-image-full')) align = 'full';
+      else if (figure.classList.contains('jbd-image-center')) align = 'center';
+    } else if (this.selectedImage.classList.contains('jbd-image-inline')) {
+      align = 'inline';
+    }
+
+    const buttons = this.imageResizerOverlay.querySelectorAll('[data-img-action^="align-"]');
+    buttons.forEach(btn => {
+      const act = btn.getAttribute('data-img-action');
+      btn.classList.toggle('active', act === `align-${align}`);
+    });
+  }
+
+  setImageAlignment(alignment) {
+    if (!this.selectedImage) return;
+    let figure = this.selectedFigure;
+
+    if (!figure) {
+      figure = document.createElement('figure');
+      figure.className = `jbd-image jbd-image-${alignment}`;
+      figure.style.width = this.selectedImage.style.width || '50%';
+      figure.style.maxWidth = '100%';
+      this.selectedImage.parentNode.insertBefore(figure, this.selectedImage);
+      figure.appendChild(this.selectedImage);
+      this.selectedImage.style.width = '100%';
+      this.selectedFigure = figure;
+    } else {
+      figure.classList.remove('jbd-image-left', 'jbd-image-center', 'jbd-image-right', 'jbd-image-full', 'jbd-image-inline');
+      figure.classList.add(`jbd-image-${alignment}`);
+      if (alignment === 'full') {
+        figure.style.width = '100%';
+      } else if (figure.style.width === '100%') {
+        figure.style.width = '50%';
+      }
+    }
+
+    this.updateBubbleToolbarStates();
+    this.updateImageOverlayPosition();
+    this.history.record(this.getHTML());
+    this._handleInput();
+  }
+
+  setImageSize(sizeStr) {
+    if (!this.selectedImage) return;
+    const target = this.selectedFigure || this.selectedImage;
+    target.style.width = sizeStr;
+    target.style.maxWidth = '100%';
+    this.selectedImage.style.height = 'auto';
+
+    this.updateImageOverlayPosition();
+    this.history.record(this.getHTML());
+    this._handleInput();
+  }
+
+  toggleImageCaption() {
+    if (!this.selectedImage) return;
+    let figure = this.selectedFigure;
+    if (!figure) {
+      this.setImageAlignment('center');
+      figure = this.selectedFigure;
+    }
+    if (!figure) return;
+
+    let figcaption = figure.querySelector('figcaption');
+    if (figcaption) {
+      figcaption.focus();
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(figcaption);
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } catch {}
+    } else {
+      figcaption = createElement('figcaption', {
+        className: 'jbd-image-caption',
+        contentEditable: 'true'
+      }, ['Caption text...']);
+      figure.appendChild(figcaption);
+      figcaption.focus();
+    }
+    this.updateImageOverlayPosition();
+    this.history.record(this.getHTML());
+    this._handleInput();
+  }
+
+  promptImageLink() {
+    if (!this.selectedImage) return;
+    const link = this.selectedImage.closest('a');
+    const currentUrl = link ? (link.getAttribute('href') || '') : '';
+    const promptText = currentUrl ? 'Update hyperlink (leave empty to remove link):' : 'Enter hyperlink URL:';
+
+    const newUrl = window.prompt(promptText, currentUrl);
+    if (newUrl === null) return;
+
+    const trimmed = newUrl.trim();
+    if (!trimmed) {
+      if (link && link.parentNode) {
+        link.parentNode.insertBefore(this.selectedImage, link);
+        link.remove();
+      }
+    } else {
+      if (link) {
+        link.setAttribute('href', trimmed);
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+      } else {
+        const newA = createElement('a', {
+          href: trimmed,
+          target: '_blank',
+          rel: 'noopener noreferrer'
+        });
+        this.selectedImage.parentNode.insertBefore(newA, this.selectedImage);
+        newA.appendChild(this.selectedImage);
+      }
+    }
+    this.updateImageOverlayPosition();
+    this.history.record(this.getHTML());
+    this._handleInput();
+  }
+
+  removeSelectedImage() {
+    if (!this.selectedImage) return;
+    const toRemove = this.selectedFigure || this.selectedImage.closest('a') || this.selectedImage;
+    if (toRemove && toRemove.parentNode) {
+      toRemove.parentNode.removeChild(toRemove);
+    }
+    this.deselectImage();
+    this.history.record(this.getHTML());
+    this._handleInput();
+  }
+
+  destroyImageInteractions() {
+    this.deselectImage();
+    if (this.imageResizerOverlay && this.imageResizerOverlay.parentNode) {
+      this.imageResizerOverlay.parentNode.removeChild(this.imageResizerOverlay);
+    }
+    if (this._handleImageAreaClick) {
+      this.contentArea.removeEventListener('click', this._handleImageAreaClick);
+    }
+    if (this._handleImageDblClick) {
+      this.contentArea.removeEventListener('dblclick', this._handleImageDblClick);
+    }
+    if (this._handleImageReposition) {
+      this.contentArea.removeEventListener('scroll', this._handleImageReposition);
+      window.removeEventListener('scroll', this._handleImageReposition);
+      window.removeEventListener('resize', this._handleImageReposition);
+    }
+    if (this._handleDocMousedown) {
+      document.removeEventListener('mousedown', this._handleDocMousedown);
+    }
+    if (this._handleDragOver) {
+      this.contentArea.removeEventListener('dragover', this._handleDragOver);
+    }
+    if (this._handleDrop) {
+      this.contentArea.removeEventListener('drop', this._handleDrop);
+    }
+  }
+
+  initTableInteractions() {
+    if (typeof document === 'undefined') return;
+
+    this.selectedTable = null;
+    this.selectedCell = null;
+
+    this.tableResizerOverlay = createElement('div', {
+      className: 'jbd-table-resizer-overlay',
+      role: 'region',
+      'aria-label': 'Table controls'
+    });
+
+    this.tableResizerOverlay.innerHTML = `
+      <div class="jbd-table-handle-e" data-tbl-handle="e" title="Resize Table Width"></div>
+      <div class="jbd-table-handle-se" data-tbl-handle="se" title="Resize Table Width"></div>
+      <div class="jbd-table-size-badge" id="jbd-table-size-badge"></div>
+      <div class="jbd-table-bubble-toolbar" role="toolbar" aria-label="Table Quick Tools">
+        <button type="button" class="jbd-table-bubble-btn" data-tbl-action="row-above" title="Insert Row Above">⬆️ Row</button>
+        <button type="button" class="jbd-table-bubble-btn" data-tbl-action="row-below" title="Insert Row Below">⬇️ Row</button>
+        <button type="button" class="jbd-table-bubble-btn jbd-table-bubble-btn-danger" data-tbl-action="row-delete" title="Delete Row">🗑️ Row</button>
+        <div class="jbd-table-bubble-divider"></div>
+        <button type="button" class="jbd-table-bubble-btn" data-tbl-action="col-left" title="Insert Column Left">⬅️ Col</button>
+        <button type="button" class="jbd-table-bubble-btn" data-tbl-action="col-right" title="Insert Column Right">➡️ Col</button>
+        <button type="button" class="jbd-table-bubble-btn jbd-table-bubble-btn-danger" data-tbl-action="col-delete" title="Delete Column">🗑️ Col</button>
+        <div class="jbd-table-bubble-divider"></div>
+        <button type="button" class="jbd-table-bubble-btn" data-tbl-action="header" title="Toggle Header Row">🔤 Header</button>
+        <button type="button" class="jbd-table-bubble-btn" data-tbl-action="striped" title="Toggle Striped Rows">🦓 Striped</button>
+        <button type="button" class="jbd-table-bubble-btn" data-tbl-action="bordered" title="Toggle Borders">🔲 Border</button>
+        <button type="button" class="jbd-table-bubble-btn" data-tbl-action="caption" title="Add / Edit Caption">💬 Caption</button>
+        <div class="jbd-table-bubble-divider"></div>
+        <button type="button" class="jbd-table-bubble-btn" data-tbl-action="properties" title="Table Properties & Styles">⚙️ Edit</button>
+        <button type="button" class="jbd-table-bubble-btn jbd-table-bubble-btn-danger" data-tbl-action="delete" title="Delete Table">🗑️</button>
+      </div>
+    `;
+
+    this.wrapper.appendChild(this.tableResizerOverlay);
+
+    this.tableResizerOverlay.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-tbl-action]');
+      if (!btn || !this.selectedTable) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const action = btn.getAttribute('data-tbl-action');
+      const targetCell = this.selectedCell || this.selectedTable.querySelector('td, th');
+
+      if (action === 'row-above') {
+        TableManager.addRowAbove(targetCell);
+      } else if (action === 'row-below') {
+        TableManager.addRowBelow(targetCell);
+      } else if (action === 'row-delete') {
+        TableManager.deleteRow(targetCell);
+      } else if (action === 'col-left') {
+        TableManager.addColLeft(targetCell);
+      } else if (action === 'col-right') {
+        TableManager.addColRight(targetCell);
+      } else if (action === 'col-delete') {
+        TableManager.deleteCol(targetCell);
+      } else if (action === 'header') {
+        const thead = this.selectedTable.querySelector('thead');
+        if (thead) {
+          let tbody = this.selectedTable.querySelector('tbody');
+          if (!tbody) {
+            tbody = createElement('tbody');
+            this.selectedTable.appendChild(tbody);
+          }
+          const headerRows = Array.from(thead.querySelectorAll('tr'));
+          headerRows.reverse().forEach(hr => {
+            Array.from(hr.children).forEach(th => {
+              const td = createElement('td', {}, Array.from(th.childNodes));
+              hr.replaceChild(td, th);
+            });
+            tbody.insertBefore(hr, tbody.firstChild);
+          });
+          thead.remove();
+        } else {
+          const firstRow = this.selectedTable.querySelector('tr');
+          if (firstRow) {
+            const theadEl = createElement('thead');
+            Array.from(firstRow.children).forEach(cell => {
+              const th = createElement('th', { scope: 'col' }, Array.from(cell.childNodes));
+              firstRow.replaceChild(th, cell);
+            });
+            this.selectedTable.insertBefore(theadEl, this.selectedTable.firstChild);
+            theadEl.appendChild(firstRow);
+          }
+        }
+      } else if (action === 'striped') {
+        this.selectedTable.classList.toggle('jbd-table-striped');
+      } else if (action === 'bordered') {
+        this.selectedTable.classList.toggle('jbd-table-bordered');
+      } else if (action === 'caption') {
+        let cap = this.selectedTable.querySelector('caption');
+        if (!cap) {
+          cap = createElement('caption', { className: 'jbd-table-caption', contenteditable: 'true' }, ['Table Caption & Summary']);
+          this.selectedTable.insertBefore(cap, this.selectedTable.firstChild);
+        }
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(cap);
+          const sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } catch {}
+      } else if (action === 'properties') {
+        this.openTableModal(this.selectedTable);
+        return;
+      } else if (action === 'delete') {
+        this.selectedTable.remove();
+        this.deselectTable();
+      }
+
+      if (this.selectedTable && this.selectedTable.isConnected) {
+        this.updateTableOverlayPosition();
+        this.updateTableBubbleToolbarStates();
+      } else {
+        this.deselectTable();
+      }
+
+      this.history.record(this.getHTML());
+      this._handleInput();
+    });
+
+    this.tableResizerOverlay.addEventListener('mousedown', (e) => {
+      const handle = e.target.closest('[data-tbl-handle]');
+      if (!handle || !this.selectedTable) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startX = e.clientX;
+      const tableRect = this.selectedTable.getBoundingClientRect();
+      const startWidth = tableRect.width;
+      const contentWidth = this.contentArea.clientWidth;
+      const badge = this.tableResizerOverlay.querySelector('#jbd-table-size-badge');
+
+      this.tableResizerOverlay.classList.add('resizing');
+
+      const onMouseMove = (moveEvt) => {
+        const dx = moveEvt.clientX - startX;
+        const newWidth = Math.max(120, Math.min(contentWidth, startWidth + dx));
+        const pct = Math.round((newWidth / contentWidth) * 100);
+
+        this.selectedTable.style.width = `${newWidth}px`;
+        this.selectedTable.style.maxWidth = '100%';
+        this.updateTableOverlayPosition();
+
+        if (badge) {
+          const cols = this.selectedTable.querySelector('tr')?.children.length || 0;
+          const rows = this.selectedTable.querySelectorAll('tr').length;
+          badge.textContent = `${cols} cols × ${rows} rows • ${Math.round(newWidth)} px (${pct}%)`;
+        }
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        this.tableResizerOverlay.classList.remove('resizing');
+        this.updateTableOverlayPosition();
+        this.history.record(this.getHTML());
+        this._handleInput();
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    this._handleTableAreaClick = (e) => {
+      const tbl = e.target.closest('table');
+      if (tbl && this.contentArea.contains(tbl)) {
+        const cell = e.target.closest('td, th');
+        this.selectTable(tbl, cell);
+        return;
+      }
+
+      if (this.selectedTable && !e.target.closest('.jbd-table-resizer-overlay')) {
+        this.deselectTable();
+      }
+    };
+    this.contentArea.addEventListener('click', this._handleTableAreaClick);
+
+    this._handleTableAreaDblClick = (e) => {
+      const tbl = e.target.closest('table');
+      if (tbl && this.contentArea.contains(tbl)) {
+        e.preventDefault();
+        this.selectTable(tbl, e.target.closest('td, th'));
+        this.openTableModal(tbl);
+      }
+    };
+    this.contentArea.addEventListener('dblclick', this._handleTableAreaDblClick);
+
+    this._handleTableReposition = () => {
+      if (this.selectedTable) {
+        this.updateTableOverlayPosition();
+      }
+    };
+    this.contentArea.addEventListener('scroll', this._handleTableReposition, { passive: true });
+    window.addEventListener('scroll', this._handleTableReposition, { passive: true });
+    window.addEventListener('resize', this._handleTableReposition, { passive: true });
+
+    this._handleTableDocMousedown = (e) => {
+      if (this.selectedTable && !this.wrapper.contains(e.target) && !document.querySelector('.jbd-dialog-overlay')) {
+        this.deselectTable();
+      }
+    };
+    document.addEventListener('mousedown', this._handleTableDocMousedown);
+  }
+
+  selectTable(table, cell = null) {
+    if (!table || !this.contentArea.contains(table)) {
+      this.deselectTable();
+      return;
+    }
+    if (this.selectedImage) {
+      this.deselectImage();
+    }
+    this.deselectTable();
+
+    this.selectedTable = table;
+    this.selectedCell = cell || table.querySelector('td, th');
+
+    table.classList.add('jbd-table-active');
+
+    this.updateTableOverlayPosition();
+    this.updateTableBubbleToolbarStates();
+  }
+
+  deselectTable() {
+    if (this.selectedTable) {
+      this.selectedTable.classList.remove('jbd-table-active');
+    }
+    this.selectedTable = null;
+    this.selectedCell = null;
+
+    if (this.tableResizerOverlay) {
+      this.tableResizerOverlay.classList.remove('active', 'resizing');
+    }
+  }
+
+  updateTableOverlayPosition() {
+    if (!this.selectedTable || !this.selectedTable.isConnected) {
+      this.deselectTable();
+      return;
+    }
+
+    const tblRect = this.selectedTable.getBoundingClientRect();
+    const wrapRect = this.wrapper.getBoundingClientRect();
+
+    const top = tblRect.top - wrapRect.top;
+    const left = tblRect.left - wrapRect.left;
+
+    this.tableResizerOverlay.style.top = `${top}px`;
+    this.tableResizerOverlay.style.left = `${left}px`;
+    this.tableResizerOverlay.style.width = `${tblRect.width}px`;
+    this.tableResizerOverlay.style.height = `${tblRect.height}px`;
+    this.tableResizerOverlay.classList.add('active');
+
+    const toolbarEl = this.wrapper.querySelector('.jbd-toolbar');
+    const toolbarBottom = toolbarEl ? (toolbarEl.offsetTop + toolbarEl.offsetHeight) : 0;
+    if (top - 48 < toolbarBottom) {
+      this.tableResizerOverlay.classList.add('bubble-at-bottom');
+    } else {
+      this.tableResizerOverlay.classList.remove('bubble-at-bottom');
+    }
+
+    const bubbleEl = this.tableResizerOverlay.querySelector('.jbd-table-bubble-toolbar');
+    if (bubbleEl) {
+      const bubbleWidth = bubbleEl.offsetWidth || 500;
+      const overlayWidth = tblRect.width;
+      const idealCenter = left + (overlayWidth / 2);
+      const halfBubble = bubbleWidth / 2;
+      const wrapWidth = wrapRect.width;
+      const minCenter = halfBubble + 8;
+      const maxCenter = wrapWidth - halfBubble - 8;
+      const clampedCenter = Math.max(minCenter, Math.min(maxCenter, idealCenter));
+      const bubbleLeft = clampedCenter - left;
+      bubbleEl.style.left = `${bubbleLeft}px`;
+      bubbleEl.style.transform = 'translateX(-50%)';
+    }
+  }
+
+  updateTableBubbleToolbarStates() {
+    if (!this.tableResizerOverlay || !this.selectedTable) return;
+    const tbl = this.selectedTable;
+    const isStriped = tbl.classList.contains('jbd-table-striped');
+    const isBordered = tbl.classList.contains('jbd-table-bordered');
+    const hasThead = !!tbl.querySelector('thead');
+    const hasCaption = !!tbl.querySelector('caption');
+
+    const setBtnActive = (action, active) => {
+      const btn = this.tableResizerOverlay.querySelector(`[data-tbl-action="${action}"]`);
+      if (btn) btn.classList.toggle('active', !!active);
+    };
+
+    setBtnActive('striped', isStriped);
+    setBtnActive('bordered', isBordered);
+    setBtnActive('header', hasThead);
+    setBtnActive('caption', hasCaption);
+  }
+
+  destroyTableInteractions() {
+    this.deselectTable();
+    if (this.tableResizerOverlay && this.tableResizerOverlay.parentNode) {
+      this.tableResizerOverlay.parentNode.removeChild(this.tableResizerOverlay);
+    }
+    if (this._handleTableAreaClick) {
+      this.contentArea.removeEventListener('click', this._handleTableAreaClick);
+    }
+    if (this._handleTableAreaDblClick) {
+      this.contentArea.removeEventListener('dblclick', this._handleTableAreaDblClick);
+    }
+    if (this._handleTableReposition) {
+      this.contentArea.removeEventListener('scroll', this._handleTableReposition);
+      window.removeEventListener('scroll', this._handleTableReposition);
+      window.removeEventListener('resize', this._handleTableReposition);
+    }
+    if (this._handleTableDocMousedown) {
+      document.removeEventListener('mousedown', this._handleTableDocMousedown);
+    }
+  }
+
+  updateExistingTable(table, options) {
+    if (!table) return;
+
+    let cap = table.querySelector('caption');
+    if (options.caption && options.caption.trim()) {
+      if (!cap) {
+        cap = createElement('caption', { className: 'jbd-table-caption' });
+        table.insertBefore(cap, table.firstChild);
+      }
+      cap.textContent = options.caption.trim();
+    } else if (cap) {
+      cap.remove();
+    }
+
+    table.classList.toggle('jbd-table-bordered', !!options.bordered);
+    table.classList.toggle('jbd-table-striped', !!options.striped);
+    table.classList.toggle('jbd-table-hover', !!options.hover);
+    table.classList.toggle('jbd-table-sm', !!options.condensed);
+
+    table.classList.remove('jbd-table-left', 'jbd-table-center', 'jbd-table-right');
+    if (options.align === 'left') table.classList.add('jbd-table-left');
+    else if (options.align === 'right') table.classList.add('jbd-table-right');
+    else table.classList.add('jbd-table-center');
+
+    if (options.width) {
+      table.style.width = options.width;
+      if (options.width !== '100%') {
+        table.style.maxWidth = '100%';
+      }
+    }
+
+    const currentThead = table.querySelector('thead');
+    const headerType = options.headerType || 'row';
+    const wantHeadRow = (headerType === 'row' || headerType === 'both');
+    const wantHeadCol = (headerType === 'col' || headerType === 'both');
+
+    if (wantHeadRow && !currentThead) {
+      const firstRow = table.querySelector('tr');
+      if (firstRow) {
+        const thead = createElement('thead');
+        Array.from(firstRow.children).forEach(c => {
+          const th = createElement('th', { scope: 'col' }, Array.from(c.childNodes));
+          firstRow.replaceChild(th, c);
+        });
+        table.insertBefore(thead, table.firstChild);
+        thead.appendChild(firstRow);
+      }
+    } else if (!wantHeadRow && currentThead) {
+      let tbody = table.querySelector('tbody');
+      if (!tbody) {
+        tbody = createElement('tbody');
+        table.appendChild(tbody);
+      }
+      Array.from(currentThead.querySelectorAll('tr')).reverse().forEach(tr => {
+        Array.from(tr.children).forEach(th => {
+          const td = createElement('td', {}, Array.from(th.childNodes));
+          tr.replaceChild(td, th);
+        });
+        tbody.insertBefore(tr, tbody.firstChild);
+      });
+      currentThead.remove();
+    }
+
+    const bodyRows = table.querySelectorAll('tbody tr');
+    bodyRows.forEach(r => {
+      const firstCell = r.children[0];
+      if (!firstCell) return;
+      if (wantHeadCol && firstCell.tagName !== 'TH') {
+        const th = createElement('th', { scope: 'row' }, Array.from(firstCell.childNodes));
+        r.replaceChild(th, firstCell);
+      } else if (!wantHeadCol && firstCell.tagName === 'TH') {
+        const td = createElement('td', {}, Array.from(firstCell.childNodes));
+        r.replaceChild(td, firstCell);
+      }
+    });
+
+    this.selectTable(table);
+    this.updateTableOverlayPosition();
+    this.history.record(this.getHTML());
+    this._handleInput();
+  }
+
+  openTableModal(existingTable = null) {
     if (this.isSourceMode) return;
+    const currentRange = saveSelection(this.contentArea) || this.savedSelectionRange;
+    if (currentRange) {
+      this.savedSelectionRange = currentRange;
+    }
+
+    let existingData = null;
+    if (existingTable) {
+      const rows = existingTable.querySelectorAll('tr').length;
+      const cols = Math.max(...Array.from(existingTable.querySelectorAll('tr')).map(r => r.children.length), 1);
+      const hasThead = !!existingTable.querySelector('thead');
+      const hasColHeader = TableManager.hasRowHeaders(existingTable);
+      let headerType = 'none';
+      if (hasThead && hasColHeader) headerType = 'both';
+      else if (hasThead) headerType = 'row';
+      else if (hasColHeader) headerType = 'col';
+
+      const cap = existingTable.querySelector('caption');
+      let align = 'center';
+      if (existingTable.classList.contains('jbd-table-left')) align = 'left';
+      else if (existingTable.classList.contains('jbd-table-right')) align = 'right';
+
+      existingData = {
+        isEdit: true,
+        rows,
+        cols,
+        headerType,
+        caption: cap ? cap.textContent.trim() : '',
+        bordered: existingTable.classList.contains('jbd-table-bordered'),
+        striped: existingTable.classList.contains('jbd-table-striped'),
+        hover: existingTable.classList.contains('jbd-table-hover'),
+        condensed: existingTable.classList.contains('jbd-table-sm'),
+        align,
+        width: existingTable.style.width || '100%'
+      };
+    }
+
     Dialog.openTableDialog({
+      existingData,
       onConfirm: (options) => {
+        if (existingTable) {
+          this.updateExistingTable(existingTable, options);
+          return;
+        }
+
         const table = TableManager.createTable(options);
-        insertAtCursor(this.contentArea, table, this.savedSelectionRange);
+        if (options.striped) table.classList.add('jbd-table-striped');
+        if (options.hover) table.classList.add('jbd-table-hover');
+        if (options.condensed) table.classList.add('jbd-table-sm');
+        if (options.align === 'left') table.classList.add('jbd-table-left');
+        else if (options.align === 'right') table.classList.add('jbd-table-right');
+        else table.classList.add('jbd-table-center');
+
+        if (options.width) {
+          table.style.width = options.width;
+        }
+
+        this.contentArea.focus();
+        if (this.savedSelectionRange) {
+          restoreSelection(this.savedSelectionRange);
+        }
+
+        const selection = window.getSelection();
+        let inserted = false;
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          if (this.contentArea.contains(range.commonAncestorContainer)) {
+            let currentBlock = range.startContainer;
+            if (currentBlock.nodeType === Node.TEXT_NODE) {
+              currentBlock = currentBlock.parentNode;
+            }
+            while (currentBlock && currentBlock.parentNode !== this.contentArea && currentBlock !== this.contentArea) {
+              currentBlock = currentBlock.parentNode;
+            }
+
+            if (currentBlock && currentBlock !== this.contentArea && currentBlock.tagName === 'P') {
+              const text = currentBlock.textContent.trim();
+              if (text === '' && !currentBlock.querySelector('img, table, iframe')) {
+                currentBlock.parentNode.insertBefore(table, currentBlock);
+                currentBlock.remove();
+                inserted = true;
+              } else {
+                if (currentBlock.nextSibling) {
+                  currentBlock.parentNode.insertBefore(table, currentBlock.nextSibling);
+                } else {
+                  currentBlock.parentNode.appendChild(table);
+                }
+                inserted = true;
+              }
+            }
+          }
+        }
+
+        if (!inserted) {
+          insertAtCursor(this.contentArea, table, this.savedSelectionRange);
+        }
+
+        if (this.contentArea.lastElementChild === table) {
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          this.contentArea.appendChild(p);
+        }
+
+        this.selectTable(table);
+
+        const firstCell = table.querySelector('th, td');
+        if (firstCell) {
+          TableManager.focusCell(firstCell);
+          this.savedSelectionRange = saveSelection(this.contentArea);
+        }
+
         this._handleInput();
       }
     });
@@ -1192,7 +2260,14 @@ openImageModal() {
   // --- Public APIs ---
 
   getHTML() {
-    return this.contentArea.innerHTML;
+    let html = this.contentArea.innerHTML;
+    if (html.includes('jbd-image-active')) {
+      html = html.replace(/\s*\bjbd-image-active\b/g, '');
+    }
+    if (html.includes('jbd-table-active')) {
+      html = html.replace(/\s*\bjbd-table-active\b/g, '');
+    }
+    return html;
   }
 
   setHTML(html) {
@@ -1335,6 +2410,8 @@ openImageModal() {
   }
 
   destroy() {
+    this.destroyImageInteractions();
+    this.destroyTableInteractions();
     if (this.autoSaver) this.autoSaver.cancel();
 
     this.contentArea.removeEventListener('input', this._handleInput);

@@ -38,6 +38,7 @@ component extends="wheels.Controller" {
 		if (local.ctrl == "articles" && local.act == "api") return true;
 		if (local.ctrl == "scheduler" && (local.act == "apirun" || local.act == "apistatus")) return true;
 		if (listFindNoCase("pressreleases,press-releases", local.ctrl) && (local.act == "api" || local.act == "view")) return true;
+		if (local.ctrl == "pages" && (local.act == "previewonepagesite" || local.act == "exportonepagesite")) return true;
 		return false;
 	}
 
@@ -52,7 +53,7 @@ component extends="wheels.Controller" {
 	private void function requireLogin() {
 		if (isPublicRequest()) return;
 
-		local.idleLimitMinutes = 30;
+		local.idleLimitMinutes = 60; // 1 hour idle limit
 		local.signedIn = StructKeyExists(session, "user") && IsStruct(session.user) && StructKeyExists(session.user, "id");
 		local.expired = false;
 
@@ -99,7 +100,7 @@ component extends="wheels.Controller" {
 		if (ListFindNoCase("workspaces,users,settings,sessions,main,documentation,up,scheduler", local.ctrl)) {
 			return;
 		}
-		if (local.act == "convertdocument") {
+		if (local.act == "convertdocument" || local.act == "publishonepagetoproduction" || local.act == "compileonepagesite" || local.act == "saveemailsettings" || local.act == "getemailsettings") {
 			return;
 		}
 

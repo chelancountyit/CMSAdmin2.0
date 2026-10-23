@@ -533,158 +533,605 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     });
   }
 
-  /**
-   * Accessible Image insertion dialog
+    /**
+   * Accessible & Comprehensive Image insertion & editing dialog
+   * Supports URL input, Media Library browsing, local file upload,
+   * live dimensions & preview, WCAG 1.1.1 alt text / decorative toggle,
+   * captions, credits, alignment, size presets, lock proportions,
+   * frames, shadows, and hyperlinks.
    */
-  static openImageDialog({ onConfirm }) {
-    const form = createElement('div', { className: 'jbd-form-grid' });
+  static openImageDialog({ currentData = null, onConfirm }) {
+    const isEdit = !!currentData;
+    const initial = Object.assign({
+      src: '',
+      alt: '',
+      isDecorative: false,
+      caption: '',
+      credit: '',
+      align: 'center',
+      width: '100%',
+      height: 'auto',
+      borderRadius: 'default',
+      borderStyle: 'none',
+      shadow: 'none',
+      linkUrl: '',
+      linkTarget: '_blank',
+      isZoomable: false
+    }, currentData || {});
+
+    const form = createElement('div', { className: 'jbd-image-dialog-container' });
 
     form.innerHTML = `
       <div class="jbd-form-group">
-        <label for="jbd-image-url">Image Web URL <span aria-hidden="true">*</span></label>
-        <input type="url" id="jbd-image-url" class="jbd-input" placeholder="https://example.com/photo.jpg" required aria-required="true" />
+        <label for="jbd-image-url">Image Web URL or Asset <span class="jbd-required-indicator" aria-hidden="true">*</span></label>
+        <div style="display:flex; gap:6px;">
+          <input type="url" id="jbd-image-url" class="jbd-input" placeholder="https://example.com/photo.jpg or /files/..." value="${escapeHTML(initial.src)}" required aria-required="true" style="flex:1;" />
+          <button type="button" class="jbd-btn jbd-btn-secondary" id="jbd-btn-browse-media" style="white-space:nowrap; display:inline-flex; align-items:center; gap:5px;" title="Browse County Media Library">
+            <svg class="jbd-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Media Library
+          </button>
+          <button type="button" class="jbd-btn jbd-btn-secondary" id="jbd-btn-upload-file" style="white-space:nowrap; display:inline-flex; align-items:center; gap:5px;" title="Select Image from Your Computer">
+            <svg class="jbd-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload
+          </button>
+          <input type="file" id="jbd-image-file-input" accept="image/*" style="display:none;" />
+        </div>
       </div>
+
+      <div class="jbd-img-preview-box" id="jbd-img-preview-box">
+        <div class="jbd-img-preview-canvas" id="jbd-img-preview-canvas">
+          <img id="jbd-preview-img" src="${escapeHTML(initial.src)}" alt="Preview" style="${initial.src ? 'display:block;' : 'display:none;'} max-height:120px; max-width:100%; border-radius:4px; object-fit:contain;" />
+          <span class="jbd-preview-placeholder" id="jbd-preview-placeholder" style="${initial.src ? 'display:none;' : 'display:block;'} color:var(--jbd-color-muted, #64748b); font-size:12px;">Image preview & natural dimensions will appear here</span>
+        </div>
+        <div class="jbd-img-preview-info">
+          <span class="jbd-img-natural-badge" id="jbd-img-natural-badge" style="display:none;"></span>
+        </div>
+      </div>
+
       <div class="jbd-form-group">
-        <label for="jbd-image-alt">Alternative Text (Alt Description) <span aria-hidden="true">*</span></label>
-        <input type="text" id="jbd-image-alt" class="jbd-input" placeholder="Brief description for screen readers" aria-required="true" />
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <label for="jbd-image-alt">Alternative Text (Screen Reader Description) <span class="jbd-required-indicator" id="jbd-alt-required-star" style="${initial.isDecorative ? 'display:none;' : 'display:inline;'}" aria-hidden="true">*</span></label>
+          <label class="jbd-checkbox-label" style="font-size:12px; font-weight:normal; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+            <input type="checkbox" id="jbd-image-decorative" ${initial.isDecorative ? 'checked' : ''} /> Purely decorative (skip for screen readers)
+          </label>
+        </div>
+        <input type="text" id="jbd-image-alt" class="jbd-input" placeholder="Concise description of image content for screen readers" value="${escapeHTML(initial.alt)}" ${initial.isDecorative ? 'disabled' : ''} aria-required="true" />
+        <span class="jbd-field-help" style="font-size:11px; color:var(--jbd-color-muted, #64748b);">WCAG 1.1.1: Describe the subject or action. Do not say \"photo of\" or \"image of\".</span>
       </div>
-      <div class="jbd-form-group">
-        <label for="jbd-image-caption">Caption (optional)</label>
-        <input type="text" id="jbd-image-caption" class="jbd-input" placeholder="Visible photo caption..." />
-      </div>
+
       <div class="jbd-form-row">
         <div class="jbd-form-group">
-          <label for="jbd-image-align">Alignment</label>
-          <select id="jbd-image-align" class="jbd-dialog-select">
-            <option value="none">Default (Block)</option>
-            <option value="left">Left (Float)</option>
-            <option value="center">Center</option>
-            <option value="right">Right (Float)</option>
+          <label for="jbd-image-caption">Visible Caption (optional)</label>
+          <input type="text" id="jbd-image-caption" class="jbd-input" placeholder="Caption displayed below photo" value="${escapeHTML(initial.caption)}" />
+        </div>
+        <div class="jbd-form-group">
+          <label for="jbd-image-credit">Photo Credit / Attribution</label>
+          <input type="text" id="jbd-image-credit" class="jbd-input" placeholder="e.g. Chelan County Sheriff" value="${escapeHTML(initial.credit)}" />
+        </div>
+      </div>
+
+      <div class="jbd-form-group">
+        <label>Position & Alignment</label>
+        <div class="jbd-segmented-control" id="jbd-align-segmented">
+          <button type="button" class="jbd-segmented-btn ${initial.align === 'left' ? 'is-active' : ''}" data-align="left" title="Float Left with text wrap">◀ Left</button>
+          <button type="button" class="jbd-segmented-btn ${initial.align === 'center' ? 'is-active' : ''}" data-align="center" title="Centered Block">⏺ Center</button>
+          <button type="button" class="jbd-segmented-btn ${initial.align === 'right' ? 'is-active' : ''}" data-align="right" title="Float Right with text wrap">▶ Right</button>
+          <button type="button" class="jbd-segmented-btn ${initial.align === 'full' ? 'is-active' : ''}" data-align="full" title="Full Width Block">⛶ Full</button>
+          <button type="button" class="jbd-segmented-btn ${initial.align === 'inline' ? 'is-active' : ''}" data-align="inline" title="Inline with text">Inline</button>
+        </div>
+        <input type="hidden" id="jbd-image-align-val" value="${escapeHTML(initial.align)}" />
+      </div>
+
+      <div class="jbd-form-group">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label>Dimensions & Resizing</label>
+          <div class="jbd-size-presets" id="jbd-size-presets">
+            <button type="button" class="jbd-pill-btn" data-size="25%">25%</button>
+            <button type="button" class="jbd-pill-btn" data-size="33.3%">33%</button>
+            <button type="button" class="jbd-pill-btn" data-size="50%">50%</button>
+            <button type="button" class="jbd-pill-btn" data-size="75%">75%</button>
+            <button type="button" class="jbd-pill-btn" data-size="100%">100%</button>
+            <button type="button" class="jbd-pill-btn" data-size="natural">Original</button>
+          </div>
+        </div>
+        <div class="jbd-form-row" style="margin-top:4px;">
+          <div class="jbd-form-group">
+            <label for="jbd-image-width" style="font-size:12px;">Width</label>
+            <input type="text" id="jbd-image-width" class="jbd-input" value="${escapeHTML(initial.width)}" placeholder="100% or 450px" />
+          </div>
+          <div class="jbd-form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label for="jbd-image-height" style="font-size:12px;">Height</label>
+              <button type="button" class="jbd-btn-link" id="jbd-lock-ratio-btn" style="font-size:11px;" title="Toggle Aspect Ratio Lock">
+                <span id="jbd-ratio-lock-state">🔒 Locked</span>
+              </button>
+            </div>
+            <input type="text" id="jbd-image-height" class="jbd-input" value="${escapeHTML(initial.height)}" placeholder="auto or 300px" />
+          </div>
+        </div>
+      </div>
+
+      <div class="jbd-form-row">
+        <div class="jbd-form-group">
+          <label for="jbd-image-radius">Corners</label>
+          <select id="jbd-image-radius" class="jbd-dialog-select">
+            <option value="default" ${initial.borderRadius === 'default' ? 'selected' : ''}>Subtle (4px)</option>
+            <option value="none" ${initial.borderRadius === 'none' ? 'selected' : ''}>Sharp (0px)</option>
+            <option value="rounded-lg" ${initial.borderRadius === 'rounded-lg' ? 'selected' : ''}>Rounded (12px)</option>
+            <option value="circle" ${initial.borderRadius === 'circle' ? 'selected' : ''}>Circle / Pill</option>
           </select>
         </div>
         <div class="jbd-form-group">
-          <label for="jbd-image-width">Max Width</label>
-          <input type="text" id="jbd-image-width" class="jbd-input" value="100%" placeholder="100% or 400px" />
+          <label for="jbd-image-border">Border / Frame</label>
+          <select id="jbd-image-border" class="jbd-dialog-select">
+            <option value="none" ${initial.borderStyle === 'none' ? 'selected' : ''}>None</option>
+            <option value="bordered" ${initial.borderStyle === 'bordered' ? 'selected' : ''}>Subtle 1px Border</option>
+            <option value="frame" ${initial.borderStyle === 'frame' ? 'selected' : ''}>Framed Card (Photo)</option>
+          </select>
+        </div>
+        <div class="jbd-form-group">
+          <label for="jbd-image-shadow">Drop Shadow</label>
+          <select id="jbd-image-shadow" class="jbd-dialog-select">
+            <option value="none" ${initial.shadow === 'none' ? 'selected' : ''}>None</option>
+            <option value="shadow-sm" ${initial.shadow === 'shadow-sm' ? 'selected' : ''}>Soft</option>
+            <option value="shadow-md" ${initial.shadow === 'shadow-md' ? 'selected' : ''}>Medium</option>
+            <option value="shadow-lg" ${initial.shadow === 'shadow-lg' ? 'selected' : ''}>Elevated</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="jbd-form-group" style="border-top:1px solid var(--jbd-color-base-border, #cbd5e1); padding-top:10px; margin-top:4px;">
+        <label for="jbd-image-link">Hyperlink (optional)</label>
+        <input type="url" id="jbd-image-link" class="jbd-input" placeholder="https://chelancounty.gov or /files/..." value="${escapeHTML(initial.linkUrl)}" />
+        <div style="display:flex; gap:16px; margin-top:6px;">
+          <label class="jbd-checkbox-label" style="font-size:12px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+            <input type="checkbox" id="jbd-image-link-blank" ${initial.linkTarget === '_blank' || !initial.linkUrl ? 'checked' : ''} /> Open in new tab
+          </label>
+          <label class="jbd-checkbox-label" style="font-size:12px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+            <input type="checkbox" id="jbd-image-zoomable" ${initial.isZoomable ? 'checked' : ''} /> Click to enlarge (lightbox)
+          </label>
         </div>
       </div>
     `;
 
     Dialog.show({
-      title: 'Insert Image',
+      title: isEdit ? 'Edit Image & Presentation' : 'Insert Image',
       body: form,
       buttons: [
         { label: 'Cancel', className: 'jbd-btn-secondary' },
         {
-          label: 'Insert Image',
+          label: isEdit ? 'Update Image' : 'Insert Image',
           className: 'jbd-btn-primary',
           onClick: (d, overlay) => {
             const urlInput = overlay.querySelector('#jbd-image-url');
             const altInput = overlay.querySelector('#jbd-image-alt');
-            const alt = altInput ? altInput.value.trim() : '';
-            const caption = overlay.querySelector('#jbd-image-caption').value.trim();
-            const align = overlay.querySelector('#jbd-image-align').value;
-            const width = overlay.querySelector('#jbd-image-width').value.trim() || '100%';
+            const decorativeCb = overlay.querySelector('#jbd-image-decorative');
+            const captionInput = overlay.querySelector('#jbd-image-caption');
+            const creditInput = overlay.querySelector('#jbd-image-credit');
+            const alignValInput = overlay.querySelector('#jbd-image-align-val');
+            const widthInput = overlay.querySelector('#jbd-image-width');
+            const heightInput = overlay.querySelector('#jbd-image-height');
+            const radiusSelect = overlay.querySelector('#jbd-image-radius');
+            const borderSelect = overlay.querySelector('#jbd-image-border');
+            const shadowSelect = overlay.querySelector('#jbd-image-shadow');
+            const linkInput = overlay.querySelector('#jbd-image-link');
+            const linkBlankCb = overlay.querySelector('#jbd-image-link-blank');
+            const zoomableCb = overlay.querySelector('#jbd-image-zoomable');
 
-            if (!urlInput.value.trim()) {
-              urlInput.focus();
+            const url = urlInput ? urlInput.value.trim() : '';
+            const isDecorative = decorativeCb ? decorativeCb.checked : false;
+            const alt = altInput ? altInput.value.trim() : '';
+
+            if (!url) {
+              if (urlInput) urlInput.focus();
               if (window.adminAlert) {
-                window.adminAlert({ title: 'Image URL Required', message: 'Please provide an image URL.', type: 'warning' });
+                window.adminAlert({ title: 'Image URL Required', message: 'Please provide an image URL or choose a file.', type: 'warning' });
               } else if (window.showToast) {
                 window.showToast('Please provide an image URL.', 'warning');
               }
               return;
             }
 
-            if (!alt) {
+            if (!isDecorative && !alt) {
               if (altInput) {
                 altInput.focus();
                 altInput.style.borderColor = 'var(--admin-danger, #ef4444)';
                 altInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
               }
               if (window.adminAlert) {
-                window.adminAlert({ title: 'WCAG 1.1.1 Required', message: 'Alternative Text is mandatory for all images under County ADA Title II policy. Please describe the image for screen readers before inserting.', type: 'warning' });
+                window.adminAlert({
+                  title: 'WCAG 1.1.1 Required',
+                  message: 'Alternative Text is mandatory under County ADA Title II policy. Please describe the image for screen readers, or check \"Purely decorative\".',
+                  type: 'warning'
+                });
               } else if (window.showToast) {
                 window.showToast('Alternative Text is mandatory for all images (WCAG 1.1.1).', 'warning');
               }
               return;
             }
 
-            onConfirm({ src: urlInput.value.trim(), alt, caption, align, width });
+            onConfirm({
+              src: url,
+              alt: isDecorative ? '' : alt,
+              isDecorative: isDecorative,
+              caption: captionInput ? captionInput.value.trim() : '',
+              credit: creditInput ? creditInput.value.trim() : '',
+              align: alignValInput ? alignValInput.value : 'center',
+              width: widthInput ? (widthInput.value.trim() || '100%') : '100%',
+              height: heightInput ? (heightInput.value.trim() || 'auto') : 'auto',
+              borderRadius: radiusSelect ? radiusSelect.value : 'default',
+              borderStyle: borderSelect ? borderSelect.value : 'none',
+              shadow: shadowSelect ? shadowSelect.value : 'none',
+              linkUrl: linkInput ? linkInput.value.trim() : '',
+              linkTarget: linkBlankCb && linkBlankCb.checked ? '_blank' : '',
+              isZoomable: zoomableCb ? zoomableCb.checked : false
+            });
+
             d.close(overlay);
+          }
         }
       ]
     });
+
+    const overlay = document.querySelector('.jbd-dialog-overlay:last-child');
+    if (!overlay) return;
+
+    const urlInput = overlay.querySelector('#jbd-image-url');
+    const altInput = overlay.querySelector('#jbd-image-alt');
+    const altStar = overlay.querySelector('#jbd-alt-required-star');
+    const decorativeCb = overlay.querySelector('#jbd-image-decorative');
+    const captionInput = overlay.querySelector('#jbd-image-caption');
+    const creditInput = overlay.querySelector('#jbd-image-credit');
+    const previewImg = overlay.querySelector('#jbd-preview-img');
+    const previewPlaceholder = overlay.querySelector('#jbd-preview-placeholder');
+    const naturalBadge = overlay.querySelector('#jbd-img-natural-badge');
+    const browseMediaBtn = overlay.querySelector('#jbd-btn-browse-media');
+    const uploadBtn = overlay.querySelector('#jbd-btn-upload-file');
+    const fileInput = overlay.querySelector('#jbd-image-file-input');
+    const alignValInput = overlay.querySelector('#jbd-image-align-val');
+    const alignButtons = overlay.querySelectorAll('.jbd-segmented-btn');
+    const presetButtons = overlay.querySelectorAll('.jbd-pill-btn');
+    const widthInput = overlay.querySelector('#jbd-image-width');
+    const heightInput = overlay.querySelector('#jbd-image-height');
+    const lockRatioBtn = overlay.querySelector('#jbd-lock-ratio-btn');
+    const ratioLockState = overlay.querySelector('#jbd-ratio-lock-state');
+
+    let naturalWidth = null;
+    let naturalHeight = null;
+    let aspectRatio = null;
+    let isRatioLocked = true;
+
+    const updatePreview = (src) => {
+      if (!src) {
+        if (previewImg) previewImg.style.display = 'none';
+        if (previewPlaceholder) previewPlaceholder.style.display = 'block';
+        if (naturalBadge) naturalBadge.style.display = 'none';
+        return;
+      }
+      if (previewImg) {
+        previewImg.src = src;
+        previewImg.style.display = 'block';
+      }
+      if (previewPlaceholder) previewPlaceholder.style.display = 'none';
+
+      const testImg = new Image();
+      testImg.onload = () => {
+        naturalWidth = testImg.naturalWidth;
+        naturalHeight = testImg.naturalHeight;
+        if (naturalWidth && naturalHeight) {
+          aspectRatio = naturalWidth / naturalHeight;
+          if (naturalBadge) {
+            naturalBadge.textContent = `Natural: ${naturalWidth} × ${naturalHeight} px`;
+            naturalBadge.style.display = 'inline-block';
+          }
+        }
+      };
+      testImg.onerror = () => {
+        if (naturalBadge) {
+          naturalBadge.textContent = 'Preview unavailable';
+          naturalBadge.style.display = 'inline-block';
+        }
+      };
+      testImg.src = src;
+    };
+
+    if (initial.src) {
+      updatePreview(initial.src);
+    }
+
+    if (urlInput) {
+      urlInput.addEventListener('input', () => {
+        updatePreview(urlInput.value.trim());
+      });
+    }
+
+    if (decorativeCb) {
+      decorativeCb.addEventListener('change', () => {
+        if (decorativeCb.checked) {
+          if (altInput) {
+            altInput.disabled = true;
+            altInput.value = '';
+            altInput.style.borderColor = '';
+            altInput.style.boxShadow = '';
+          }
+          if (altStar) altStar.style.display = 'none';
+        } else {
+          if (altInput) altInput.disabled = false;
+          if (altStar) altStar.style.display = 'inline';
+        }
+      });
+    }
+
+    alignButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        alignButtons.forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const align = btn.getAttribute('data-align');
+        if (alignValInput) alignValInput.value = align;
+        if (align === 'full' && widthInput) {
+          widthInput.value = '100%';
+          if (heightInput) heightInput.value = 'auto';
+        }
+      });
+    });
+
+    presetButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        presetButtons.forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const sz = btn.getAttribute('data-size');
+        if (sz === 'natural') {
+          if (naturalWidth && widthInput && heightInput) {
+            widthInput.value = `${naturalWidth}px`;
+            heightInput.value = `${naturalHeight}px`;
+          }
+        } else if (widthInput && heightInput) {
+          widthInput.value = sz;
+          heightInput.value = 'auto';
+        }
+      });
+    });
+
+    if (lockRatioBtn) {
+      lockRatioBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        isRatioLocked = !isRatioLocked;
+        if (ratioLockState) {
+          ratioLockState.textContent = isRatioLocked ? '🔒 Locked' : '🔓 Unlocked';
+        }
+      });
+    }
+
+    if (widthInput) {
+      widthInput.addEventListener('input', () => {
+        presetButtons.forEach(b => b.classList.remove('is-active'));
+        const val = widthInput.value.trim();
+        if (isRatioLocked && aspectRatio && heightInput) {
+          const num = parseInt(val, 10);
+          if (!isNaN(num) && (val.endsWith('px') || /^\d+$/.test(val))) {
+            heightInput.value = `${Math.round(num / aspectRatio)}px`;
+          }
+        }
+      });
+    }
+
+    if (heightInput) {
+      heightInput.addEventListener('input', () => {
+        presetButtons.forEach(b => b.classList.remove('is-active'));
+        const val = heightInput.value.trim();
+        if (isRatioLocked && aspectRatio && widthInput) {
+          const num = parseInt(val, 10);
+          if (!isNaN(num) && (val.endsWith('px') || /^\d+$/.test(val))) {
+            widthInput.value = `${Math.round(num * aspectRatio)}px`;
+          }
+        }
+      });
+    }
+
+    if (browseMediaBtn) {
+      browseMediaBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof window !== 'undefined' && typeof window.openMediaPicker === 'function') {
+          window.openMediaPicker('image', {
+            folder: 'images',
+            onSelect: (payload) => {
+              const src = payload.url || (payload.data && payload.data.webUrl) || '';
+              const alt = payload.alt || payload.title || (payload.data && (payload.data.altText || payload.data.title)) || '';
+              const caption = (payload.data && payload.data.caption) || '';
+              const credit = (payload.data && (payload.data.credit || payload.data.photoCredit)) || '';
+
+              if (src && urlInput) {
+                urlInput.value = src;
+                updatePreview(src);
+              }
+              if (alt && altInput && !decorativeCb.checked && !altInput.value.trim()) {
+                altInput.value = alt;
+              }
+              if (caption && captionInput && !captionInput.value.trim()) {
+                captionInput.value = caption;
+              }
+              if (credit && creditInput && !creditInput.value.trim()) {
+                creditInput.value = credit;
+              }
+            }
+          });
+        } else if (window.showToast) {
+          window.showToast('Media Library is not active on this page. You can paste an image URL or upload a file.', 'info');
+        }
+      });
+    }
+
+    if (uploadBtn && fileInput) {
+      uploadBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        fileInput.click();
+      });
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (loadEvt) => {
+            const dataUrl = loadEvt.target.result;
+            if (urlInput) {
+              urlInput.value = dataUrl;
+              updatePreview(dataUrl);
+            }
+            if (altInput && !decorativeCb.checked && !altInput.value.trim()) {
+              altInput.value = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
   }
 
   /**
    * Accessible Table insertion dialog with WCAG scope attributes
    */
-  static openTableDialog({ onConfirm }) {
+    static openTableDialog({ existingData = null, onConfirm }) {
+    const isEdit = !!existingData;
+    const curRows = isEdit ? (existingData.rows || 3) : 3;
+    const curCols = isEdit ? (existingData.cols || 3) : 3;
+    const curHeader = isEdit ? (existingData.headerType || 'row') : 'row';
+    const curCaption = isEdit ? (existingData.caption || '') : '';
+    const curBordered = isEdit ? (existingData.bordered !== false) : true;
+    const curStriped = isEdit ? !!existingData.striped : false;
+    const curHover = isEdit ? !!existingData.hover : false;
+    const curCondensed = isEdit ? !!existingData.condensed : false;
+    const curAlign = isEdit ? (existingData.align || 'center') : 'center';
+    const curWidth = isEdit ? (existingData.width || '100%') : '100%';
+
+    const escapeAttr = (str) => String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
     const form = createElement('div', { className: 'jbd-form-grid' });
 
+    let gridHtml = '';
+    if (!isEdit) {
+      gridHtml = `
+        <div class="jbd-form-row">
+          <div class="jbd-form-group">
+            <label for="jbd-table-rows">Number of Rows</label>
+            <input type="number" id="jbd-table-rows" class="jbd-input" min="1" max="50" value="${curRows}" aria-required="true" />
+          </div>
+          <div class="jbd-form-group">
+            <label for="jbd-table-cols">Number of Columns</label>
+            <input type="number" id="jbd-table-cols" class="jbd-input" min="1" max="20" value="${curCols}" aria-required="true" />
+          </div>
+        </div>
+      `;
+    } else {
+      gridHtml = `
+        <div style="background:var(--jbd-color-toolbar-background, #f8fafc); border:1px solid var(--jbd-color-base-border, #e2e8f0); border-radius:6px; padding:8px 12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:12px; font-weight:600; color:var(--jbd-color-text, #1e293b);">
+            Table Grid: ${curCols} columns &times; ${curRows} rows
+          </span>
+          <span style="font-size:11px; color:var(--jbd-color-muted, #64748b);">
+            Use in-editor toolbar to add/remove rows &amp; columns
+          </span>
+        </div>
+      `;
+    }
+
     form.innerHTML = `
-      <div class="jbd-form-row">
-        <div class="jbd-form-group">
-          <label for="jbd-table-rows">Number of Rows</label>
-          <input type="number" id="jbd-table-rows" class="jbd-input" min="1" max="50" value="3" aria-required="true" />
-        </div>
-        <div class="jbd-form-group">
-          <label for="jbd-table-cols">Number of Columns</label>
-          <input type="number" id="jbd-table-cols" class="jbd-input" min="1" max="20" value="3" aria-required="true" />
-        </div>
-      </div>
+      ${gridHtml}
+
       <div class="jbd-form-group">
-        <label for="jbd-table-header-type">Header Type (WCAG scope attribute)</label>
+        <label for="jbd-table-header-type">Header Structure (WCAG scope attribute)</label>
         <select id="jbd-table-header-type" class="jbd-dialog-select">
-          <option value="row" selected>First Row (Column Headers &lt;th scope="col"&gt;)</option>
-          <option value="col">First Column (Row Headers &lt;th scope="row"&gt;)</option>
-          <option value="both">Both (Row and Column Headers)</option>
-          <option value="none">No Headers (Standard Data Cells)</option>
+          <option value="row" ${curHeader === 'row' ? 'selected' : ''}>First Row (Column Headers &lt;th scope="col"&gt;)</option>
+          <option value="col" ${curHeader === 'col' ? 'selected' : ''}>First Column (Row Headers &lt;th scope="row"&gt;)</option>
+          <option value="both" ${curHeader === 'both' ? 'selected' : ''}>Both (Row and Column Headers)</option>
+          <option value="none" ${curHeader === 'none' ? 'selected' : ''}>No Headers (Standard Data Cells)</option>
         </select>
-      </div>
-      <div class="jbd-form-group">
-        <label for="jbd-table-caption">Table Caption (Accessibility Summary)</label>
-        <input type="text" id="jbd-table-caption" class="jbd-input" placeholder="e.g. Fee Schedule or Department Contact Directory" />
-        <small style="color:var(--jbd-color-muted, #64748b); font-size:11.5px; margin-top:4px; display:block;">
-          Recommended for WCAG 2.1 AA compliance to summarize table contents for screen readers.
+        <small style="color:var(--jbd-color-muted, #64748b); font-size:11px; margin-top:3px; display:block;">
+          Required for WCAG 2.1 AA accessible table navigation.
         </small>
       </div>
-      <div class="jbd-form-group-checkbox">
-        <label for="jbd-table-border">
-          <input type="checkbox" id="jbd-table-border" checked />
-          Add Styled Borders
-        </label>
+
+      <div class="jbd-form-group">
+        <label for="jbd-table-caption">Table Caption &bull; Summary (WCAG 2.1 AA)</label>
+        <input type="text" id="jbd-table-caption" class="jbd-input" value="${escapeAttr(curCaption)}" placeholder="e.g. 2026 Department Fee Schedule &bull; Public Works" />
+        <small style="color:var(--jbd-color-muted, #64748b); font-size:11.5px; margin-top:4px; display:block;">
+          Visible title and screen-reader summary describing the contents or layout.
+        </small>
+      </div>
+
+      <div class="jbd-form-row">
+        <div class="jbd-form-group">
+          <label for="jbd-table-width">Table Width</label>
+          <select id="jbd-table-width" class="jbd-dialog-select">
+            <option value="100%" ${curWidth === '100%' ? 'selected' : ''}>100% (Full Width)</option>
+            <option value="75%" ${curWidth === '75%' ? 'selected' : ''}>75% Width</option>
+            <option value="50%" ${curWidth === '50%' ? 'selected' : ''}>50% Width</option>
+            <option value="auto" ${curWidth === 'auto' ? 'selected' : ''}>Auto (Fit to Content)</option>
+          </select>
+        </div>
+        <div class="jbd-form-group">
+          <label for="jbd-table-align">Horizontal Alignment</label>
+          <select id="jbd-table-align" class="jbd-dialog-select">
+            <option value="center" ${curAlign === 'center' ? 'selected' : ''}>Center Block</option>
+            <option value="left" ${curAlign === 'left' ? 'selected' : ''}>Left Align</option>
+            <option value="right" ${curAlign === 'right' ? 'selected' : ''}>Right Align</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--jbd-color-text, #1e293b);">Table Presentation Styles</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+            <input type="checkbox" id="jbd-table-border" ${curBordered ? 'checked' : ''} />
+            <span>Styled Cell Borders</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+            <input type="checkbox" id="jbd-table-striped" ${curStriped ? 'checked' : ''} />
+            <span>Striped Alternating Rows</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+            <input type="checkbox" id="jbd-table-hover" ${curHover ? 'checked' : ''} />
+            <span>Highlight Row on Hover</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+            <input type="checkbox" id="jbd-table-condensed" ${curCondensed ? 'checked' : ''} />
+            <span>Compact Cell Padding</span>
+          </label>
+        </div>
       </div>
     `;
 
     Dialog.show({
-      title: 'Insert Table',
+      title: isEdit ? 'Table Properties & Presentation' : 'Insert Table',
       body: form,
       buttons: [
         { label: 'Cancel', className: 'jbd-btn-secondary' },
         {
-          label: 'Create Table',
+          label: isEdit ? 'Save Changes' : 'Create Table',
           className: 'jbd-btn-primary',
           onClick: (d, overlay) => {
-            const rows = Math.max(1, Math.min(50, parseInt(overlay.querySelector('#jbd-table-rows').value, 10) || 3));
-            const cols = Math.max(1, Math.min(20, parseInt(overlay.querySelector('#jbd-table-cols').value, 10) || 3));
+            const rowsInput = overlay.querySelector('#jbd-table-rows');
+            const colsInput = overlay.querySelector('#jbd-table-cols');
+            const rows = rowsInput ? Math.max(1, Math.min(50, parseInt(rowsInput.value, 10) || 3)) : curRows;
+            const cols = colsInput ? Math.max(1, Math.min(20, parseInt(colsInput.value, 10) || 3)) : curCols;
             const headerType = overlay.querySelector('#jbd-table-header-type').value;
             const captionInput = overlay.querySelector('#jbd-table-caption');
             const caption = captionInput ? captionInput.value.trim() : '';
             const bordered = overlay.querySelector('#jbd-table-border').checked;
+            const striped = overlay.querySelector('#jbd-table-striped').checked;
+            const hover = overlay.querySelector('#jbd-table-hover').checked;
+            const condensed = overlay.querySelector('#jbd-table-condensed').checked;
+            const align = overlay.querySelector('#jbd-table-align').value;
+            const width = overlay.querySelector('#jbd-table-width').value;
             const hasHeader = headerType !== 'none';
 
             d.close(overlay);
-            onConfirm({ rows, cols, headerType, hasHeader, caption, bordered });
+            onConfirm({ rows, cols, headerType, hasHeader, caption, bordered, striped, hover, condensed, align, width, isEdit });
           }
         }
       ]
     });
   }
 
-  /**
-   * Accessible Special characters / symbols modal
-   */
   static openSpecialCharsDialog({ onSelect }) {
     const charList = [
       { char: '©', name: 'Copyright symbol' },

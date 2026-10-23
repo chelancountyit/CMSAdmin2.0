@@ -182,8 +182,15 @@
 						<div class="nav-editor-description">Home points to this workspace on the public county site.</div>
 					</div>
 					<div class="pg-field" id="navigationUrlWrap" hidden>
-						<label for="navigationUrl" class="form-label">Custom URL</label>
-						<input type="text" id="navigationUrl" class="form-control nav-editor-input" maxlength="1000" inputmode="url" autocomplete="url" placeholder="https:// or /path">
+						<label for="navigationUrl" class="form-label">Custom URL or Anchor Tag</label>
+						<input type="text" id="navigationUrl" class="form-control nav-editor-input" maxlength="1000" placeholder="##anchor, https://, or /path">
+						<div class="nav-editor-description">Enter an anchor tag (e.g. <code>##amenities</code> or <code>##rates</code>) for one-page sections, or an external/internal URL.</div>
+						<div id="navOnePageAnchorsWrap" style="margin-top:0.65rem;" hidden>
+							<div style="font-size:0.75rem; font-weight:700; color:var(--admin-text-subtle); margin-bottom:0.35rem; display:flex; align-items:center; gap:0.35rem;">
+								<span>One-Page Studio Section Anchors:</span>
+							</div>
+							<div id="navOnePageAnchorsList" style="display:flex; flex-wrap:wrap; gap:0.4rem;"></div>
+						</div>
 					</div>
 				</section>
 
@@ -574,6 +581,35 @@ window.navigationIconSvgs = <cfoutput>#navIconSvgJson#</cfoutput>;
 		document.getElementById("navigationUrlWrap").hidden = !isCustom;
 		pageSelect.required = !isCustom;
 		customUrl.required = isCustom;
+
+		var anchorsWrap = document.getElementById("navOnePageAnchorsWrap");
+		var anchorsList = document.getElementById("navOnePageAnchorsList");
+		if (anchorsWrap && anchorsList) {
+			var anchors = config.onePageAnchors || [];
+			if (isCustom && Array.isArray(anchors) && anchors.length > 0) {
+				anchorsWrap.hidden = false;
+				anchorsList.innerHTML = "";
+				anchors.forEach(function (anc) {
+					var pill = document.createElement("button");
+					pill.type = "button";
+					pill.className = "btn btn-outline btn-xs";
+					pill.style.cssText = "font-size:0.72rem; padding:0.2rem 0.5rem; border-radius:12px; font-weight:600;";
+					pill.textContent = anc.anchor + " (" + anc.label + ")";
+					pill.title = "Click to set destination to " + anc.anchor;
+					pill.addEventListener("click", function (e) {
+						e.preventDefault();
+						if (!nameInput.value.trim()) {
+							nameInput.value = anc.label;
+						}
+						customUrl.value = anc.anchor;
+						customUrl.focus();
+					});
+					anchorsList.appendChild(pill);
+				});
+			} else {
+				anchorsWrap.hidden = true;
+			}
+		}
 	}
 
 	function editItem(id) {

@@ -37,21 +37,24 @@
 				font-size: 15px;
 				line-height: 1.5;
 			}
-			/* When embedded in an iframe on public pages, eliminate inner padding and inner scrollbar */
+			/* When embedded in an iframe on public pages, eliminate outer page margin and avoid clipping */
 			html.is-embedded, body.is-embedded {
 				margin: 0 !important;
-				padding: 0.25rem 0 0.5rem 0 !important;
+				padding: 0.25rem 0 1.5rem 0 !important;
 				background: transparent !important;
-				overflow: hidden !important;
+				overflow-x: hidden !important;
+				overflow-y: auto !important;
 				height: auto !important;
+				min-height: 100% !important;
 			}
 			body.is-embedded .form-wrapper {
 				max-width: 100% !important;
 				margin: 0 !important;
-				padding: 0 !important;
+				padding: 0 0 1.25rem 0 !important;
 			}
 			body.is-embedded .form-card {
 				box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+				margin-bottom: 2rem !important;
 			}
 			#wheels-debugbar {
 				display: none !important;
@@ -506,7 +509,7 @@
 					<!-- Dynamic Accessible Form Fields -->
 					<div id="dynamicFields" class="fields-list"></div>
 
-					<div style="margin-top:0.75rem; padding-top:1.25rem; border-top:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+					<div style="margin-top:1rem; padding-top:1.5rem; padding-bottom:1.5rem; border-top:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
 						<button type="submit" class="btn-submit" id="btnSubmit">Submit Form</button>
 						<span style="font-size:0.8rem; color:var(--text-muted); display:inline-flex; align-items:center; gap:0.35rem;">
 							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -547,15 +550,20 @@
 
 				// Post actual form content height to parent window with +50px container buffer without infinite loop feedback
 				let lastSentHeight = 0;
-				function sendHeightToParent() {
+				function sendHeightToParent(force) {
 					if (window.parent && window.parent !== window) {
-						var wrapper = document.querySelector(".form-wrapper") || document.querySelector(".form-card");
+						var wrapper = document.querySelector(".form-wrapper") || document.querySelector(".form-card") || document.body;
 						if (!wrapper) return;
-						var h = Math.ceil(wrapper.getBoundingClientRect().height);
+						var rectHeight = Math.ceil(wrapper.getBoundingClientRect().height);
+						var scrollHeight = Math.max(
+							document.body ? document.body.scrollHeight : 0,
+							document.documentElement ? document.documentElement.scrollHeight : 0,
+							wrapper ? wrapper.scrollHeight : 0
+						);
+						var h = Math.max(rectHeight, scrollHeight);
 						if (!h || h <= 0) return;
-						// Include requested additional 50px height buffer for comfortable container padding
-						var hWithBuffer = h + 50;
-						if (Math.abs(hWithBuffer - lastSentHeight) < 4) return;
+						var hWithBuffer = h + 80;
+						if (!force && Math.abs(hWithBuffer - lastSentHeight) < 4) return;
 						lastSentHeight = hWithBuffer;
 						window.parent.postMessage({
 							type: "chelan-form-resize",
@@ -1070,9 +1078,29 @@
 
 				// Auto-emit height upon initial load and window resizing
 				sendHeightToParent();
-				setTimeout(sendHeightToParent, 100);
-				setTimeout(sendHeightToParent, 400);
-				window.addEventListener("load", sendHeightToParent);
+				setTimeout(function() { sendHeightToParent(true); }, 80);
+				setTimeout(function() { sendHeightToParent(true); }, 250);
+				setTimeout(function() { sendHeightToParent(true); }, 600);
+				setTimeout(function() { sendHeightToParent(true); }, 1200);
+				window.addEventListener("load", function() { sendHeightToParent(true); });
+				if (document.fonts && document.fonts.ready) {
+					document.fonts.ready.then(function() { sendHeightToParent(true); });
+				}
+
+				if (window.ResizeObserver) {
+					var ro = new ResizeObserver(function() {
+						sendHeightToParent();
+					});
+					ro.observe(document.body);
+					var cardEl = document.getElementById("formCard");
+					if (cardEl) ro.observe(cardEl);
+				}
+
+				window.addEventListener("message", function(e) {
+					if (e.data && (e.data.type === "chelan-form-request-height" || e.data === "chelan-form-request-height")) {
+						sendHeightToParent(true);
+					}
+				});
 			})();
 		</script>
 	</body>

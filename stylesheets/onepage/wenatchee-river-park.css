@@ -1,0 +1,63 @@
+/* Chelan County CMSAdmin 2.0 - One Page Studio Stylesheet */
+/* Theme: river-park | WCAG 2.1 AA Compliant */
+:root {
+  --ops-primary: #166534;
+  --ops-primary-dark: #14532d;
+  --ops-gold: #d4af37;
+  --ops-bg: #0f172a;
+  --ops-surface: #1e293b;
+  --ops-text: #f8fafc;
+  --ops-muted: #94a3b8;
+  --ops-border: rgba(255,255,255,0.12);
+}
+html { scroll-behavior: smooth; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+body { margin: 0; padding: 0; background: #fafafa; color: #1e293b; line-height: 1.6; }
+.ops-header { position: sticky; top: 0; z-index: 1000; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; }
+.ops-brand { font-size: 1.25rem; font-weight: 700; color: #0f172a; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
+.ops-nav-wrap { display: flex; align-items: center; }
+.ops-nav { display: flex; align-items: center; gap: 1.25rem; list-style: none; margin: 0; padding: 0; }
+.ops-nav a { color: #475569; text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: color 0.15s ease; padding: 0.35rem 0.6rem; border-radius: 6px; }
+.ops-nav a:hover, .ops-nav a.active { color: var(--ops-primary); background: rgba(22,101,52,0.06); }
+.ops-nav-toggle { display: none; background: transparent; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.4rem 0.65rem; cursor: pointer; color: #0f172a; font-size: 1.15rem; line-height: 1; }
+.ops-cta-btn { background: var(--ops-primary); color: #fff !important; padding: 0.5rem 1.15rem !important; border-radius: 9999px; text-decoration: none; font-weight: 700; font-size: 0.85rem; transition: background 0.15s ease; display: inline-block; }
+.ops-cta-btn:hover { background: var(--ops-primary-dark) !important; }
+.ops-hero { padding: 5rem 2rem; background: linear-gradient(135deg, #0e1615 0%, #1a2a28 100%); color: #fff; text-align: center; position: relative; }
+.ops-hero-container { max-width: 900px; margin: 0 auto; }
+.ops-hero-title { font-size: 2.75rem; font-weight: 800; margin: 0 0 1rem; line-height: 1.15; }
+.ops-hero-tagline { font-size: 1.2rem; color: #cbd5e1; margin: 0 0 2rem; max-width: 760px; margin-left: auto; margin-right: auto; }
+.ops-hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.ops-section { padding: 4.5rem 2rem; scroll-margin-top: 70px; }
+.ops-container { max-width: 1100px; margin: 0 auto; }
+.ops-section-header { text-align: center; margin-bottom: 2.5rem; }
+.ops-section-eyebrow { display: inline-block; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ops-primary); margin-bottom: 0.5rem; }
+.ops-section-title { font-size: 2.1rem; font-weight: 700; color: #0f172a; margin: 0; }
+.ops-bg-default { background: #ffffff; }
+.ops-bg-muted { background: #f8fafc; }
+.ops-bg-surface-elevated { background: #f1f5f9; }
+.ops-bg-dark { background: #0f172a; color: #f8fafc; }
+.ops-bg-dark .ops-section-title { color: #fff; }
+.ops-bg-dark .ops-section-eyebrow { color: var(--ops-gold); }
+.ops-split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+.ops-divider { border: 0; border-top: 1px solid #e2e8f0; margin: 3rem 0 0; }
+.ops-footer { background: #0b1120; color: #94a3b8; padding: 3rem 2rem; text-align: center; font-size: 0.85rem; }
+/* Typography & Embedded Elements */
+.ops-body-content { font-size: 1.05rem; line-height: 1.7; }
+.ops-body-content p { margin: 0 0 1.25rem; }
+.ops-body-content ul, .ops-body-content ol { margin: 0 0 1.5rem 1.5rem; }
+.ops-body-content li { margin-bottom: 0.5rem; }
+.ops-body-content img { max-width: 100%; height: auto; border-radius: 8px; }
+.ops-body-content table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+.ops-body-content th, .ops-body-content td { border: 1px solid #e2e8f0; padding: 0.75rem 1rem; text-align: left; }
+.ops-body-content th { background: #f8fafc; font-weight: 700; }
+/* Responsive Queries */
+@media (max-width: 768px) {
+  .ops-split-grid { grid-template-columns: 1fr; gap: 1.75rem; }
+  .ops-hero-title { font-size: 2rem; }
+  .ops-section { padding: 3rem 1.25rem; }
+  .ops-nav-toggle { display: block; }
+  .ops-nav-wrap { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 1rem 1.5rem; box-shadow: 0 10px 15px rgba(0,0,0,0.08); }
+  .ops-nav-wrap.ops-nav-open { display: block; }
+  .ops-nav { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .ops-nav a { display: block; width: 100%; padding: 0.5rem 0.75rem; font-size: 1rem; }
+}
+

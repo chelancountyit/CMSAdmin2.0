@@ -69,16 +69,22 @@
 		}
 
 		.login-seal {
-			width: 68px;
-			height: 68px;
+			height: 250px;
+			max-height: 250px;
+			width: auto;
+			max-width: 100%;
 			object-fit: contain;
-			filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
-			margin-bottom: 0.75rem;
-			transition: transform 0.2s ease;
+			display: block;
+			margin-left: auto;
+			margin-right: auto;
+			margin-bottom: 1.25rem;
+			filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+			transition: transform 0.25s ease, filter 0.25s ease;
 		}
 
 		.login-seal:hover {
-			transform: scale(1.04);
+			transform: scale(1.02);
+			filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
 		}
 
 		.login-brand-title {
@@ -537,7 +543,22 @@
 			font-weight: 700;
 		}
 
-		/* Alerts */
+		/* Flash & Session Alerts */
+		##flashAlertContainer {
+			transition: opacity 0.45s ease, transform 0.45s ease, max-height 0.45s ease, margin 0.45s ease;
+			overflow: hidden;
+		}
+
+		##flashAlertContainer .flash-messages {
+			margin-bottom: 1.25rem;
+		}
+
+		##flashAlertContainer .alert {
+			box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+			border-radius: 12px;
+		}
+
+		/* In-Card Alerts */
 		.login-alert {
 			padding: 0.85rem 1.15rem;
 			border-radius: 10px;
@@ -548,6 +569,28 @@
 			gap: 0.65rem;
 			line-height: 1.45;
 			border-left: 4px solid transparent;
+			transition: opacity 0.45s ease, transform 0.45s ease;
+		}
+
+		.login-alert-dismiss {
+			background: transparent;
+			border: none;
+			color: inherit;
+			opacity: 0.55;
+			cursor: pointer;
+			padding: 0.2rem;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 4px;
+			transition: opacity 0.15s ease, background-color 0.15s ease;
+			flex-shrink: 0;
+			margin-left: 0.5rem;
+		}
+
+		.login-alert-dismiss:hover {
+			opacity: 1;
+			background: rgba(0, 0, 0, 0.08);
 		}
 
 		.login-alert-danger {
@@ -592,6 +635,10 @@
 		}
 
 		@media (max-width: 480px) {
+			.login-seal {
+				height: 180px;
+				max-height: 180px;
+			}
 			.login-card {
 				padding: 1.5rem 1.25rem;
 			}
@@ -604,7 +651,7 @@
 	<div class="login-container">
 		<!--- Chelan County Seal Header --->
 		<div class="login-brand-header">
-			<img src="/images/logo.png" alt="Chelan County Seal" class="login-seal" width="68" height="68">
+			<img src="/images/logo.png" alt="Chelan County Seal" class="login-seal" width="250" height="250">
 			<h1 class="login-brand-title">Chelan County CMS</h1>
 			<div class="login-brand-sub">
 				<span>#svgIcon(name="lock", size=14)# Official Government Portal</span>
@@ -625,11 +672,17 @@
 			<div id="loginErrorAlert" class="login-alert login-alert-danger" style="display:none;" role="alert">
 				<span style="flex-shrink:0;">#svgIcon(name="alert-triangle", size=18)#</span>
 				<div id="loginErrorMessage" style="flex:1;"></div>
+				<button type="button" class="login-alert-dismiss" onclick="clearAlerts()" aria-label="Dismiss error">
+					#svgIcon(name="x", size=14)#
+				</button>
 			</div>
 
 			<div id="loginSuccessAlert" class="login-alert login-alert-success" style="display:none;" role="status">
 				<span style="flex-shrink:0;">#svgIcon(name="check-circle", size=18)#</span>
 				<div id="loginSuccessMessage" style="flex:1;"></div>
+				<button type="button" class="login-alert-dismiss" onclick="clearAlerts()" aria-label="Dismiss alert">
+					#svgIcon(name="x", size=14)#
+				</button>
 			</div>
 
 			<!--- STEP 1: ENTER EMAIL ADDRESS --->
@@ -886,7 +939,99 @@
 			return newObj;
 		}
 
+		var flashAutoHider = null;
+		var errorAutoHider = null;
+		var successAutoHider = null;
+
+		/**
+		 * Attaches an auto-dismiss timer to an alert element with pause-on-hover support.
+		 * Automatically smoothly fades out the element after delayMs.
+		 */
+		function attachAutoHideWithPause(el, delayMs, onHidden) {
+			if (!el) return null;
+			var timeoutId = null;
+			var remaining = delayMs || 5000;
+			var startTime = Date.now();
+			var isPaused = false;
+
+			function start() {
+				startTime = Date.now();
+				timeoutId = setTimeout(function() {
+					el.style.transition = 'opacity 0.45s ease, transform 0.45s ease';
+					el.style.opacity = '0';
+					el.style.transform = 'translateY(-6px)';
+					setTimeout(function() {
+						el.style.display = 'none';
+						el.style.opacity = '';
+						el.style.transform = '';
+						el.style.transition = '';
+						if (typeof onHidden === 'function') onHidden();
+					}, 450);
+				}, remaining);
+			}
+
+			function pause() {
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+					timeoutId = null;
+					remaining = Math.max(1000, remaining - (Date.now() - startTime));
+					isPaused = true;
+				}
+			}
+
+			function resume() {
+				if (isPaused && el.style.display !== 'none') {
+					isPaused = false;
+					start();
+				}
+			}
+
+			el.addEventListener('mouseenter', pause);
+			el.addEventListener('mouseleave', resume);
+
+			start();
+
+			return {
+				cancel: function() {
+					if (timeoutId) clearTimeout(timeoutId);
+					timeoutId = null;
+					el.removeEventListener('mouseenter', pause);
+					el.removeEventListener('mouseleave', resume);
+				}
+			};
+		}
+
 		document.addEventListener('DOMContentLoaded', function() {
+			// Auto-hide session / flash messages if present (after 5 seconds, pauses on hover)
+			var flashContainer = document.getElementById('flashAlertContainer');
+			if (flashContainer && flashContainer.innerText.trim().length > 0) {
+				flashAutoHider = attachAutoHideWithPause(flashContainer, 5000, function() {
+					flashContainer.innerHTML = '';
+					flashAutoHider = null;
+				});
+
+				flashContainer.addEventListener('click', function(e) {
+					var closeBtn = e.target.closest('.alert-close, [data-dismiss="alert"]');
+					if (closeBtn) {
+						if (flashAutoHider) { flashAutoHider.cancel(); flashAutoHider = null; }
+						flashContainer.innerHTML = '';
+					}
+				});
+			}
+
+			// Dismiss error alert automatically when user resumes typing
+			['emailInput', 'otpInput', 'authCodeInput', 'connectCodeInput'].forEach(function(id) {
+				var inputEl = document.getElementById(id);
+				if (inputEl) {
+					inputEl.addEventListener('input', function() {
+						var errAlert = document.getElementById('loginErrorAlert');
+						if (errAlert && errAlert.style.display !== 'none') {
+							clearAlerts();
+						}
+					});
+				}
+			});
+
 			var prefilled = document.getElementById('emailInput').value.trim();
 			if (prefilled.length > 0 && prefilled.indexOf('@') > 0) {
 				lookupEmail(prefilled);
@@ -910,11 +1055,26 @@
 			var errAlert = document.getElementById('loginErrorAlert');
 			var errMsg = document.getElementById('loginErrorMessage');
 			var succAlert = document.getElementById('loginSuccessAlert');
-			if (succAlert) succAlert.style.display = 'none';
+			if (succAlert) {
+				if (successAutoHider) { successAutoHider.cancel(); successAutoHider = null; }
+				succAlert.style.display = 'none';
+			}
+			if (errorAutoHider) {
+				errorAutoHider.cancel();
+				errorAutoHider = null;
+			}
 			if (errAlert && errMsg) {
 				errMsg.innerHTML = msg;
+				errAlert.style.transition = '';
+				errAlert.style.opacity = '1';
+				errAlert.style.transform = 'translateY(0)';
 				errAlert.style.display = 'flex';
 				errAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+				// Auto-hide error message after 5 seconds (pauses on hover)
+				errorAutoHider = attachAutoHideWithPause(errAlert, 5000, function() {
+					errorAutoHider = null;
+				});
 			}
 		}
 
@@ -922,14 +1082,31 @@
 			var succAlert = document.getElementById('loginSuccessAlert');
 			var succMsg = document.getElementById('loginSuccessMessage');
 			var errAlert = document.getElementById('loginErrorAlert');
-			if (errAlert) errAlert.style.display = 'none';
+			if (errAlert) {
+				if (errorAutoHider) { errorAutoHider.cancel(); errorAutoHider = null; }
+				errAlert.style.display = 'none';
+			}
+			if (successAutoHider) {
+				successAutoHider.cancel();
+				successAutoHider = null;
+			}
 			if (succAlert && succMsg) {
 				succMsg.innerHTML = msg;
+				succAlert.style.transition = '';
+				succAlert.style.opacity = '1';
+				succAlert.style.transform = 'translateY(0)';
 				succAlert.style.display = 'flex';
+
+				// Auto-hide success message after 5 seconds (pauses on hover)
+				successAutoHider = attachAutoHideWithPause(succAlert, 5000, function() {
+					successAutoHider = null;
+				});
 			}
 		}
 
 		function clearAlerts() {
+			if (errorAutoHider) { errorAutoHider.cancel(); errorAutoHider = null; }
+			if (successAutoHider) { successAutoHider.cancel(); successAutoHider = null; }
 			var errAlert = document.getElementById('loginErrorAlert');
 			var succAlert = document.getElementById('loginSuccessAlert');
 			if (errAlert) errAlert.style.display = 'none';

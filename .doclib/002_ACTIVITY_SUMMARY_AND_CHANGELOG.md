@@ -12,6 +12,189 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 21, 2026 — One Page Studio: Expanded Section Background Styles Suite (Abstract Curly Lines, Cream Gradients, Topographic Waves & Live Modal Swatch Preview)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/controllers/Pages.cfc`, `app/views/pages/onePage.cfm`, `.doclib/013_ONE_PAGE_STUDIO_AND_PORTAL_BUILDER.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Expanded Section Background Styles (`Pages.cfc::buildOnePageCss` & `app/views/pages/onePage.cfm`):**
+     - Enriched section background styling beyond the original 4 basic styles with 11 versatile, 100% local, zero-CDN CSS/SVG presets:
+       - `default`: Default White Surface (`#ffffff`).
+       - `muted`: Soft Muted Gray (`#f8fafc`).
+       - `surface-elevated`: Elevated Subtle Slate (`#f1f5f9`).
+       - `cream-gradient`: Gradient Cream to White (Warm ivory to pure white gradient with gold-tinted eyebrow text).
+       - `curly-lines`: Abstract Two-Tone Curly Lines (Dual-tone flowing bezier wave ribbons in forest green and warm amber/sky blue with soft radial ambiance).
+       - `topo-contours`: Topographic Contour Waves (Organic topographic elevation curves, ideal for parks, river trails, and public lands).
+       - `nature-sage`: Forest Mist & Soft Sage (Delicate pale sage green gradient with organic tone).
+       - `soft-sunset`: Warm Ochre / Desert Sand (Subtle sand/terracotta gradient).
+       - `geometric-mesh`: Subtle Technical Grid Mesh (Precision dot matrix intersection pattern).
+       - `dark`: Dark High-Contrast Midnight (`#0f172a` slate with gold accents).
+       - `dark-lines`: Dark Glowing Wave Lines (Midnight canvas with glowing emerald and cyan waves).
+  2. **Section Configuration Modal & Live Swatch Preview (`app/views/pages/onePage.cfm`):**
+     - Expanded the "Background Style" dropdown (`#opsSecBg`) in the Section Edit modal to surface all 11 background style options.
+     - Added a live visual swatch preview box (`#opsSecBgPreview`) directly beneath the dropdown that reactively displays the selected gradient, curly line, or contour texture in real time.
+     - Synchronized modal opening logic (`openEditSection`) and dropdown `change` event listener to update the swatch immediately.
+  3. **Verification & Stability:**
+     - Verified CSS generation in live preview: `.ops-bg-cream-gradient` and `.ops-bg-curly-lines` verified in `/pages/one-page/preview?id=1`.
+     - Executed full test suite: **46 / 46 One Page Studio tests passed (100% green)**.
+
+### Session: October 21, 2026 — Login Screen: Seal Logo Enlargement (250px Centered) & Auto-Dismissing Session/Error Alerts
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/views/sessions/new.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Logo Visual Presentation (250px Height & Centered):**
+     - Scaled the Chelan County Seal (`.login-seal`) on the authentication screen (`/login`) from 68px to `height: 250px; max-height: 250px; width: auto; max-width: 100%; object-fit: contain;`.
+     - Centered the element cleanly via `display: block; margin-left: auto; margin-right: auto; margin-bottom: 1.25rem;` within `.login-brand-header`.
+     - Added enhanced depth shadow (`filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35))`) and smooth interactive hover scale (`scale(1.02)`).
+     - Configured responsive scaling in `@media (max-width: 480px)` to clamp height to `180px` on compact mobile viewports, preventing vertical overflow.
+  2. **Auto-Hiding Session & Error Messages Engine:**
+     - **Session / Flash Messages (`#flashAlertContainer`):** Added automated dismissal timer that smoothly fades out server-rendered flash/session messages (e.g. timeout notices) after 5 seconds with pause-on-hover capability and click-to-dismiss support.
+     - **In-Card Error & Success Alerts (`#loginErrorAlert`, `#loginSuccessAlert`):** Enhanced `showError()` and `showSuccess()` with an auto-dismiss timer (5 seconds) with smooth CSS opacity/translation transitions.
+     - **Pause-on-Hover:** Built `attachAutoHideWithPause()` so alerts remain visible while the user is hovering their mouse over the message to read it.
+     - **Instant Clear on Input:** Added real-time input listeners to `#emailInput`, `#otpInput`, `#authCodeInput`, and `#connectCodeInput` to dismiss errors the moment the user resumes typing.
+     - **Accessible Close Button:** Embedded an inline dismiss button (`.login-alert-dismiss`) with SVG icon (`x`) on alert containers for instant manual dismissal.
+  3. **Verification & Stability:**
+     - Full converter & HTTP suite tested and green: **54 / 54 tests passing in `tests/run_full_test_suite.cfm`**.
+     - One Page Studio suite tested and green: **46 / 46 tests passing in `tests/test_one_page_studio.cfm`**.
+
+### Session: October 21, 2026 — One Page Studio: "Publish to Production" Direct Server Deployment Pipeline (Decoupled Assets in workspace.project_path)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`config/routes.cfm`, `app/controllers/Pages.cfc`, `app/controllers/Controller.cfc`, `app/views/pages/onePage.cfm`, `tests/test_one_page_studio.cfm`, `.doclib/013_ONE_PAGE_STUDIO_AND_PORTAL_BUILDER.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Primary Production Action Button (`app/views/pages/onePage.cfm`):**
+     - Replaced the secondary "Export Modular Bundle (.ZIP)" button with the primary **"Publish to Production"** button (`#btnOpsPublishProduction`) styled as a high-visibility `btn btn-success` with `#svgIcon(name="upload", size=16)#`.
+     - Standardized user confirmation via `window.adminConfirm(...)` (complying strictly with Chelan County non-negotiable invariants: zero native `confirm()` or `alert()` dialogs, 100% accessible).
+     - Provides clear visual status feedback: transitions to `"Publishing to Production..."` during deployment and shows non-blocking toast notifications upon completion via `window.showToast()`.
+  2. **Direct Server Deployment Pipeline (`Pages.cfc::publishOnePageToProduction`):**
+     - Registered POST route `/pages/one-page/publish-production` mapped to `pages#publishOnePageToProduction`.
+     - Added CSRF exemption in `Pages.cfc::config()` and updated `Controller.cfc::enforceWorkspaceSelection()` to allow direct workspace resolution from `dbo.one_page_sites.siteid`.
+     - **Filesystem Discovery:** Resolves target physical project root via `cms_workspaces.project_path` (e.g. `C:\inetpub\wenatcheeriverpark.org`, `C:\inetpub\ohmegardens.org`, `C:\inetpub\chelan-county`).
+     - **Automated Directory Tree Provisioning:** Recursively validates and creates `[project_path]\assets\css\`, `[project_path]\assets\js\`, and `[project_path]\assets\images\`.
+     - **Decoupled Assets Deployment:**
+       - Writes generated production stylesheet to `[project_path]\assets\css\site.css` via `buildOnePageCss(site)`.
+       - Writes generated production JavaScript runtime to `[project_path]\assets\js\site.js` via `buildOnePageJs(site)`.
+       - Automatically scans active section markup for local photography/media attachments (e.g., `/files/shared/media/...`), copies physical image files into `[project_path]\assets\images\`, and rewrites HTML `src` attributes to relative `assets/images/[filename]` for 100% self-contained offline deployment.
+       - Generates decoupled production `[project_path]\index.html` linking `assets/css/site.css` and `assets/js/site.js`.
+       - Emits comprehensive deployment guide and accessibility audit report to `[project_path]\README.md`.
+  3. **Verification & Full Automated Test Coverage (`tests/test_one_page_studio.cfm`):**
+     - Added **SUITE 8: Publish to Production (workspace.project_path Deployment)** to `tests/test_one_page_studio.cfm`.
+     - Validates end-to-end authenticated HTTP POST execution, JSON `success=true` response, physical existence of `index.html`, `assets/css/site.css`, `assets/js/site.js`, and `README.md` in `C:\inetpub\wenatcheeriverpark.org`, and verified asset `<link>` / `<script>` references.
+     - **All 46 / 46 One Page Studio tests passing (100% green, 0 failures)**.
+     - Full test suite verified passing: **54 / 54 tests passing in `tests/run_full_test_suite.cfm`**.
+
+### Session: October 21, 2026 — One Page Studio: Decoupled Asset Separation (Compilation Pipeline & Standalone Modular ZIP Bundle)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/controllers/Pages.cfc`, `app/views/pages/onePage.cfm`, `stylesheets/onepage/`, `javascripts/onepage/`, `tests/test_one_page_studio.cfm`, `.doclib/013_ONE_PAGE_STUDIO_AND_PORTAL_BUILDER.md`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Decoupled Asset Generation & Compilation Pipeline (`compileOnePageSite`):**
+     - Introduced `separateAssets` compilation parameter (defaulting to `true` with UI checkbox control).
+     - **Dedicated CSS Generator (`buildOnePageCss`):** Generates modular production stylesheets with visual theme tokens (`--ops-primary`, `--ops-gold`, etc. for `river-park`, `modern-municipal`, `clean-editorial`, and `dark-luxury`), resets, typography, sticky navigation, responsive hero, split grid, section variations, table styling, and site custom CSS. Automatically persists to `/stylesheets/onepage/[slug].css`.
+     - **Dedicated Vanilla JS Runtime (`buildOnePageJs`):** Generates modular production JavaScript supporting smooth anchor scrolling, `IntersectionObserver`-based Section Scrollspy, mobile navigation toggle drawer (`aria-expanded`, `aria-controls`), and back-to-top button. Automatically persists to `/javascripts/onepage/[slug].js`.
+     - **Clean `dbo.pages.Body` Storage:** Decouples database storage from monolithic style/script bloat by storing clean semantic HTML referencing `<link rel="stylesheet" href="/stylesheets/onepage/[slug].css">` and `<script defer src="/javascripts/onepage/[slug].js"></script>`. Preserves backward-compatible inline fallback when `separateAssets` is set to false.
+  2. **Standalone Modular Package Generator (`.ZIP` Bundle in `exportOnePageSite`):**
+     - Added `format=zip` export support via native ColdFusion `<cfzip>` streaming in-memory archives.
+     - **Bundle Architecture:** Packages `index.html` (referencing `assets/css/site.css` and `assets/js/site.js`), `assets/css/site.css`, `assets/js/site.js`, and `README.md` (comprehensive hosting, accessibility, and file structure documentation).
+     - **Local Media Bundling:** Automatically locates section images (e.g. `/files/shared/media/...`, `/images/...`), bundles them into `assets/images/`, and rewrites HTML image tags for 100% self-contained, offline-ready deployment without external CDNs.
+  3. **Studio UI Enhancements (`app/views/pages/onePage.cfm`):**
+     - Added "Separate Assets (.css & .js)" toggle switch in the Publish & Actions sidebar card.
+     - Added **"Export Modular Bundle (.ZIP)"** button alongside "Export Standalone HTML File".
+     - Connected UI handlers to compile with `separateAssets` flag and download ZIP or HTML bundles directly.
+  4. **Verification & Full Integration Testing (`tests/test_one_page_studio.cfm`):**
+     - Appended **SUITE 7: Asset Separation in One Page Studio** validating CSS/JS file creation in physical directories, ZIP bundle generation with HTTP 200 `application/zip`, zip file entries verification, and standalone HTML export with separated links.
+     - Executed full suite: **36 / 36 tests passing (100% pass rate, 0 failures)**.
+
+### Session: October 21, 2026 — JBDEditor: Advanced Table Suite (In-Editor Bubble Toolbar, Drag-Resizing, Properties Modal, and WCAG Scope Standards)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`stylesheets/jbdeditor.css`, `stylesheets/jbd-templates.css`, `vendor/jbdeditor/css/editor.css`, `javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `javascripts/jbdeditor/editor.js`, `javascripts/jbdeditor/jbdeditor.js`, `javascripts/jbdeditor/jaleditor.js`, `vendor/jbdeditor/src/dialog.js`, `vendor/jbdeditor/src/editor.js`, `vendor/jbdeditor/src/jbdeditor.js`, `vendor/jbdeditor/src/jaleditor.js`, `app/views/layout.cfm`, `vendor/jbdeditor/test.html`).
+- **Key Deliverables:**
+  1. **Comprehensive Table Properties & Presentation Dialog (`Dialog.openTableDialog`):**
+     - Enhanced modal supporting both new table creation and in-place editing of existing tables (`existingData`).
+     - **Accessibility & WCAG 2.1 AA Compliance:** Full support for `th[scope="col"]`, `th[scope="row"]`, and `caption` summary describing table contents for screen readers.
+     - **Presentation Controls:** Configurable width presets (100% Full Width, 75%, 50%, Auto fit-to-content), alignment (Center Block, Left Align, Right Align), styled borders (`.jbd-table-bordered`), alternating striped rows (`.jbd-table-striped`), hover highlights (`.jbd-table-hover`), and compact cell padding (`.jbd-table-sm`).
+     - **In-Place Updates:** Seamlessly converts header structures, adjusts styles, and applies widths/alignment without modifying existing cell contents.
+  2. **In-Editor Interactive Table Tools:**
+     - **Table Resizer Overlay:** Attached to editor wrapper outside `contentArea` with `z-index: 100`, preserving clean HTML serialization.
+     - **Interactive Width Drag-Handles:** Dedicated East handle (`.jbd-table-handle-e`) and Southeast handle (`.jbd-table-handle-se`) allowing direct mouse-drag resizing of table width, complete with a live tooltip badge displaying `cols × rows • width px (%)`.
+     - **Collision-Aware Floating Table Bubble Toolbar:**
+       - Automatically flips below the table (`.bubble-at-bottom`) when space above is constrained by the sticky top toolbar.
+       - Clamps horizontally within wrapper boundaries to prevent clipping on left/right edges.
+       - **Row Actions:** ➕ Row Above (`row-above`), ➕ Row Below (`row-below`), 🗑️ Delete Row (`row-delete`).
+       - **Column Actions:** ➕ Col Left (`col-left`), ➕ Col Right (`col-right`), 🗑️ Delete Col (`col-delete`).
+       - **Quick Toggles:** Header row toggle (`header`), Striped alternating rows (`striped`), Cell borders (`bordered`), Caption insertion/focus (`caption`).
+       - **Properties & Deletion:** ⚙️ Edit Table Properties modal (`properties`), 🗑️ Delete Table (`delete`).
+  3. **Seamless Keyboard & Selection Experience:**
+     - Clicking or focusing inside any cell activates the table overlay and contextual bubble toolbar.
+     - Double-clicking opens the Table Properties dialog directly.
+     - <kbd>Tab</kbd> and <kbd>Shift</kbd>+<kbd>Tab</kbd> navigate between cells; pressing <kbd>Tab</kbd> in the final cell automatically appends a new row below.
+     - <kbd>Escape</kbd> or clicking outside deselects the table cleanly.
+  4. **Clean Serialization:**
+     - `getHTML()` guarantees all `.jbd-table-active` outline states are cleanly stripped upon export or save.
+  5. **Verification & Tests:**
+     - Added **Section 15: Table Interaction & Editing Suite** to `vendor/jbdeditor/test.html`.
+     - Executed via headless Google Chrome: **100% of all 245 assertions passing cleanly across all 15 suites**.
+  6. **Cache Busters Bumped:**
+     - Updated `app/views/layout.cfm` cache busters: `jbdeditor.css?v=2.2`, `jbd-templates.css?v=1.7`, `jbdeditor.js?v=2.2`.
+
+### Session: October 21, 2026 — JBDEditor: Advanced Image Suite (Positioning, Drag-Resizing, Floating Bubble Toolbar, Dialog Options, and WCAG Compliance)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`stylesheets/jbdeditor.css`, `stylesheets/jbd-templates.css`, `vendor/jbdeditor/css/editor.css`, `javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `javascripts/jbdeditor/jbdeditor.js`, `javascripts/jbdeditor/jaleditor.js`, `vendor/jbdeditor/src/dialog.js`, `vendor/jbdeditor/src/editor.js`, `vendor/jbdeditor/src/jbdeditor.js`, `vendor/jbdeditor/src/jaleditor.js`, `app/views/layout.cfm`, `app/views/articles/edit.cfm`, `vendor/jbdeditor/test.html`).
+- **Key Deliverables:**
+  1. **Comprehensive Image Insert & Edit Dialog ("The Whole Shebang"):**
+     - Modern tabbed/segmented modal in `Dialog.openImageDialog()` supporting both new insertions and seamless in-place editing of existing images (`<figure class="jbd-image">` or standalone `<img>`).
+     - **Media Source Options:** Image URL input, workspace Media Library browser integration (`window.openMediaPicker` with elevated `zIndex: 100005` to stack properly over `.jbd-dialog-overlay`), and direct local file upload (`FileReader` with instant Base64 preview).
+     - **Live Dimension Detection & Ratio Badge:** Auto-detects natural width/height and displays an aspect ratio badge (e.g. `16:9`, `4:3`, `1:1`).
+     - **WCAG 2.1 AA / ADA Title II Compliance:** Mandatory Alt Text validation with guidance counter (rec. < 150 chars), blocking generic placeholders (*"image"*, *"photo"*, *"graphic"*, or filename endings). Includes a WCAG Technique H67 "Mark as decorative image" toggle that sets `alt=""` and `role="presentation"`.
+     - **Visual Captions & Photo Credits:** Optional `<figcaption>` with rich credit styling (`.jbd-image-credit`) rendered cleanly below the image.
+     - **Alignment & Layout Controls:** Left Float (`.jbd-image-left`), Center Block (`.jbd-image-center`), Right Float (`.jbd-image-right`), Full Bleed (`.jbd-image-full`), and Inline Flow (`.jbd-image-inline`).
+     - **Dimension Sizing Presets & Aspect-Ratio Lock:** Presets for 25%, 33%, 50%, 75%, 100%, and Natural; custom pixel width/height inputs with a toggleable aspect ratio lock icon.
+     - **Styling Presets:** Corner radius (None, Rounded `6px`, Large `12px`, Circle/Pill `9999px`), frame/borders (Bordered, Framed card), and elevation shadows (Small, Medium, Large).
+     - **Hyperlink Integration:** Wrap image in a hyperlink with optional "Open in new tab (`target='_blank'`)" and "Click-to-enlarge lightbox" triggers.
+  2. **In-Editor Interactive Image Tools & Toolbar Visibility:**
+     - **Main Toolbar Button Integration:** Added `'image'` to both `JBD_BASIC_TOOLBAR` and `JBD_SUBPAGE_TOOLBAR` across all modules. Standard pages and articles declaring `data-jbd-toolbar="basic"` (e.g. `articles/edit.cfm`, `pages/edit.cfm`, `pressreleases/edit.cfm`, `rfps/edit.cfm`) now prominently display the Insert Image tool button.
+     - **Non-Invasive DOM Resizer Overlay:** Attached to editor wrapper outside `contentArea` with elevated `z-index: 100` (above sticky toolbar) to guarantee zero handle DOM pollution into serialized HTML.
+     - **8 Interactive Drag Handles:** (NW, N, NE, E, SE, S, SW, W) enabling live proportional resizing with Shift-key lock and aspect-ratio preservation.
+     - **Live Dimension Tooltip Badge:** Real-time floating badge displaying exact width, height, and width percentage (`W × H px (%)`) while dragging or selecting.
+     - **Collision-Aware Floating Bubble Toolbar:** 
+       - Evaluates vertical clearance against sticky header; automatically flips below image (`.bubble-at-bottom`) when positioned near the top of the editor content.
+       - Clamps horizontally within editor bounds to prevent clipping when selecting floated or narrow images.
+       - Elevated to `z-index: 105` with single-click actions:
+         - Alignment presets (Left, Center, Right, Full Width) with active state indicators.
+         - Sizing buttons (25%, 50%, 75%, 100%).
+         - Quick caption toggle (inserts or focuses `<figcaption>`).
+         - Quick link prompt / toggle.
+         - "Edit Details" button (opens the full configuration dialog preloaded with current image properties).
+         - Delete button (removes image from document).
+  3. **Direct File Drag-and-Drop & Clipboard Paste:**
+     - Dropping image files directly into the editor canvas automatically reads them via `FileReader` and launches the WCAG-enforced Image Dialog.
+     - Pasting image files from OS clipboard automatically parses the file and opens the dialog for alt text assignment.
+  4. **Keyboard Accessibility & Clean Serialization:**
+     - `Backspace` or `Delete` removes active image; `Escape` deselects.
+     - `getHTML()` systematically removes `jbd-image-active` selection classes before exporting or saving form data.
+  5. **Automated Test Harness Verification:**
+     - Added comprehensive Section 14 Image Suite tests to `vendor/jbdeditor/test.html` covering modal initialization, figure creation, alignment classes, sizing presets, captioning, decorative image handling, handle creation, and clean HTML export.
+     - Executed via headless Google Chrome: 100% of all tests passing cleanly.
+  6. **Cache Busters Bumped:**
+     - Updated `app/views/layout.cfm` cache busters: `jbdeditor.css?v=2.0`, `jbd-templates.css?v=1.6`, `jbdeditor.js?v=2.0`.
+
+### Session: October 20, 2026 — One Page Studio: Page Section Action Buttons & ACF Key Normalization
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/views/pages/onePage.cfm`, `tests/test_one_page_studio.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **Adobe ColdFusion JSON Serialization Key-Case Resolution:**
+     - Identified root cause of inactive buttons: Adobe ColdFusion `SerializeJSON` capitalized struct keys (`SECTIONS`, `SELECTEDSITE`, `ROUTES`, `ID`, `SECTIONTITLE`, `ANCHORID`, etc.), causing JavaScript lookups (`config.sections`, `s.id`, `routes.saveSection`, `selectedSite.id`) to evaluate to `undefined`.
+     - Introduced defensive `getProp(obj, prop, def)` case-insensitive property accessor across the One Page Studio client application.
+     - Normalized `selectedSite`, `sites`, `sections`, and `routes` with concrete fallback route paths so fetch requests never target `undefined`.
+  2. **Page Section Action Buttons Overhaul (`onePage.cfm`):**
+     - **Move Up & Move Down:** Implemented direct DOM element swapping (`insertBefore`) on `.ops-section-row` nodes for instantaneous visual feedback, paired with automated ID extraction and persistence to `/pages/one-page/sections/reorder`. Replaced raw HTML entities with accessible SVG chevrons (`chevron-up`, `chevron-down`) and explicit `aria-label` tags.
+     - **Configure / Edit Section:** Enhanced `.btnOpsEditSection` to reliably find section records and provide a DOM dataset fallback so the configuration modal opens under any state.
+     - **Remove / Delete Section & Site (`window.adminConfirm` Promise Resolution):** Identified and resolved the root cause of the non-functioning Delete buttons: `window.adminConfirm()` returns an ES6 Promise resolving to `true`/`false` rather than accepting a legacy callback function. Passing `(msg, cb)` caused `adminConfirm` to treat the callback as the options object, leaving `options.onConfirm` undefined and never executing the delete fetch. Re-engineered `confirmAction(msg, opts)` to properly await the Promise and execute the delete request upon user confirmation for both Section Deletion (`.btnOpsDeleteSection`) and Site Deletion (`#btnOpsDeleteSite` and Directory `.btnOpsDirectoryDeleteSite`). Also enhanced `deleteOnePageSite()` and `deleteOnePageSection()` in `Pages.cfc` to defensively accept both JSON body payloads and query/form parameters.
+     - **Copy Anchor Tag:** Added cross-origin clipboard helper `copyText(anc)` with temporary `textarea` fallback for non-secure HTTP / iframe contexts, preventing unhandled `SecurityError` or `TypeError` crashes.
+     - **Add Candidate Pages:** Resolved drawer submit button (`#btnSubmitOpsAddPages`) and open buttons (`#btnOpsOpenPagePicker`, `#btnOpsEmptyAddPages`) by guaranteeing valid `selectedSite.id`.
+     - **Browse Hero Media:** Wired `#btnOpsBrowseHeroMedia` to the workspace Media Library picker.
+  3. **Automated Regression Verification (`tests/test_one_page_studio.cfm`):**
+     - Added **SUITE 6: Section Button Operations (Save, Reorder, Delete)** to the test runner.
+     - Verified clean SQL operations respecting filtered indexes (`SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;`).
+     - **26 / 26 automated tests passing 100% cleanly**.
+
 ### Session: October 18, 2026 — Mandatory ADA Title II & WCAG 2.1 AA Requirements Enforcement for Images
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 (`app/controllers/Media.cfc`, `api/Files.cfc`, `app/views/media/upload.cfm`, `app/views/media/index.cfm`, `app/views/media/picker.cfm`, `javascripts/filexplorer/explorer.js`, `javascripts/jbdeditor.js`, `javascripts/jbdeditor/dialog.js`, `vendor/jbdeditor/src/dialog.js`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
@@ -1228,3 +1411,233 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 
 
+
+---
+
+### Milestone 25: Series 007 Documentation Deep Dive & Production Specification Upgrade
+- **User Directive:** "why are the md filess in .doclib is not detailed enough" -> "yes" (Expand and elevate `.doclib` technical specifications)
+- **Problem Statement:** The original `.doclib` topic files (such as `007_EMERGENCY_ALERTS_AND_INCIDENTS.md`) were created as high-level summary skeletons (~70 lines) that lacked exhaustive implementation architecture, method contracts, UI walkthroughs, API schemas, and front-end integration code.
+- **Deliverables & Enhancements in `.doclib/007_EMERGENCY_ALERTS_AND_INCIDENTS.md`:**
+  1. **Statutory & Operational Mandate:** Formally documented RCW 42.56 public records retention compliance, EOC/PIO coordination, Level 1-3 wildfire evacuation definitions, pass closures, and county facility alerts.
+  2. **System Architecture & Mermaid Topology:** Added end-to-end visual workflow mapping Dispatch Studio $\rightarrow$ Controller $\rightarrow$ SQL Server Filtered Indexes $\rightarrow$ Public REST API $\rightarrow$ Citizen Web/Mobile Touchpoints.
+  3. **Data Model & Complete Data Dictionary:** Added column-by-column specifications for `dbo.emergency_alerts`, nullability, defaults, index definitions, and the mandatory `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` invariant.
+  4. **Controller Actions Specification (`Alerts.cfc`):** Detailed breakdown of `config()`, `index()`, `save()`, `toggle()`, `delete()`, `apiActive()`, and private helper functions with argument handling and return envelopes.
+  5. **Standard Incident Presets Catalog:** Complete JSON reference catalog for 6 municipal quick-dispatch templates (Level 1/2/3 Wildfire, Mountain Pass Closure, River Flood Warning, Courthouse 2-Hour Delay).
+  6. **UI Component Architecture (`index.cfm`):** ASCII layout diagram and field-by-field walkthrough of the Dispatch Studio, KPI cards, live banner preview simulator, search filter, and accessible modals.
+  7. **Public REST API Reference (`GET /api/v1/alerts/active`):** Full OpenAPI-style endpoint documentation with query filters (`?site=...`), HTTP caching/CORS headers, and sample JSON payloads for both active incidents and standby states.
+  8. **Public Website Frontend Integration Blueprint:** Production-ready copy-paste embed snippet in vanilla JavaScript and CSS, with accessible ARIA live regions (`role="alert"`), `localStorage` dismissal persistence, and WCAG 2.1 AA color contrast compliance.
+  9. **Operational Playbooks:** Emergency SQL "Kill Switch" script for immediate silent override across all county properties, cURL verification commands, and response header checks.
+
+---
+
+### Milestone 26: Complete `.doclib` Technical Overhaul & Project Customization Skill (`SKILL.md`)
+- **User Directive:** "yes, this will turn out to be a reference for documentation and will become skill.md for this project"
+- **Deliverables & Enhancements:**
+  1. **Series 006 (Pages & Revision History Rollback Studio) Expanded:**
+     - Added comprehensive technical specifications for `dbo.pages`, `dbo.page_revisions`, and `meta_json` serialization.
+     - Documented the 4-phase snapshotting and rollback lifecycle, the client-side LCS word-token diff engine, the 4 comparison modes in `#pgRevisionsModal`, the 12-col Full vs 3/9 Sidebar wireframe layouts, the 6-field Featured Cover Image suite, and all controller actions in `Pages.cfc`.
+  2. **Series 005 (Articles & Public Information Module) Expanded:**
+     - Documented multi-tenant department scoping, category taxonomies (`dbo.article_categories`), tag indexing, scheduled publishing workflows, the automated `ArticleA11yLinter` quality gate, and the public REST API (`GET /api/v1/articles`) with full JSON schemas.
+  3. **Series 004 (Media Library & Workspace File Explorer) Expanded:**
+     - Documented the authoritative storage topology (`c:\inetpub\chelan-county\files\`), NTFS directory junctions for CMSAdmin and the shared photo library (`shared images` $\rightarrow$ `picjumbo`), the `dbo.media_assets` relational metadata index, the modal picker iframe postMessage contract, and traversal security controls.
+  4. **Series 008 (Database Schema & SQL Server Standards) Expanded:**
+     - Documented datasource configuration, the mandatory `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` invariant (Msg 1934 prevention), `cfsqltype` mapping rules (`cf_sql_nvarchar` Unicode enforcement), soft-delete audit standards, and multi-tenant workspace schemas (`dbo.cms_workspaces`).
+  5. **Created Project Skill (`.agents/skills/cmsadmin2-development/SKILL.md`):**
+     - Established an official, discoverable Antigravity workspace skill tailored to Chelan County CMSAdmin 2.0.
+     - Encodes the 5 non-negotiable invariants, versioning and build scheme (`v2.1.[build]`), `.doclib` book of record map, page editor parity rules, cover image suite metadata, and pre-completion verification checklists for future pair-programming sessions.
+- **Verification:**
+  - Verified clean syntax across all `.doclib` files and `SKILL.md`.
+  - Executed git status to review all staged/modified documentation assets.
+
+---
+
+### Milestone 27: Content Manager Inactive Page Soft-Delete Implementation
+- **User Directive:** "On Content Managet pages list, when a page is inactive, give the option to soft delete /migrate-workflows"
+- **Deliverables & Architecture:**
+  1. **Route Mappings (`config/routes.cfm`):**
+     - Added `.post(name="deletePage", pattern="pages/delete", to="pages##delete")`, `.post(name="deletePageCamel", pattern="pages/deletePage", to="pages##delete")`, and `.post(name="deletePageSoft", pattern="pages/soft-delete", to="pages##delete")`.
+  2. **Controller Logic (`app/controllers/Pages.cfc`):**
+     - Added `delete` to `protectsFromForgery(except="...,delete")`.
+     - Implemented `function delete()`:
+       - Validates page existence and ensures it is not already deleted (`DeletedAt IS NULL`).
+       - Validates that system-locked pages cannot be deleted (`isLocked == 0`).
+       - Enforces status constraint: only pages with `StatusCode = 'Inactive'` can be deleted.
+       - Sets `DeletedAt = SYSUTCDATETIME()`, `Modified = SYSUTCDATETIME()`, and `ModifiedBy = spCurrentActor()` using mandatory `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;`.
+       - Records an audit snapshot in `dbo.page_revisions` to maintain 100% compliance with RCW 42.56.
+  3. **Content Manager UI (`app/views/pages/index.cfm`):**
+     - Expanded table actions column width from 48px to 76px.
+     - Conditionally renders a red trash icon button (`.btn-outline-danger`) next to the Edit button whenever a page is inactive (`p.status eq 'Inactive'`) and not system-locked (`not p.locked`).
+     - Added client-side `confirmDeletePage(id, title)` function utilizing `window.adminConfirm` with accessible prompt, CSRF token attachment, asynchronous `fetch('/pages/delete')`, and `window.showToast()` confirmation.
+  4. **Skill Migration Check:**
+     - Verified legacy workflow directories (`.agents/workflows/`, `_agents/workflows/`) are completely clean and migrated to the official Antigravity skill format at `.agents/skills/cmsadmin2-development/SKILL.md`.
+- **Verification:**
+  - Executed framework reload `/login?reload=true&password=chelancms` (HTTP 200).
+  - Verified clean syntax in `config/routes.cfm`, `app/controllers/Pages.cfc`, and `app/views/pages/index.cfm`.
+
+---
+
+### Milestone 29: One Page Studio & Anchor-Based Navigation Integration
+- **User Directive:** "We need to add an option to create a one page website (for front end portal/site) but taken from the selection of multiple pages - One Page Studio, menu can be defined from menu creation, i believe it will allow hash # tag for anchor."
+- **Deliverables & Architecture:**
+  1. **Relational Database Schema & SQL Server Standards:**
+     - Created `dbo.one_page_sites` to store one-page portal configurations, hero settings, theme tokens, custom CSS/JS, and layout options.
+     - Created `dbo.one_page_sections` to map workspace content pages (`page_id`) into ordered scrollable one-page sections with custom section anchors (`#amenities`), headings, badges, and layout variants (`contained`, `contained-card`, `full-bleed`).
+     - Added SQL Server filtered indexes (`WHERE deletedat IS NULL`) complying with `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` invariants:
+       - `IX_one_page_sites_site_slug` on `dbo.one_page_sites([siteid], [slug])`
+       - `IX_one_page_sections_site_sort` on `dbo.one_page_sections([one_page_site_id], [sort_order])`
+       - `IX_one_page_sections_site_anchor` on `dbo.one_page_sections([one_page_site_id], [anchor_slug])`
+     - Seeded initial reference portal for Wenatchee River Park (`siteid = 'wrcp'`, `slug = 'wenatchee-river-park'`) with 6 linked content sections and seed pages.
+  2. **Navigation Anchor Hash (`#tag`) Support (`Navigation.cfc`, `navigation/index.cfm`):**
+     - Updated destination validation in `Navigation.cfc::saveItem()` to permit `#tag` anchors (`^(https?://|/|##)`).
+     - Enhanced `normalizeWorkspacePageDestination()` to preserve anchor hashes (`#section` and `/path#section`) without corrupting or prepending redundant slashes.
+     - Enhanced `Navigation.cfc::index()` to query active one-page site anchors for the current workspace and pass them via `navigationConfigJson.onePageAnchors`.
+     - Enhanced `app/views/navigation/index.cfm` with interactive quick-insert anchor pill badges in the Custom URL builder.
+  3. **Controller Implementation & Public Access Bypass (`Pages.cfc`, `Controller.cfc`, `routes.cfm`):**
+     - Added route mappings in `config/routes.cfm`: `pages/one-page`, `pages/one-page/preview`, `pages/one-page/export`, `pages/one-page/save`, `pages/one-page/delete`, `pages/one-page/section/save`, `pages/one-page/section/delete`, `pages/one-page/section/reorder`, and `pages/one-page/sync-menu`.
+     - Whitelisted `previewonepagesite` and `exportonepagesite` in `Controller.cfc::isPublicRequest()` to allow public/guest iframe and tab previews and static zip/html downloads.
+     - Added CSRF exemptions in `Pages.cfc::config()` for One Page Studio REST actions.
+     - Implemented backend actions in `Pages.cfc`:
+       - `onePage()`: Main Studio view action, auto-provisions schema if needed, loads active workspace sites, pages, and menus.
+       - `getOnePageSites()`, `getOnePageSite()`, `saveOnePageSite()`, `deleteOnePageSite()`: Full CRUD for portal configurations.
+       - `saveOnePageSection()`, `deleteOnePageSection()`, `reorderOnePageSections()`: Section management and order manipulation.
+       - `syncOnePageToMenu()`: Automatic sync between One Page Studio sections and Navigation Menus with smooth-scrolling hash anchors.
+       - `compileOnePageSite()`, `previewOnePageSite()`, `exportOnePageSite()`: Full multi-page assembly engine, standalone live renderer, and static export.
+  4. **One Page Studio User Interface (`app/views/pages/onePage.cfm`, `app/views/layout.cfm`):**
+     - Added "One Page Studio" link with desktop-stacked icon under the Pages menu in `app/views/layout.cfm`.
+     - Built comprehensive Studio interface with:
+       - **Assembler Tab:** Drag-and-drop / sortable list of sections with live badges, layout selectors, anchor tags, and edit/delete controls.
+       - **Multi-Page Picker Drawer:** Searchable multi-page catalog to add multiple workspace pages to the one-page portal in bulk.
+       - **Device Preview Tab:** Live interactive responsive iframe preview with Desktop, Tablet, and Mobile viewport toggles.
+       - **Directory Tab:** Overview of all one-page sites in the active workspace with direct preview, edit, and export links.
+       - **Navigation Sync:** One-click button to generate or update the workspace navigation menu with anchor links pointing to sections.
+       - **Theme & Metadata Modal:** Control over navbar brand, CTA buttons, hero banner, primary colors, smooth scrolling, and custom CSS/JS.
+  5. **Documentation & Automated Verification:**
+     - Created comprehensive technical manual [`.doclib/013_ONE_PAGE_STUDIO_AND_PORTAL_BUILDER.md`](file:///c:/inetpub/CMSAdmin2.0/.doclib/013_ONE_PAGE_STUDIO_AND_PORTAL_BUILDER.md).
+     - Registered Series 013 in [`.doclib/000_SERIES_INDEX.md`](file:///c:/inetpub/CMSAdmin2.0/.doclib/000_SERIES_INDEX.md).
+     - Created automated test harness `tests/test_one_page_studio.cfm` verifying database schema, query execution with ANSI_NULLS/QUOTED_IDENTIFIER, controller action responses, anchor validation, HTML rendering, and menu sync: **22 / 22 Tests Passed (0 Failed)**.
+- **Verification:**
+  - ColdFusion framework reload executed successfully (`/login?reload=true&password=chelancms`).
+  - Unit tests executed via HTTP request (`/tests/test_one_page_studio.cfm`), reporting 100% success rate.
+
+---
+
+### Milestone 28: Archived Page Detection & Interactive Reactivation Prompt
+- **User Directive:** "what happen if i create a page with the same title as an archived page, should we ask if we need to activate the old file?" -> "lets do it"
+- **Problem Statement:** When creating a new page via the "Add Page" modal, if an archived/soft-deleted page (`DeletedAt IS NOT NULL`) already existed with the same title or slug, the system previously ignored it and created a redundant, blank duplicate record. This fragmented revision history, abandoned existing assets and formatting, and created unnecessary URL suffixes (e.g. `/slug-2`).
+- **Deliverables & Architecture:**
+  1. **Route Mappings (`config/routes.cfm`):**
+     - Registered `.post(name="restoreArchivedPage", pattern="pages/restore-archived", to="pages##restoreArchived")` and camelCase alias.
+  2. **Controller Logic (`app/controllers/Pages.cfc`):**
+     - Added `restoreArchived` to `protectsFromForgery(except="...,restoreArchived")`.
+     - Enhanced `createModal()`:
+       - Checks for existing soft-deleted pages (`DeletedAt IS NOT NULL`) in the active workspace matching the requested title or permalink (unless `forceNew: true` is passed).
+       - When an archived page is detected, halts creation and returns `{ archivedFound: true, archivedPage: { id, title, slug, deletedAt, deletedBy, layout } }`.
+     - Implemented `function restoreArchived()`:
+       - Sets `DeletedAt = NULL`, `StatusCode = 'Active'`, `Visibility = 'Draft'`, `Modified = SYSUTCDATETIME()`, and `ModifiedBy = spCurrentActor()`.
+       - Commits an automated reactivation snapshot to `dbo.page_revisions` (RCW 42.56 compliance).
+       - Returns `{ success: true, redirectUrl: "/pages/edit?id=...&reactivated=1" }`.
+  3. **Content Manager UI (`app/views/pages/index.cfm`):**
+     - In `proceedToEditor()`, handles `data.archivedFound`:
+       - Invokes `handleArchivedPageFound(archived)` using `window.adminConfirm`.
+       - Explains to the author: *"An archived page titled '[Title]' (/[slug]) was previously archived on [Date] by [User]. Would you like to restore and activate this archived page with its previous content, attachments, and revision history?"*
+       - Option 1 (Accept): Calls `executeRestoreArchivedPage()` to reactivate the existing page and immediately redirects to the editor with all past content intact.
+       - Option 2 (Cancel): Prompts confirmation to create a fresh blank page (`proceedToEditor(true)`), auto-incrementing the slug to avoid URL conflicts.
+- **Verification:**
+  - Tested framework reload `/login?reload=true&password=chelancms` (HTTP 200).
+  - Verified clean syntax in `config/routes.cfm`, `app/controllers/Pages.cfc`, and `app/views/pages/index.cfm`.
+
+---
+
+### Milestone 29: One Page Studio & Anchor-Based Navigation Integration
+- **User Directive:** "We need to add an option to create a one page website (for front end portal/site) but taken from the selection of multiple pages - One Page Studio, menu can be defined from menu creation, i believe it will allow hash # tag for anchor."
+- **Deliverables & Architecture:**
+  1. **Relational Database Schema & SQL Server Standards:**
+     - Created `dbo.one_page_sites` to store one-page portal configurations, hero settings, theme tokens, custom CSS/JS, and layout options.
+     - Created `dbo.one_page_sections` to map workspace content pages (`page_id`) into ordered scrollable one-page sections with custom section anchors (`#amenities`), headings, badges, and layout variants (`contained`, `contained-card`, `full-bleed`).
+     - Added SQL Server filtered indexes (`WHERE deletedat IS NULL`) complying with `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` invariants:
+       - `IX_one_page_sites_site_slug` on `dbo.one_page_sites([siteid], [slug])`
+       - `IX_one_page_sections_site_sort` on `dbo.one_page_sections([one_page_site_id], [sort_order])`
+       - `IX_one_page_sections_site_anchor` on `dbo.one_page_sections([one_page_site_id], [anchor_slug])`
+     - Seeded initial reference portal for Wenatchee River Park (`siteid = 'wrcp'`, `slug = 'wenatchee-river-park'`) with 6 linked content sections and seed pages.
+  2. **Navigation Anchor Hash (`#tag`) Support (`Navigation.cfc`, `navigation/index.cfm`):**
+     - Updated destination validation in `Navigation.cfc::saveItem()` to permit `#tag` anchors (`^(https?://|/|##)`).
+     - Enhanced `normalizeWorkspacePageDestination()` to preserve anchor hashes (`#section` and `/path#section`) without corrupting or prepending redundant slashes.
+     - Enhanced `Navigation.cfc::index()` to query active one-page site anchors for the current workspace and pass them via `navigationConfigJson.onePageAnchors`.
+     - Enhanced `app/views/navigation/index.cfm` with interactive quick-insert anchor pill badges in the Custom URL builder.
+  3. **Controller Implementation & Public Access Bypass (`Pages.cfc`, `Controller.cfc`, `routes.cfm`):**
+     - Added route mappings in `config/routes.cfm`: `pages/one-page`, `pages/one-page/preview`, `pages/one-page/export`, `pages/one-page/save`, `pages/one-page/delete`, `pages/one-page/section/save`, `pages/one-page/section/delete`, `pages/one-page/section/reorder`, and `pages/one-page/sync-menu`.
+     - Whitelisted `previewonepagesite` and `exportonepagesite` in `Controller.cfc::isPublicRequest()` to allow public/guest iframe and tab previews and static zip/html downloads.
+     - Added CSRF exemptions in `Pages.cfc::config()` for One Page Studio REST actions.
+     - Implemented backend actions in `Pages.cfc`:
+       - `onePage()`: Main Studio view action, auto-provisions schema if needed, loads active workspace sites, pages, and menus.
+       - `getOnePageSites()`, `getOnePageSite()`, `saveOnePageSite()`, `deleteOnePageSite()`: Full CRUD for portal configurations.
+       - `saveOnePageSection()`, `deleteOnePageSection()`, `reorderOnePageSections()`: Section management and order manipulation.
+       - `syncOnePageToMenu()`: Automatic sync between One Page Studio sections and Navigation Menus with smooth-scrolling hash anchors.
+       - `compileOnePageSite()`, `previewOnePageSite()`, `exportOnePageSite()`: Full multi-page assembly engine, standalone live renderer, and static export.
+  4. **One Page Studio User Interface (`app/views/pages/onePage.cfm`, `app/views/layout.cfm`):**
+     - Added "One Page Studio" link with desktop-stacked icon under the Pages menu in `app/views/layout.cfm`.
+     - Built comprehensive Studio interface with:
+       - **Assembler Tab:** Drag-and-drop / sortable list of sections with live badges, layout selectors, anchor tags, and edit/delete controls.
+       - **Multi-Page Picker Drawer:** Searchable multi-page catalog to add multiple workspace pages to the one-page portal in bulk.
+       - **Device Preview Tab:** Live interactive responsive iframe preview with Desktop, Tablet, and Mobile viewport toggles.
+       - **Directory Tab:** Overview of all one-page sites in the active workspace with direct preview, edit, and export links.
+       - **Navigation Sync:** One-click button to generate or update the workspace navigation menu with anchor links pointing to sections.
+       - **Theme & Metadata Modal:** Control over navbar brand, CTA buttons, hero banner, primary colors, smooth scrolling, and custom CSS/JS.
+  5. **Documentation & Automated Verification:**
+     - Created comprehensive technical manual [`.doclib/013_ONE_PAGE_STUDIO_AND_PORTAL_BUILDER.md`](file:///c:/inetpub/CMSAdmin2.0/.doclib/013_ONE_PAGE_STUDIO_AND_PORTAL_BUILDER.md).
+     - Registered Series 013 in [`.doclib/000_SERIES_INDEX.md`](file:///c:/inetpub/CMSAdmin2.0/.doclib/000_SERIES_INDEX.md).
+     - Created automated test harness `tests/test_one_page_studio.cfm` verifying database schema, query execution with ANSI_NULLS/QUOTED_IDENTIFIER, controller action responses, anchor validation, HTML rendering, and menu sync: **22 / 22 Tests Passed (0 Failed)**.
+- **Verification:**
+  - ColdFusion framework reload executed successfully (`/login?reload=true&password=chelancms`).
+  - Unit tests executed via HTTP request (`/tests/test_one_page_studio.cfm`), reporting 100% success rate.
+
+---
+
+### Milestone 29: One Page Studio & Anchor-Based Navigation Integration
+- **User Directive:** "We need to add an option to create a one page website (for front end portal/site) but taken from the selection of multiple pages - One Page Studio, menu can be defined from menu creation, i believe it will allow hash # tag for anchor."
+- **Deliverables & Architecture:**
+  1. **Relational Database Schema & SQL Server Standards:**
+     - Created `dbo.one_page_sites` to store one-page portal configurations, hero settings, theme tokens, custom CSS/JS, and layout options.
+     - Created `dbo.one_page_sections` to map workspace content pages (`page_id`) into ordered scrollable one-page sections with custom section anchors (`#amenities`), headings, badges, and layout variants (`contained`, `contained-card`, `full-bleed`).
+     - Added SQL Server filtered indexes (`WHERE deletedat IS NULL`) complying with `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;` invariants:
+       - `IX_one_page_sites_site_slug` on `dbo.one_page_sites([siteid], [slug])`
+       - `IX_one_page_sections_site_sort` on `dbo.one_page_sections([one_page_site_id], [sort_order])`
+       - `IX_one_page_sections_site_anchor` on `dbo.one_page_sections([one_page_site_id], [anchor_slug])`
+     - Seeded initial reference portal for Wenatchee River Park (`siteid = 'wrcp'`, `slug = 'wenatchee-river-park'`) with 6 linked content sections and seed pages.
+  2. **Navigation Anchor Hash (`#tag`) Support (`Navigation.cfc`, `navigation/index.cfm`):**
+     - Updated destination validation in `Navigation.cfc::saveItem()` to permit `#tag` anchors (`^(https?://|/|##)`).
+     - Enhanced `normalizeWorkspacePageDestination()` to preserve anchor hashes (`#section` and `/path#section`) without corrupting or prepending redundant slashes.
+     - Enhanced `Navigation.cfc::index()` to query active one-page site anchors for the current workspace and pass them via `navigationConfigJson.onePageAnchors`.
+     - Enhanced `app/views/navigation/index.cfm` with interactive quick-insert anchor pill badges in the Custom URL builder.
+  3. **Controller Implementation & Public Access Bypass (`Pages.cfc`, `Controller.cfc`, `routes.cfm`):**
+     - Added route mappings in `config/routes.cfm`: `pages/one-page`, `pages/one-page/preview`, `pages/one-page/export`, `pages/one-page/save`, `pages/one-page/delete`, `pages/one-page/section/save`, `pages/one-page/section/delete`, `pages/one-page/section/reorder`, and `pages/one-page/sync-menu`.
+     - Whitelisted `previewonepagesite` and `exportonepagesite` in `Controller.cfc::isPublicRequest()` to allow public/guest iframe and tab previews and static zip/html downloads.
+     - Added CSRF exemptions in `Pages.cfc::config()` for One Page Studio REST actions.
+     - Implemented backend actions in `Pages.cfc`:
+       - `onePage()`: Main Studio view action, auto-provisions schema if needed, loads active workspace sites, pages, and menus.
+       - `getOnePageSites()`, `getOnePageSite()`, `saveOnePageSite()`, `deleteOnePageSite()`: Full CRUD for portal configurations.
+       - `saveOnePageSection()`, `deleteOnePageSection()`, `reorderOnePageSections()`: Section management and order manipulation.
+       - `syncOnePageToMenu()`: Automatic sync between One Page Studio sections and Navigation Menus with smooth-scrolling hash anchors.
+       - `compileOnePageSite()`, `previewOnePageSite()`, `exportOnePageSite()`: Full multi-page assembly engine, standalone live renderer, and static export.
+  4. **One Page Studio User Interface (`app/views/pages/onePage.cfm`, `app/views/layout.cfm`):**
+     - Added "One Page Studio" link with desktop-stacked icon under the Pages menu in `app/views/layout.cfm`.
+     - Built comprehensive Studio interface with:
+       - **Assembler Tab:** Drag-and-drop / sortable list of sections with live badges, layout selectors, anchor tags, and edit/delete controls.
+       - **Multi-Page Picker Drawer:** Searchable multi-page catalog to add multiple workspace pages to the one-page portal in bulk.
+       - **Device Preview Tab:** Live interactive responsive iframe preview with Desktop, Tablet, and Mobile viewport toggles.
+       - **Directory Tab:** Overview of all one-page sites in the active workspace with direct preview, edit, and export links.
+       - **Navigation Sync:** One-click button to generate or update the workspace navigation menu with anchor links pointing to sections.
+       - **Theme & Metadata Modal:** Control over navbar brand, CTA buttons, hero banner, primary colors, smooth scrolling, and custom CSS/JS.
+  5. **Documentation & Automated Verification:**
+     - Created comprehensive technical manual [`.doclib/013_ONE_PAGE_STUDIO_AND_PORTAL_BUILDER.md`](file:///c:/inetpub/CMSAdmin2.0/.doclib/013_ONE_PAGE_STUDIO_AND_PORTAL_BUILDER.md).
+     - Registered Series 013 in [`.doclib/000_SERIES_INDEX.md`](file:///c:/inetpub/CMSAdmin2.0/.doclib/000_SERIES_INDEX.md).
+     - Created automated test harness `tests/test_one_page_studio.cfm` verifying database schema, query execution with ANSI_NULLS/QUOTED_IDENTIFIER, controller action responses, anchor validation, HTML rendering, and menu sync: **22 / 22 Tests Passed (0 Failed)**.
+- **Verification:**
+  - ColdFusion framework reload executed successfully (`/login?reload=true&password=chelancms`).
+  - Unit tests executed via HTTP request (`/tests/test_one_page_studio.cfm`), reporting 100% success rate.
+
+  - **ColdFusion Tag Output Parser Hotfix:** Resolved `Invalid CFML construct found on line 408 at column 141` in `app/views/pages/onePage.cfm` caused by unescaped HTML numeric entity `#` in `&#8942;&#8942;` inside `<cfoutput>` block, escaping it to `&##8942;&##8942;`.
+
+  - **Navigation View CFML Hash Escaping Hotfix:** Resolved `Invalid CFML construct found on line 186 at column 162` in `app/views/navigation/index.cfm` caused by unescaped `#` in placeholder and description text (`#anchor`, `#amenities`, `#rates`) within a `<cfoutput>` context, escaping them to `##`.
+  - **JSON Key Case Normalization Hotfix:** Resolved `Menu sync failed.` UI alert caused by Adobe ColdFusion `SerializeJSON` serializing unquoted CFML struct keys as uppercase (`SUCCESS`, `MESSAGE`). Added key lowercasing in `Pages.cfc::fxRenderJson()` and defensive case-insensitive checks in `app/views/pages/onePage.cfm`.
+  - **Admin-Only Role Restriction:** Moved One Page Studio exclusively to the **Administration** navigation group in `app/views/layout.cfm` (alongside Workspaces, Users & Roles, and Navigation Menus with the `layers` SVG icon), removing it from the general Content Management pages submenu. Added server-side role security checks (`getCurrentActiveRole() == 'admin'`) to `Pages.cfc::onePage()` and all One Page Studio API endpoints (`saveOnePageSite`, `saveOnePageSection`, `syncOnePageToMenu`, etc.), restricting access strictly to System Administrators.

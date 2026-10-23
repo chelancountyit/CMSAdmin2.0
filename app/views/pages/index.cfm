@@ -331,7 +331,7 @@ form.admin-modal-dialog {
 		<table class="admin-table" id="pagesTable" aria-label="All pages">
 			<thead>
 				<tr>
-					<th scope="col" style="width:48px;"><span class="sr-only">Actions</span></th>
+					<th scope="col" style="width:76px; text-align:center;"><span class="sr-only">Actions</span></th>
 					<th scope="col">Page Title</th>
 					<th scope="col" style="text-align:center;">Menu Item</th>
 					<th scope="col" style="text-align:center;">Status</th>
@@ -351,6 +351,11 @@ form.admin-modal-dialog {
 							<a href="#urlFor(controller='pages', action='edit', params='id=#p.id#')#" class="btn btn-sm btn-icon-only btn-outline" aria-label="Edit #EncodeForHTMLAttribute(p.title)#" title="Edit">
 								#svgIcon(name="edit", size=14)#
 							</a>
+							<cfif (p.status eq 'Inactive' or p.status eq 'inactive') and not p.locked>
+								<button type="button" class="btn btn-sm btn-icon-only btn-outline-danger" onclick="confirmDeletePage(#p.id#, '#JSStringFormat(p.title)#')" aria-label="Delete #EncodeForHTMLAttribute(p.title)#" title="Soft Delete Inactive Page">
+									#svgIcon(name="trash", size=14)#
+								</button>
+							</cfif>
 						</div>
 					</td>
 					<td>
@@ -819,7 +824,7 @@ form.admin-modal-dialog {
 	});
 
 	// Exit modal and proceed to Edit Page (persisting to database first)
-	function proceedToEditor() {
+	function proceedToEditor(forceNew) {
 		var titleVal = titleInput.value.trim();
 		var slugVal = slugInput.value.trim();
 		var layoutVal = layoutHidden.value || "Right Sidebar";
@@ -837,7 +842,7 @@ form.admin-modal-dialog {
 
 		// 1. Show immediate button loading state
 		btnContinue.disabled = true;
-		btnContinue.innerHTML = '<span class="admin-spinner-sm" style="margin-right:6px;" aria-hidden="true"></span> <span>Saving & Opening Editor...</span>';
+		btnContinue.innerHTML = '<span class="admin-spinner-sm" style="margin-right:6px;" aria-hidden="true"></span> <span>Checking &amp; Creating...</span>';
 
 		// 2. Trigger high-contrast Page Transition Loader
 		if (typeof window.showPageLoader === "function") {
@@ -903,7 +908,8 @@ form.admin-modal-dialog {
 				title: titleVal,
 				slug: slugVal,
 				layout: layoutVal,
-				siteId: activeWs
+				siteId: activeWs,
+				forceNew: forceNew === true
 			})
 		})
 		.then(function (res) {
@@ -914,13 +920,24 @@ form.admin-modal-dialog {
 				} catch (e) {
 					throw new Error("Invalid response from server (HTTP " + res.status + ").");
 				}
-				if (!res.ok) {
+				if (!res.ok && !data.archivedFound && !data.ARCHIVEDFOUND) {
 					throw new Error(getField(data, "message") || ("Server error (HTTP " + res.status + ")."));
 				}
 				return data;
 			});
 		})
 		.then(function (data) {
+			// Check if an archived/soft-deleted page was found
+			if (data.archivedFound || data.ARCHIVEDFOUND) {
+				if (typeof window.hidePageLoader === "function") window.hidePageLoader();
+				btnContinue.disabled = false;
+				btnContinue.innerHTML = '<span>Continue to Editor</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-left:4px;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
+
+				var archived = data.archivedPage || {};
+				handleArchivedPageFound(archived, titleVal, slugVal);
+				return;
+			}
+
 			var isSuccess = getField(data, "success") === true;
 			var newId = parseInt(getField(data, "id"), 10) || 0;
 			var redirectUrl = getField(data, "redirectUrl");
@@ -948,13 +965,93 @@ form.admin-modal-dialog {
 		});
 	}
 
-	btnContinue.addEventListener("click", proceedToEditor);
+	async function handleArchivedPageFound(archived, titleVal, slugVal) {
+		var pageTitle = archived.title || titleVal;
+		var pageSlug = archived.slug || slugVal;
+		var delDate = archived.deletedAt || "a previous date";
+		var delUser = archived.deletedBy || "staff";
+
+		var restoreChoice = false;
+		if (typeof window.adminConfirm === "function") {
+			restoreChoice = await window.adminConfirm({
+				title: "Archived Page Found",
+				message: 'An archived page titled "' + pageTitle + '" (/' + pageSlug + ') was archived on ' + delDate + ' by ' + delUser + '.\n\nWould you like to restore and activate this archived page with its previous content, attachments, and revision history?',
+				acceptText: "Restore Archived Page",
+				cancelText: "Create Brand New Page",
+				type: "info"
+			});
+		}
+
+		if (restoreChoice) {
+			executeRestoreArchivedPage(archived.id, pageTitle);
+		} else {
+			var createChoice = false;
+			if (typeof window.adminConfirm === "function") {
+				createChoice = await window.adminConfirm({
+					title: "Create Brand New Page?",
+					message: 'A brand new blank page will be created. The URL slug will be automatically incremented if needed to avoid conflicting with the archived record. Do you wish to continue?',
+					acceptText: "Create New Page",
+					cancelText: "Cancel & Edit Title",
+					type: "primary"
+				});
+			}
+			if (createChoice) {
+				proceedToEditor(true); // forceNew = true
+			}
+		}
+	}
+
+	function executeRestoreArchivedPage(pageId, pageTitle) {
+		if (typeof window.showPageLoader === "function") window.showPageLoader("Reactivating archived page...");
+		var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+		var headers = {
+			"Content-Type": "application/json",
+			"Accept": "application/json",
+			"X-Requested-With": "XMLHttpRequest"
+		};
+		if (csrfMeta && csrfMeta.getAttribute("content")) {
+			headers["X-CSRF-Token"] = csrfMeta.getAttribute("content");
+		}
+
+		fetch("/pages/restore-archived", {
+			method: "POST",
+			credentials: "same-origin",
+			headers: headers,
+			body: JSON.stringify({ id: pageId })
+		})
+		.then(function(res) { return res.json(); })
+		.then(function(resData) {
+			if (resData.success || resData.SUCCESS) {
+				closeModal();
+				if (typeof window.showToast === "function") {
+					window.showToast(resData.message || "Page reactivated successfully!", "success");
+				}
+				var targetUrl = resData.redirectUrl || ("/pages/edit?id=" + encodeURIComponent(pageId) + "&reactivated=1");
+				setTimeout(function() {
+					window.location.href = targetUrl;
+				}, 400);
+			} else {
+				if (typeof window.hidePageLoader === "function") window.hidePageLoader();
+				if (typeof window.adminAlert === "function") {
+					window.adminAlert({ title: "Reactivation Failed", message: resData.message || "Unable to restore archived page.", type: "danger" });
+				}
+			}
+		})
+		.catch(function(err) {
+			if (typeof window.hidePageLoader === "function") window.hidePageLoader();
+			if (typeof window.adminAlert === "function") {
+				window.adminAlert({ title: "System Error", message: err.message || "Failed to communicate with server.", type: "danger" });
+			}
+		});
+	}
+
+	btnContinue.addEventListener("click", function() { proceedToEditor(false); });
 
 	[titleInput, slugInput].forEach(function (inp) {
 		inp.addEventListener("keydown", function (e) {
 			if (e.key === "Enter") {
 				e.preventDefault();
-				proceedToEditor();
+				proceedToEditor(false);
 			}
 		});
 	});
@@ -963,4 +1060,57 @@ form.admin-modal-dialog {
 	if (typeof window.hidePageLoader === "function") window.hidePageLoader();
 	if (typeof window.finishTopProgress === "function") window.finishTopProgress();
 })();
+
+async function confirmDeletePage(id, title) {
+	if (!id) return;
+	var promptTitle = title || ('Page ##' + id);
+	var ok = false;
+	if (typeof window.adminConfirm === "function") {
+		ok = await window.adminConfirm({
+			title: 'Soft Delete Inactive Page?',
+			message: 'Are you sure you want to soft delete "' + promptTitle + '"? This inactive page will be archived and removed from the active directory.',
+			type: 'danger',
+			acceptText: 'Delete Page',
+			confirmText: 'Delete Page',
+			cancelText: 'Cancel'
+		});
+	}
+	if (!ok) return;
+
+	var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+	var headers = {
+		'Content-Type': 'application/json',
+		'X-Requested-With': 'XMLHttpRequest'
+	};
+	if (csrfToken) {
+		headers['X-CSRF-Token'] = csrfToken;
+	}
+
+	fetch('/pages/delete', {
+		method: 'POST',
+		credentials: 'same-origin',
+		headers: headers,
+		body: JSON.stringify({ id: id })
+	})
+	.then(function(r) { return r.json(); })
+	.then(function(res) {
+		if (res.success || res.SUCCESS) {
+			if (typeof window.showToast === 'function') {
+				window.showToast(res.message || 'Page soft-deleted successfully.', 'success');
+			}
+			setTimeout(function() {
+				window.location.reload();
+			}, 500);
+		} else {
+			if (typeof window.adminAlert === 'function') {
+				window.adminAlert({ title: 'Delete Failed', message: res.message || 'Failed to delete page.', type: 'danger' });
+			}
+		}
+	})
+	.catch(function(err) {
+		if (typeof window.adminAlert === 'function') {
+			window.adminAlert({ title: 'System Error', message: (err && err.message) ? err.message : 'An error occurred while deleting the page.', type: 'danger' });
+		}
+	});
+}
 </script>

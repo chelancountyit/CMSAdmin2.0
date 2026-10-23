@@ -1557,6 +1557,26 @@ window.closeEmbedFormModal = function() {
 		}
 	});
 
+		// Real-time automatic iframe resize listener for embedded Chelan forms inside JBDEditor & Page Preview
+	if (!window._chelanEditorFormResizeAttached) {
+		window._chelanEditorFormResizeAttached = true;
+		window.addEventListener("message", function(e) {
+			if (e.data && e.data.type === "chelan-form-resize" && e.data.height) {
+				var targetHeight = Math.max(400, Math.min(parseInt(e.data.height, 10), 3500));
+				var iframes = document.querySelectorAll("iframe");
+				iframes.forEach(function(f) {
+					try {
+						if (f.contentWindow === e.source || (f.src && (f.src.indexOf("/forms/preview") !== -1 || f.src.indexOf("forms/preview") !== -1))) {
+							f.style.height = targetHeight + "px";
+							f.style.minHeight = targetHeight + "px";
+							f.setAttribute("height", targetHeight);
+						}
+					} catch(err) {}
+				});
+			}
+		});
+	}
+
 	document.addEventListener("click", function(e) {
 		var btnIframe = e.target.closest(".btn-insert-embed-iframe");
 		if (btnIframe) {
@@ -1565,7 +1585,7 @@ window.closeEmbedFormModal = function() {
 			var formTitle = btnIframe.getAttribute("data-title") || "Online Form";
 			var formSrc = formSlug ? ('http://cmsadmin.chelancounty.gov/forms/preview?slug=' + encodeURIComponent(formSlug)) : ('http://cmsadmin.chelancounty.gov/forms/preview?id=' + formId);
 			var snippet = '<div class="cms-form-embed" data-form-slug="' + formSlug + '" data-form-id="' + formId + '">\n' +
-				'  <iframe src="' + formSrc + '" width="100%" height="750" frameborder="0" scrolling="no" style="border:none; width:100%; min-height:500px; overflow:hidden; border-radius:8px;" title="' + formTitle.replace(/"/g, '&quot;') + '"></iframe>\n' +
+				'  <iframe src="' + formSrc + '" width="100%" height="920" frameborder="0" scrolling="auto" style="border:none; width:100%; min-height:650px; border-radius:8px; transition:height 0.2s ease;" title="' + formTitle.replace(/"/g, '&quot;') + '"></iframe>\n' +
 				'</div>\n';
 			closeEmbedFormModal();
 			insertSnippetAtCursor("pgContent", snippet);

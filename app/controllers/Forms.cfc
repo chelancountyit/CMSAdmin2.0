@@ -3,7 +3,7 @@ component extends="Controller" {
 	function config() {
 		super.config();
 		// Allow JSON submissions without CSRF token mismatch if accessed via external API/iframe
-		protectsFromForgery(except="submit");
+		protectsFromForgery(except="submit,saveEmailSettings");
 	}
 
 	// Field types that render content only and never collect a value
@@ -66,6 +66,7 @@ component extends="Controller" {
 
 		local.qForms = fbQuery("
 			SELECT f.id, f.form_key, f.slug, f.title, f.description, f.status, f.siteid,
+			       f.notification_email, f.notification_email_cc, f.email_notifications_enabled,
 			       f.submissions_count, f.views_count, f.anti_spam_enabled, f.wcag_compliant,
 			       DATEADD(minute, DATEDIFF(minute, SYSUTCDATETIME(), SYSDATETIME()), f.updatedat) AS updated_local,
 			       d.code AS dept_code, d.name AS dept_name, d.color_hex AS dept_color, d.badge_class AS dept_badge,
@@ -122,6 +123,9 @@ component extends="Controller" {
 				pendingCount: Val(local.r.pending_count),
 				viewsCount: Val(local.r.views_count),
 				updatedAt: IsDate(local.r.updated_local) ? local.r.updated_local : "",
+				notificationEmail: local.r.notification_email ?: "",
+				notificationEmailCc: local.r.notification_email_cc ?: "",
+				emailNotificationsEnabled: local.r.email_notifications_enabled ? true : false,
 				publicUrl: local.base & urlFor(route="formPreview") & "?slug=" & URLEncodedFormat(local.r.slug),
 				editUrl: urlFor(controller="forms", action="builder", params="id=" & local.r.id),
 				previewUrl: urlFor(route="formPreview") & "?slug=" & URLEncodedFormat(local.r.slug)
@@ -362,6 +366,240 @@ component extends="Controller" {
 		renderJson({
 			"success": true,
 			"message": "Form deleted. Its submissions and audit history were preserved."
+		});
+	}
+
+	/**
+	/**
+	 * Returns email configuration for a specific form (staff alerts + citizen auto-responder)
+	 */
+	function getEmailSettings() {
+		local.formId = Val(params.id ?: (params.key ?: 0));
+		local.frm = getManagedFormRow(local.formId);
+		if (StructIsEmpty(local.frm)) {
+			renderJson({ "success": false, "message": "Form not found or you lack permission to manage it." }, 404);
+			return;
+		}
+
+		local.q = fbQuery("
+			SELECT f.id, f.title, f.slug, f.form_key, f.notification_email, f.notification_email_cc,
+			       f.email_notifications_enabled, f.schema_json,
+			       d.name AS dept_name, d.alert_email AS dept_alert_email
+			FROM forms f
+			LEFT JOIN form_departments d ON d.id = f.department_id
+			WHERE f.id = :id AND f.deletedat IS NULL
+		", { id: { value: local.frm.id, cfsqltype: "cf_sql_integer" } });
+
+		if (!local.q.recordCount) {
+			renderJson({ "success": false, "message": "Form not found." }, 404);
+			return;
+		}
+		local.r = QueryGetRow(local.q, 1);
+
+		local.deptAlert = Trim(local.r.dept_alert_email ?: "");
+		local.formEmail = Trim(local.r.notification_email ?: "");
+		local.deptName  = Trim(local.r.dept_name ?: "County Administration");
+
+		local.resolvedStaffEmail = Len(local.formEmail) ? local.formEmail : (Len(local.deptAlert) ? local.deptAlert : "forms@chelancounty.gov");
+		local.resolvedReplyTo    = Len(local.formEmail) ? local.formEmail : (Len(local.deptAlert) ? local.deptAlert : "forms@chelancounty.gov");
+		local.resolvedFromName   = Len(local.deptName) && local.deptName != "County Administration" ? local.deptName : "Chelan County Online Services";
+
+		local.emailSettings = {
+			"staffNotificationEnabled": local.r.email_notifications_enabled ? true : false,
+			"staffEmail": local.resolvedStaffEmail,
+			"staffEmailCc": Trim(local.r.notification_email_cc ?: ""),
+			"staffSubject": "[New Submission] {{form_title}} ({{reference_id}})",
+			"staffNotes": "",
+			"userAutoresponderEnabled": true,
+			"userSubject": "Confirmation: {{form_title}} Received ({{reference_id}})",
+			"userFromName": local.resolvedFromName,
+			"userReplyTo": local.resolvedReplyTo,
+			"userCustomMessage": "Thank you for contacting Chelan County. We have received your submission and will review it shortly. Please retain your reference number for your records.",
+			"userIncludeSummary": true
+		};
+
+		if (Len(Trim(local.r.schema_json ?: ""))) {
+			try {
+				local.parsed = DeserializeJSON(local.r.schema_json);
+				if (IsStruct(local.parsed) && StructKeyExists(local.parsed, "emailSettings") && IsStruct(local.parsed.emailSettings)) {
+					StructAppend(local.emailSettings, local.parsed.emailSettings, true);
+				}
+			} catch (any ignore) {}
+		}
+
+		// Retrieve form fields for realistic live email preview rendering
+		local.qFields = fbQuery("
+			SELECT id, field_key, label, field_type, placeholder, options_json
+			FROM form_fields
+			WHERE form_id = :id AND deletedat IS NULL AND is_active = 1
+			  AND field_type NOT IN ('paragraph', 'heading', 'divider', 'html', 'section', 'button')
+			ORDER BY sort_order, id
+		", { id: { value: local.frm.id, cfsqltype: "cf_sql_integer" } });
+
+		local.fields = [];
+		for (local.f in local.qFields) {
+			local.sample = "";
+			local.lk = LCase(local.f.field_key);
+			local.ll = LCase(local.f.label);
+			local.lt = LCase(local.f.field_type);
+
+			// Extract first option from options_json if available
+			if (Len(Trim(local.f.options_json ?: ""))) {
+				try {
+					local.opts = DeserializeJSON(local.f.options_json);
+					if (IsArray(local.opts) && ArrayLen(local.opts)) {
+						if (IsStruct(local.opts[1]) && StructKeyExists(local.opts[1], "label") && Len(Trim(local.opts[1].label))) {
+							local.sample = Trim(local.opts[1].label);
+						} else if (IsStruct(local.opts[1]) && StructKeyExists(local.opts[1], "value") && Len(Trim(local.opts[1].value))) {
+							local.sample = Trim(local.opts[1].value);
+						} else if (IsSimpleValue(local.opts[1]) && Len(Trim(local.opts[1]))) {
+							local.sample = Trim(local.opts[1]);
+						}
+					}
+				} catch (any ignore) {}
+			}
+
+			if (!Len(local.sample)) {
+				if (local.lt == "email" || Find("email", local.lk) || Find("email", local.ll)) {
+					local.sample = "jane.doe@example.com";
+				} else if (local.lt == "phone" || local.lt == "tel" || Find("phone", local.lk) || Find("phone", local.ll)) {
+					local.sample = "(509) 555-0199";
+				} else if (local.lt == "address" || Find("address", local.lk) || Find("address", local.ll)) {
+					local.sample = "350 Orondo Ave, Wenatchee, WA 98801";
+				} else if (local.lt == "file" || Find("photo", local.lk) || Find("file", local.ll) || Find("photo", local.ll)) {
+					local.sample = "hazard_inspection_photo.jpg (1.8 MB)";
+				} else if (local.lt == "date" || Find("date", local.lk) || Find("date", local.ll)) {
+					local.sample = "October 22, 2026";
+				} else if (Find("urgency", local.lk) || Find("urgency", local.ll)) {
+					local.sample = "Medium - Action needed within 48 hours";
+				} else if (Find("category", local.lk) || Find("hazard", local.lk) || Find("category", local.ll)) {
+					local.sample = "Pothole / Road Surface Repair";
+				} else if (Find("road", local.lk) || Find("milepost", local.lk) || Find("intersection", local.ll) || Find("road", local.ll) || Find("location", local.ll)) {
+					local.sample = "Chumstick Hwy & Milepost 4.5";
+				} else if (Find("name", local.lk) || Find("name", local.ll)) {
+					local.sample = "Jane Doe";
+				} else if (local.lt == "textarea" || Find("desc", local.lk) || Find("detail", local.ll) || Find("message", local.ll)) {
+					local.sample = "Observed road degradation and pothole in westbound travel lane approximately 100 feet past milepost. Requesting maintenance inspection.";
+				} else if (Len(Trim(local.f.placeholder ?: ""))) {
+					local.sample = Trim(local.f.placeholder);
+				} else {
+					local.sample = "Completed intake submission value";
+				}
+			}
+
+			ArrayAppend(local.fields, {
+				"id": local.f.id,
+				"key": local.f.field_key,
+				"label": local.f.label,
+				"type": local.f.field_type,
+				"sampleValue": local.sample
+			});
+		}
+
+		renderJson({
+			"success": true,
+			"form": {
+				"id": local.r.id,
+				"title": local.r.title,
+				"slug": local.r.slug,
+				"formKey": local.r.form_key,
+				"deptName": local.deptName,
+				"deptAlertEmail": local.deptAlert,
+				"fields": local.fields
+			},
+			"emailSettings": local.emailSettings
+		});
+	}
+
+	/**
+	 * Persists email notification and template configuration for a form
+	 */
+	function saveEmailSettings() {
+		local.body = readJsonBody();
+		if (!IsStruct(local.body)) {
+			renderJson({ "success": false, "message": "Invalid request payload." }, 400);
+			return;
+		}
+
+		local.formId = Val(local.body.id ?: 0);
+		local.frm = getManagedFormRow(local.formId);
+		if (StructIsEmpty(local.frm)) {
+			renderJson({ "success": false, "message": "Form not found or you lack permission to manage it." }, 404);
+			return;
+		}
+
+		local.es = StructKeyExists(local.body, "emailSettings") && IsStruct(local.body.emailSettings) ? local.body.emailSettings : {};
+
+		local.staffEnabled   = qbit(local.es.staffNotificationEnabled ?: "", true);
+		local.staffEmail     = Left(Trim(local.es.staffEmail ?: ""), 255);
+		local.staffEmailCc   = Left(Trim(local.es.staffEmailCc ?: ""), 500);
+		local.staffSubject   = Left(Trim(local.es.staffSubject ?: "[New Submission] {{form_title}} ({{reference_id}})"), 255);
+		local.staffNotes     = Left(Trim(local.es.staffNotes ?: ""), 2000);
+
+		local.userEnabled    = qbit(local.es.userAutoresponderEnabled ?: "", true);
+		local.userSubject    = Left(Trim(local.es.userSubject ?: "Confirmation: {{form_title}} Received ({{reference_id}})"), 255);
+		local.userFromName   = Left(Trim(local.es.userFromName ?: "Chelan County Online Services"), 150);
+		local.userReplyTo    = Left(Trim(local.es.userReplyTo ?: "forms@chelancounty.gov"), 255);
+		local.userMessage    = Left(Trim(local.es.userCustomMessage ?: ""), 4000);
+		local.userSummary    = qbit(local.es.userIncludeSummary ?: "", true);
+
+		// Read existing schema_json so other form builder properties are preserved
+		local.qCur = fbQuery("SELECT schema_json FROM forms WHERE id = :id", { id: { value: local.frm.id, cfsqltype: "cf_sql_integer" } });
+		local.schema = {};
+		if (local.qCur.recordCount && Len(Trim(local.qCur.schema_json))) {
+			try {
+				local.tmp = DeserializeJSON(local.qCur.schema_json);
+				if (IsStruct(local.tmp)) local.schema = local.tmp;
+			} catch (any ignore) {}
+		}
+
+		local.schema.emailSettings = {
+			"staffNotificationEnabled": local.staffEnabled.value == 1,
+			"staffEmail": local.staffEmail,
+			"staffEmailCc": local.staffEmailCc,
+			"staffSubject": local.staffSubject,
+			"staffNotes": local.staffNotes,
+			"userAutoresponderEnabled": local.userEnabled.value == 1,
+			"userSubject": local.userSubject,
+			"userFromName": local.userFromName,
+			"userReplyTo": local.userReplyTo,
+			"userCustomMessage": local.userMessage,
+			"userIncludeSummary": local.userSummary.value == 1
+		};
+
+		try {
+			fbQuery("
+				UPDATE forms
+				SET notification_email = :email,
+				    notification_email_cc = :cc,
+				    email_notifications_enabled = :enabled,
+				    schema_json = :schema,
+				    updatedat = SYSUTCDATETIME()
+				WHERE id = :id AND deletedat IS NULL
+			", {
+				email: qp(local.staffEmail, "cf_sql_nvarchar", true),
+				cc: qp(local.staffEmailCc, "cf_sql_nvarchar", true),
+				enabled: local.staffEnabled,
+				schema: { value: SerializeJSON(local.schema), cfsqltype: "cf_sql_longnvarchar" },
+				id: { value: local.frm.id, cfsqltype: "cf_sql_integer" }
+			});
+		} catch (any e) {
+			writeLog(type="error", file="form-builder", text="Saving email settings failed for form #local.frm.id#: #e.message# #e.detail#");
+			renderJson({ "success": false, "message": "Failed to update email settings: #e.message#" }, 500);
+			return;
+		}
+
+		writeAudit(formId=local.frm.id, action="FORM_EMAIL_SETTINGS_UPDATED", details={
+			"title": local.frm.title,
+			"staffEmail": local.staffEmail,
+			"staffNotifications": local.staffEnabled.value == 1,
+			"userAutoresponder": local.userEnabled.value == 1
+		});
+
+		renderJson({
+			"success": true,
+			"message": "Email settings and templates updated successfully for " & local.frm.title & ".",
+			"emailSettings": local.schema.emailSettings
 		});
 	}
 
@@ -770,8 +1008,11 @@ component extends="Controller" {
 	}
 
 	private boolean function canManageSite(required string siteid) {
-		if (!Len(Trim(arguments.siteid))) return true;
-		return isWorkspaceAccessible(arguments.siteid);
+		local.s = LCase(Trim(arguments.siteid));
+		if (!Len(local.s) || local.s == "global" || local.s == "all") return true;
+		local.role = getCurrentActiveRole();
+		if (local.role == "admin" || ArrayFindNoCase(getUserAssignedWorkspaceCodes(), "global") > 0) return true;
+		return isWorkspaceAccessible(local.s, local.role);
 	}
 
 	/** Workspaces to restrict the forms directory to (empty array = no restriction) */
@@ -1226,16 +1467,50 @@ component extends="Controller" {
 	}
 
 	private void function sendSubmissionNotification(required struct frm, required string refId, required array values) {
-		if (!arguments.frm.email_notifications_enabled) return;
-		local.to = Len(Trim(arguments.frm.notification_email)) ? Trim(arguments.frm.notification_email) : Trim(arguments.frm.dept_alert_email ?: "");
+		// Read emailSettings from frm.schema_json if present
+		local.emailSettings = {
+			"staffNotificationEnabled": arguments.frm.email_notifications_enabled ? true : false,
+			"staffEmail": Len(Trim(arguments.frm.notification_email ?: "")) ? Trim(arguments.frm.notification_email) : Trim(arguments.frm.dept_alert_email ?: ""),
+			"staffEmailCc": Trim(arguments.frm.notification_email_cc ?: ""),
+			"staffSubject": "[New Submission] {{form_title}} ({{reference_id}})",
+			"staffNotes": "",
+			"userAutoresponderEnabled": true,
+			"userSubject": "Confirmation: {{form_title}} Received ({{reference_id}})",
+			"userFromName": "Chelan County Online Services",
+			"userReplyTo": Len(Trim(arguments.frm.notification_email ?: "")) ? Trim(arguments.frm.notification_email) : "forms@chelancounty.gov",
+			"userCustomMessage": "Thank you for contacting Chelan County. We have received your submission and will review it shortly. Please retain your reference number for your records.",
+			"userIncludeSummary": true
+		};
+
+		if (Len(Trim(arguments.frm.schema_json ?: ""))) {
+			try {
+				local.parsedSchema = DeserializeJSON(arguments.frm.schema_json);
+				if (IsStruct(local.parsedSchema) && StructKeyExists(local.parsedSchema, "emailSettings") && IsStruct(local.parsedSchema.emailSettings)) {
+					StructAppend(local.emailSettings, local.parsedSchema.emailSettings, true);
+				}
+			} catch (any ignore) {}
+		}
+
+		if (!local.emailSettings.staffNotificationEnabled && !local.emailSettings.userAutoresponderEnabled) {
+			return;
+		}
+		local.to = Len(Trim(local.emailSettings.staffEmail)) ? Trim(local.emailSettings.staffEmail) : Trim(arguments.frm.dept_alert_email ?: "");
+		local.cc = Trim(local.emailSettings.staffEmailCc ?: "");
 		if (!Len(local.to)) return;
 		request.fbMail = {
 			to: local.to,
-			cc: Trim(arguments.frm.notification_email_cc ?: ""),
+			cc: local.cc,
 			subject: "New submission: #arguments.frm.title# (#arguments.refId#)",
 			title: arguments.frm.title,
 			refId: arguments.refId,
 			values: arguments.values,
+			formId: Val(arguments.frm.id ?: 0),
+			formKey: arguments.frm.form_key ?: "",
+			slug: arguments.frm.slug ?: "",
+			submittedAt: DateTimeFormat(Now(), "mmmm d, yyyy 'at' h:nn tt"),
+			ipAddress: Left(cgi.remote_addr ?: "", 45),
+			userAgent: Left(cgi.http_user_agent ?: "", 250),
+			emailSettings: local.emailSettings,
 			adminUrl: getPublicBaseUrl() & urlFor(controller="forms", action="index")
 		};
 		try {

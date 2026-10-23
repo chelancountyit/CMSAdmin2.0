@@ -2084,7 +2084,7 @@
   function openShareModal() {
     const origin = window.location.origin;
     const directUrl = `${origin}/forms/preview?id=${currentForm.id}`;
-    const embedCode = `<iframe src="${directUrl}" width="100%" height="700" frameborder="0" style="border:none; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.08);" title="${escapeHTML(currentForm.title)}"></iframe>`;
+    const embedCode = `<div class="cms-form-embed" data-form-id="${currentForm.id}">\n  <iframe src="${directUrl}" width="100%" height="920" frameborder="0" scrolling="auto" style="border:none; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.08); width:100%; min-height:650px;" title="${escapeHTML(currentForm.title)}"></iframe>\n  <script>window.addEventListener("message",function(e){if(e.data&&e.data.type==="chelan-form-resize"&&e.data.height){var f=document.querySelector('.cms-form-embed[data-form-id="'+currentForm.id+'"] iframe');if(f){f.style.height=e.data.height+"px";f.setAttribute("height",e.data.height);}}});<\/script>\n</div>`;
 
     const directInput = document.getElementById("fbDirectLinkInput");
     if (directInput) directInput.value = directUrl;

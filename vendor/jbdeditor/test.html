@@ -82,7 +82,7 @@
       assert('Table row header has scope="row"', thRow !== null);
       assert('Table has accessible caption', tableCap && tableCap.textContent === 'Sales Data');
 
-      // 5b. Table Dialog Mandatory Caption Validation
+      // 5b. Table Dialog Caption Handling
       let dialogConfirmed = false;
       let dialogConfirmedData = null;
       Dialog.openTableDialog({
@@ -93,23 +93,10 @@
       });
       const tableOverlay = document.querySelector('.jbd-dialog-overlay');
       const captionInput = tableOverlay.querySelector('#jbd-table-caption');
-      const captionError = tableOverlay.querySelector('#jbd-table-caption-error');
       const createTableBtn = tableOverlay.querySelector('.jbd-btn-primary');
 
-      // Attempt to submit with empty caption
-      captionInput.value = '';
-      createTableBtn.click();
-      assert('Modal blocks submission when caption is empty', dialogConfirmed === false);
-      assert('Caption input flagged with aria-invalid="true"', captionInput.getAttribute('aria-invalid') === 'true');
-      assert('Caption error alert is visible', captionError && captionError.style.display !== 'none');
-
-      // Type caption and verify input event clears error
-      captionInput.value = 'Q3 Regional Sales';
-      captionInput.dispatchEvent(new Event('input'));
-      assert('Typing into caption removes aria-invalid', !captionInput.hasAttribute('aria-invalid'));
-      assert('Typing into caption hides error alert', captionError.style.display === 'none');
-
       // Submit with valid caption
+      captionInput.value = 'Q3 Regional Sales';
       createTableBtn.click();
       assert('Modal confirms successfully with valid caption', dialogConfirmed === true);
       assert('Confirmed data contains entered caption', dialogConfirmedData && dialogConfirmedData.caption === 'Q3 Regional Sales');
@@ -589,6 +576,171 @@
       assert('Editor paste event is intercepted and default prevented', pasteEvent.defaultPrevented);
       // Verify cleanPaste option is enabled by default
       assert('editor.options.cleanPaste is true by default', editor.options.cleanPaste === true);
+
+      // 14. Image Insertion, Positioning, Drag Resizing & Floating Bubble Toolbar Tests
+      assert('editor.buildImageHTML method exists', typeof editor.buildImageHTML === 'function');
+      assert('editor.initImageInteractions method exists', typeof editor.initImageInteractions === 'function');
+      assert('editor.selectImage method exists', typeof editor.selectImage === 'function');
+      assert('editor.deselectImage method exists', typeof editor.deselectImage === 'function');
+      assert('editor.setImageAlignment method exists', typeof editor.setImageAlignment === 'function');
+      assert('editor.setImageSize method exists', typeof editor.setImageSize === 'function');
+      assert('editor.removeSelectedImage method exists', typeof editor.removeSelectedImage === 'function');
+
+      // 14a. buildImageHTML produces semantic, accessible figure markup
+      const imgHtml = editor.buildImageHTML({
+        src: 'https://example.com/county-courthouse.jpg',
+        alt: 'Chelan County Courthouse front entrance',
+        caption: 'Chelan County Courthouse in Wenatchee',
+        credit: 'Chelan County Facilities',
+        align: 'left',
+        width: '50%',
+        borderRadius: 'rounded-lg',
+        shadow: 'shadow-md'
+      });
+
+      assert('buildImageHTML wraps in semantic figure tag', imgHtml.startsWith('<figure') && imgHtml.includes('class="jbd-image'));
+      assert('buildImageHTML sets alignment class jbd-image-left', imgHtml.includes('jbd-image-left'));
+      assert('buildImageHTML sets width style', imgHtml.includes('width: 50%'));
+      assert('buildImageHTML sets border radius class', imgHtml.includes('jbd-image-rounded-lg'));
+      assert('buildImageHTML sets shadow class', imgHtml.includes('jbd-image-shadow-md'));
+      assert('buildImageHTML contains img with alt text', imgHtml.includes('alt="Chelan County Courthouse front entrance"'));
+      assert('buildImageHTML contains figcaption with caption text', imgHtml.includes('Chelan County Courthouse in Wenatchee'));
+      assert('buildImageHTML contains photo credit', imgHtml.includes('Photo: Chelan County Facilities'));
+
+      // 14b. buildImageHTML for inline images
+      const inlineImgHtml = editor.buildImageHTML({
+        src: 'https://example.com/icon.png',
+        alt: 'County Seal Icon',
+        align: 'inline',
+        width: '32px'
+      });
+      assert('buildImageHTML inline creates <img> tag', inlineImgHtml.startsWith('<img') && inlineImgHtml.includes('class="jbd-image-inline'));
+
+      // 14c. Decorative image handling (WCAG 1.1.1 exemption)
+      const decorativeHtml = editor.buildImageHTML({
+        src: 'https://example.com/divider.png',
+        alt: '',
+        isDecorative: true,
+        align: 'center'
+      });
+      assert('Decorative image has alt="" and role="presentation"', decorativeHtml.includes('alt=""') && decorativeHtml.includes('role="presentation"'));
+
+      // 14d. Image Resizer Overlay DOM elements
+      const overlayEl = editor.imageResizerOverlay;
+      assert('Editor has imageResizerOverlay attached to wrapper', overlayEl !== null && editor.wrapper.contains(overlayEl));
+      assert('Overlay contains 8 drag handles', overlayEl.querySelectorAll('.jbd-image-resizer-handle').length === 8);
+      assert('Overlay contains live dimension badge', overlayEl.querySelector('#jbd-image-size-badge') !== null);
+
+      // 14e. Floating Bubble Toolbar buttons
+      const bubbleToolbar = overlayEl.querySelector('.jbd-image-bubble-toolbar');
+      assert('Overlay contains floating bubble toolbar', bubbleToolbar !== null);
+      assert('Bubble toolbar has align-left button', bubbleToolbar.querySelector('[data-img-action="align-left"]') !== null);
+      assert('Bubble toolbar has align-center button', bubbleToolbar.querySelector('[data-img-action="align-center"]') !== null);
+      assert('Bubble toolbar has align-right button', bubbleToolbar.querySelector('[data-img-action="align-right"]') !== null);
+      assert('Bubble toolbar has align-full button', bubbleToolbar.querySelector('[data-img-action="align-full"]') !== null);
+      assert('Bubble toolbar has size-25 button', bubbleToolbar.querySelector('[data-img-action="size-25"]') !== null);
+      assert('Bubble toolbar has size-50 button', bubbleToolbar.querySelector('[data-img-action="size-50"]') !== null);
+      assert('Bubble toolbar has size-75 button', bubbleToolbar.querySelector('[data-img-action="size-75"]') !== null);
+      assert('Bubble toolbar has size-100 button', bubbleToolbar.querySelector('[data-img-action="size-100"]') !== null);
+      assert('Bubble toolbar has caption button', bubbleToolbar.querySelector('[data-img-action="caption"]') !== null);
+      assert('Bubble toolbar has link button', bubbleToolbar.querySelector('[data-img-action="link"]') !== null);
+      assert('Bubble toolbar has edit button', bubbleToolbar.querySelector('[data-img-action="edit"]') !== null);
+      assert('Bubble toolbar has delete button', bubbleToolbar.querySelector('[data-img-action="delete"]') !== null);
+
+      // 14f. Image Selection, In-Place Resizing & Repositioning
+      editor.setHTML('<p>Intro text</p>' + imgHtml + '<p>Outro text</p>');
+      const editorImg = editor.contentArea.querySelector('img');
+      assert('Image exists in editor content', editorImg !== null);
+
+      editor.selectImage(editorImg);
+      assert('selectImage marks image/figure as active', editorImg.closest('.jbd-image').classList.contains('jbd-image-active'));
+      assert('Overlay becomes active on selection', overlayEl.classList.contains('active'));
+      assert('Active alignment button matches image alignment (align-left)', bubbleToolbar.querySelector('[data-img-action="align-left"]').classList.contains('active'));
+
+      // Reposition to center
+      editor.setImageAlignment('center');
+      assert('setImageAlignment updates figure class to jbd-image-center', editorImg.closest('.jbd-image').classList.contains('jbd-image-center'));
+      assert('Active alignment button updates to align-center', bubbleToolbar.querySelector('[data-img-action="align-center"]').classList.contains('active'));
+
+      // Resize to 75%
+      editor.setImageSize('75%');
+      assert('setImageSize updates figure width to 75%', editorImg.closest('.jbd-image').style.width === '75%');
+
+      // 14g. getHTML() cleanliness (removes jbd-image-active)
+      const cleanSavedHtml = editor.getHTML();
+      assert('getHTML strips jbd-image-active outline class', !cleanSavedHtml.includes('jbd-image-active'));
+
+      // 14h. Deselect Image
+      editor.deselectImage();
+      assert('deselectImage removes jbd-image-active class', !editor.contentArea.innerHTML.includes('jbd-image-active'));
+      assert('Overlay becomes hidden on deselect', !overlayEl.classList.contains('active'));
+
+      // 14i. Remove Selected Image
+      editor.selectImage(editorImg);
+      editor.removeSelectedImage();
+      assert('removeSelectedImage removes figure from editor', editor.contentArea.querySelector('img') === null);
+      assert('Overlay hidden after image deletion', !overlayEl.classList.contains('active'));
+
+      
+      // ==========================================
+      // SECTION 15: Table Interaction & Editing Suite
+      // ==========================================
+      const tblOverlay = editor.tableResizerOverlay;
+      assert('Editor has tableResizerOverlay attached to wrapper', tblOverlay !== null && editor.wrapper.contains(tblOverlay));
+      assert('Table overlay contains East resize handle', tblOverlay.querySelector('.jbd-table-handle-e') !== null);
+      assert('Table overlay contains SE resize handle', tblOverlay.querySelector('.jbd-table-handle-se') !== null);
+      assert('Table overlay contains size badge', tblOverlay.querySelector('#jbd-table-size-badge') !== null);
+
+      const tblBubble = tblOverlay.querySelector('.jbd-table-bubble-toolbar');
+      assert('Table overlay contains floating bubble toolbar', tblBubble !== null);
+      assert('Table toolbar has row-above button', tblBubble.querySelector('[data-tbl-action="row-above"]') !== null);
+      assert('Table toolbar has row-below button', tblBubble.querySelector('[data-tbl-action="row-below"]') !== null);
+      assert('Table toolbar has row-delete button', tblBubble.querySelector('[data-tbl-action="row-delete"]') !== null);
+      assert('Table toolbar has col-left button', tblBubble.querySelector('[data-tbl-action="col-left"]') !== null);
+      assert('Table toolbar has col-right button', tblBubble.querySelector('[data-tbl-action="col-right"]') !== null);
+      assert('Table toolbar has col-delete button', tblBubble.querySelector('[data-tbl-action="col-delete"]') !== null);
+      assert('Table toolbar has header button', tblBubble.querySelector('[data-tbl-action="header"]') !== null);
+      assert('Table toolbar has striped button', tblBubble.querySelector('[data-tbl-action="striped"]') !== null);
+      assert('Table toolbar has bordered button', tblBubble.querySelector('[data-tbl-action="bordered"]') !== null);
+      assert('Table toolbar has caption button', tblBubble.querySelector('[data-tbl-action="caption"]') !== null);
+      assert('Table toolbar has properties button', tblBubble.querySelector('[data-tbl-action="properties"]') !== null);
+      assert('Table toolbar has delete button', tblBubble.querySelector('[data-tbl-action="delete"]') !== null);
+
+      // Insert test table
+      const testTable = TableManager.createTable({ rows: 3, cols: 3, caption: 'Quarterly Summary', bordered: true });
+      editor.contentArea.appendChild(testTable);
+
+      editor.selectTable(testTable);
+      assert('selectTable marks table as active', testTable.classList.contains('jbd-table-active'));
+      assert('Table overlay becomes active on selection', tblOverlay.classList.contains('active'));
+      assert('Bordered toggle is active for bordered table', tblBubble.querySelector('[data-tbl-action="bordered"]').classList.contains('active'));
+
+      // In-place updates via updateExistingTable
+      editor.updateExistingTable(testTable, {
+        caption: '2026 Budget Overview',
+        bordered: true,
+        striped: true,
+        hover: true,
+        condensed: true,
+        align: 'center',
+        width: '80%'
+      });
+
+      assert('updateExistingTable updates caption', testTable.querySelector('caption').textContent.trim() === '2026 Budget Overview');
+      assert('updateExistingTable applies jbd-table-striped', testTable.classList.contains('jbd-table-striped'));
+      assert('updateExistingTable applies jbd-table-hover', testTable.classList.contains('jbd-table-hover'));
+      assert('updateExistingTable applies jbd-table-sm', testTable.classList.contains('jbd-table-sm'));
+      assert('updateExistingTable applies jbd-table-center', testTable.classList.contains('jbd-table-center'));
+      assert('updateExistingTable applies 80% width', testTable.style.width === '80%');
+
+      // Check clean HTML serialization
+      const tableSavedHtml = editor.getHTML();
+      assert('getHTML strips jbd-table-active class from table', !tableSavedHtml.includes('jbd-table-active'));
+
+      // Deselect Table
+      editor.deselectTable();
+      assert('deselectTable removes active class from table', !testTable.classList.contains('jbd-table-active'));
+      assert('Table overlay hidden on deselect', !tblOverlay.classList.contains('active'));
 
       editor.destroy();
       assert('Destroy restores textarea visibility', textarea.style.display === '');

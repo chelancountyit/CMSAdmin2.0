@@ -101,7 +101,7 @@ component extends="Controller" {
 				// Auto-heal menu items whose destination was overwritten with admin placeholder /index.cfm/...
 				if (REFindNoCase("^/index\.cfm(/|$)", local.destUrl)) {
 					local.healedUrl = resolveMenuItemPageUrl(local.row.label ?: "", local.wsBasePath, variables.workspacePages);
-				} else if (local.row.destination_type != "url" || (Len(local.cleanHomeSlug) && REFindNoCase("^/?" & local.cleanHomeSlug & "/(?!page/)[^/]+/?$", local.destUrl))) {
+				} else if (Left(local.destUrl, 1) != "##" && (local.row.destination_type != "url" || (Len(local.cleanHomeSlug) && REFindNoCase("^/?" & local.cleanHomeSlug & "/(?!page/)[^/]+/?$", local.destUrl)))) {
 					local.healedUrl = normalizeWorkspacePageDestination(local.destUrl, local.wsBasePath);
 				}
 				if (Len(local.healedUrl) && local.healedUrl != local.destUrl) {
@@ -131,7 +131,32 @@ component extends="Controller" {
 			}
 		}
 
+		variables.onePageAnchors = [];
+		try {
+			local.qAnchors = navigationQuery("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT s.anchor_id, s.section_title, p.title AS site_title
+				FROM one_page_sections s
+				INNER JOIN one_page_sites p ON s.one_page_site_id = p.id
+				WHERE (p.siteid = :siteid OR p.siteid = 'global')
+				  AND s.is_active = 1
+				  AND s.deletedat IS NULL
+				  AND p.deletedat IS NULL
+				ORDER BY s.sort_order ASC
+			", { siteid: stringParam(local.siteid, 100) });
+			for (local.a in local.qAnchors) {
+				ArrayAppend(variables.onePageAnchors, {
+					anchor: "##" & local.a.anchor_id,
+					label: local.a.section_title,
+					siteTitle: local.a.site_title
+				});
+			}
+		} catch (any errAnchors) {
+			variables.onePageAnchors = [];
+		}
+
 		variables.navigationConfigJson = safeJsonForScript({
+			"onePageAnchors": variables.onePageAnchors,
 			"items": variables.navigationItems,
 			"pages": variables.workspacePages,
 			"workspaceId": local.siteid,
@@ -169,11 +194,11 @@ component extends="Controller" {
 			local.destination = Left(normalizeWorkspacePageDestination(local.destination, local.wsBasePath), 1000);
 		}
 		if (
-			(local.destinationType == "custom" && !REFindNoCase("^(https?://|/)", local.destination))
-			|| (local.destinationType == "page" && !REFindNoCase("^(https?://|/)", local.destination))
+			(local.destinationType == "custom" && !REFindNoCase("^(https?://|/|##)", local.destination))
+			|| (local.destinationType == "page" && !REFindNoCase("^(https?://|/|##)", local.destination))
 			|| Left(local.destination, 2) == "//"
 		) {
-			renderJson({ success: false, message: "Destinations must use an HTTP(S) URL or a site-relative path." }, 422);
+			renderJson({ success: false, message: "Destinations must use an HTTP(S) URL, site-relative path, or anchor hash (##tag)." }, 422);
 			return;
 		}
 
@@ -490,12 +515,23 @@ component extends="Controller" {
 	}
 
 	private numeric function findNavigationMenuId(required string siteid) {
+		local.preferredKey = (arguments.siteid == "ohme-gardens" || arguments.siteid == "site-ohme-gardens") ? "top" : "side";
 		local.row = navigationQuery("
 			SELECT id FROM navigation_menus
 			WHERE siteid = :siteid AND menu_key = :menuKey
 		", {
 			siteid: stringParam(arguments.siteid, 100),
-			menuKey: stringParam("side", 100)
+			menuKey: stringParam(local.preferredKey, 100)
+		});
+		if (local.row.recordCount) return Val(local.row.id);
+
+		local.altKey = (local.preferredKey == "top") ? "side" : "top";
+		local.row = navigationQuery("
+			SELECT id FROM navigation_menus
+			WHERE siteid = :siteid AND menu_key = :menuKey
+		", {
+			siteid: stringParam(arguments.siteid, 100),
+			menuKey: stringParam(local.altKey, 100)
 		});
 		if (local.row.recordCount) return Val(local.row.id);
 
@@ -506,7 +542,16 @@ component extends="Controller" {
 				WHERE siteid = :siteid AND menu_key = :menuKey
 			", {
 				siteid: stringParam(local.cand, 100),
-				menuKey: stringParam("side", 100)
+				menuKey: stringParam(local.preferredKey, 100)
+			});
+			if (local.row.recordCount) return Val(local.row.id);
+
+			local.row = navigationQuery("
+				SELECT id FROM navigation_menus
+				WHERE siteid = :siteid AND menu_key = :menuKey
+			", {
+				siteid: stringParam(local.cand, 100),
+				menuKey: stringParam(local.altKey, 100)
 			});
 			if (local.row.recordCount) return Val(local.row.id);
 		}
@@ -537,9 +582,17 @@ component extends="Controller" {
 
 	private string function normalizeWorkspacePageDestination(required string destUrl, required string wsBasePath) {
 		local.urlVal = Trim(arguments.destUrl);
-		if (!Len(local.urlVal) || REFindNoCase("^https?://", local.urlVal)) {
+		if (!Len(local.urlVal) || REFindNoCase("^https?://", local.urlVal) || Left(local.urlVal, 1) == "##") {
 			return local.urlVal;
 		}
+
+		local.hashAnchor = "";
+		local.hashPos = Find("##", local.urlVal);
+		if (local.hashPos > 0) {
+			local.hashAnchor = Mid(local.urlVal, local.hashPos, Len(local.urlVal));
+			local.urlVal = Left(local.urlVal, local.hashPos - 1);
+		}
+
 		if (Left(local.urlVal, 1) != "/") {
 			local.urlVal = "/" & local.urlVal;
 		}
@@ -559,30 +612,30 @@ component extends="Controller" {
 				|| CompareNoCase(local.urlVal, local.basePath & "/page/home") == 0
 				|| CompareNoCase(local.urlVal, local.basePath & "/page/index") == 0
 			) {
-				return local.basePath;
+				return local.basePath & local.hashAnchor;
 			}
 			if (REFindNoCase("^" & local.basePath & "/page/[^/]+$", local.urlVal)) {
 				local.slugPart = ReReplaceNoCase(local.urlVal, "^" & local.basePath & "/page/+", "", "one");
-				return local.basePath & "/page/" & local.slugPart;
+				return local.basePath & "/page/" & local.slugPart & local.hashAnchor;
 			}
 			if (REFindNoCase("^" & local.basePath & "/[^/]+$", local.urlVal)) {
 				local.slugPart = ReReplaceNoCase(local.urlVal, "^" & local.basePath & "/+", "", "one");
-				return local.basePath & "/page/" & local.slugPart;
+				return local.basePath & "/page/" & local.slugPart & local.hashAnchor;
 			}
-			return local.urlVal;
+			return local.urlVal & local.hashAnchor;
 		} else {
 			if (
 				local.urlVal == "/"
 				|| CompareNoCase(local.urlVal, "/home") == 0
 				|| CompareNoCase(local.urlVal, "/index") == 0
 			) {
-				return "/";
+				return "/" & local.hashAnchor;
 			}
 			if (!REFindNoCase("^/page/", local.urlVal)) {
 				local.slugPart = ReReplace(local.urlVal, "^/+", "", "one");
-				return "/page/" & local.slugPart;
+				return "/page/" & local.slugPart & local.hashAnchor;
 			}
-			return local.urlVal;
+			return local.urlVal & local.hashAnchor;
 		}
 	}
 
