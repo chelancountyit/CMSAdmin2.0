@@ -12,6 +12,25 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 22, 2026 — Bugfix: Restore Official Elected Photo Resolution for Auditor Workspace (`/images/logo/auditor-elected.jpg`)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 & ChelanCounty.gov (`config/sql/extract-auditor.sql`, `c:\inetpub\ChelanCounty.gov\app\global\functions.cfm`, `c:\inetpub\ChelanCounty.gov\app\views\shared\_dept-official.cfm`, `images/logo/`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Root Cause Analysis:**
+  - During the initial Auditor workspace migration, `contact_photo` in `dbo.cms_workspaces` was populated with `/images/auditor/pages/auditor-pages-eaglePlate.jpg` (an eagle license plate image from legacy pages) instead of the portrait photo of County Auditor Brandt Cappell.
+  - Furthermore, `ChelanCounty.gov::getWorkspace()` omitted `contact_photo`, `leadership_type`, and `job_title` from its query projection, causing `_dept-official.cfm` to fall back to hardcoded default values.
+- **Key Deliverables & Remediation:**
+  1. **Workspace Data & Extraction Script Correction:**
+     - Updated `dbo.cms_workspaces` for workspace `auditor` setting `contact_photo = '/images/logo/auditor-elected.jpg'`, `job_title = 'County Auditor'`, and `leadership_type = 'elected'`.
+     - Updated `config/sql/extract-auditor.sql` to persist `/images/logo/auditor-elected.jpg` directly.
+     - Synced `images/logo/` directory (containing all official portraits including `auditor-elected.jpg`) across `ChelanCounty.gov`, `CMSAdmin2.0`, and `chelan-county`.
+  2. **Frontend Query & Official Partial Updates (`ChelanCounty.gov`):**
+     - Updated `app/global/functions.cfm::getWorkspace()` to select and populate `contact_photo`, `officialPhoto`, `leadership_type`, `job_title`, and `contacttitle`.
+     - Hardened `app/views/shared/_dept-official.cfm` with robust fallbacks: dynamically checks `site.officialPhoto`, `site.contact_photo`, and auto-detects `/images/logo/[wsSlug]-elected.jpg`.
+     - Corrected name and title resolution so elected official cards dynamically display the correct elected official ("Brandt Cappell", "County Auditor") and contact button ("Contact Auditor").
+  3. **Verification:**
+     - Tested live rendering of `http://chelancounty.gov/auditor`: verified official card renders `<img src="/images/logo/auditor-elected.jpg" alt="Brandt Cappell, County Auditor">` with name "Brandt Cappell" and title "County Auditor".
+     - Refreshed application caches on both CMSAdmin 2.0 and ChelanCounty.gov.
+
 ### Session: October 22, 2026 — Bugfix: Resolve Page Editor Crash on Extracted Pages (`java.lang.Integer cannot be used as an array`)
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 (`app/controllers/Pages.cfc`, `app/views/pages/edit.cfm`, `config/sql/extract-auditor.sql`, `config/sql/fix-auditor-sidebars.sql`, `tests/test_edit_auditor_pages.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).

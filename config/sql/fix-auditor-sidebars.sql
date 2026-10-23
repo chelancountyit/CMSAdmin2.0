@@ -26,3 +26,4 @@ WHERE ContentID = 140 AND SiteID = 'auditor';
 SELECT ContentID, Title, SidebarIDs
 FROM dbo.pages
 WHERE SiteID = 'auditor' AND SidebarIDs <> '[]';
+
