@@ -258,7 +258,7 @@ DECLARE @AssessmentsID INT, @ExemptionsID INT, @MapsID INT;
 INSERT INTO dbo.navigation_menu_items (
     navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, createdat, updatedat
 ) VALUES (
-    @MenuID, NULL, 'Assessments', 'page', '/annual-revaluation', 10, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
+    @MenuID, NULL, 'Assessments', 'page', '/assessor/page/annual-revaluation', 10, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
 );
 SET @AssessmentsID = SCOPE_IDENTITY();
 
@@ -266,7 +266,7 @@ SET @AssessmentsID = SCOPE_IDENTITY();
 INSERT INTO dbo.navigation_menu_items (
     navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, createdat, updatedat
 ) VALUES (
-    @MenuID, NULL, 'Exemptions', 'page', '/seniordisabled-exemptions', 20, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
+    @MenuID, NULL, 'Exemptions', 'page', '/assessor/page/seniordisabled-exemptions', 20, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
 );
 SET @ExemptionsID = SCOPE_IDENTITY();
 
@@ -274,49 +274,49 @@ SET @ExemptionsID = SCOPE_IDENTITY();
 INSERT INTO dbo.navigation_menu_items (
     navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, createdat, updatedat
 ) VALUES (
-    @MenuID, NULL, 'Maps', 'page', '/gis-mapping', 30, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
+    @MenuID, NULL, 'Maps', 'page', '/assessor/page/gis-mapping', 30, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
 );
 SET @MapsID = SCOPE_IDENTITY();
 
 -- Child Items under Assessments
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, createdat, updatedat)
 VALUES
-    (@MenuID, @AssessmentsID, 'Annual Revaluation', 'page', '/annual-revaluation', 1, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @AssessmentsID, 'Assessment Process', 'page', '/assessment-process', 2, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @AssessmentsID, 'Real Property', 'page', '/real-property', 3, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @AssessmentsID, 'Personal Property', 'page', '/personal-property', 4, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @AssessmentsID, 'Facts About Property Taxes', 'page', '/facts-about-property-taxes', 5, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @AssessmentsID, 'Tax Bills and Payments', 'page', '/tax-bills-and-payments', 6, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @AssessmentsID, 'Impact of New State School Tax', 'page', '/impact-of-new-state-school-tax', 7, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @AssessmentsID, 'Appeals', 'page', '/appeals', 8, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @AssessmentsID, 'Levies', 'page', '/levies', 9, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @AssessmentsID, 'Important Assessment Dates', 'page', '/important-assessment-dates', 10, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
+    (@MenuID, @AssessmentsID, 'Annual Revaluation', 'page', '/assessor/page/annual-revaluation', 1, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @AssessmentsID, 'Assessment Process', 'page', '/assessor/page/assessment-process', 2, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @AssessmentsID, 'Real Property', 'page', '/assessor/page/real-property', 3, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @AssessmentsID, 'Personal Property', 'page', '/assessor/page/personal-property', 4, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @AssessmentsID, 'Facts About Property Taxes', 'page', '/assessor/page/facts-about-property-taxes', 5, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @AssessmentsID, 'Tax Bills and Payments', 'page', '/assessor/page/tax-bills-and-payments', 6, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @AssessmentsID, 'Impact of New State School Tax', 'page', '/assessor/page/impact-of-new-state-school-tax', 7, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @AssessmentsID, 'Appeals', 'page', '/assessor/page/appeals', 8, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @AssessmentsID, 'Levies', 'page', '/assessor/page/levies', 9, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @AssessmentsID, 'Important Assessment Dates', 'page', '/assessor/page/important-assessment-dates', 10, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
 
 -- Child Items under Exemptions
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, createdat, updatedat)
 VALUES
-    (@MenuID, @ExemptionsID, 'Senior/Disabled', 'page', '/seniordisabled-exemptions', 1, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ExemptionsID, 'Current Use', 'page', '/current-use-exemptions', 2, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ExemptionsID, 'Destroyed Property', 'page', '/destroyed-property-exemptions', 3, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ExemptionsID, 'DOR Nonprofits', 'page', '/dor-nonprofits', 4, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
+    (@MenuID, @ExemptionsID, 'Senior/Disabled', 'page', '/assessor/page/seniordisabled-exemptions', 1, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ExemptionsID, 'Current Use', 'page', '/assessor/page/current-use-exemptions', 2, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ExemptionsID, 'Destroyed Property', 'page', '/assessor/page/destroyed-property-exemptions', 3, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ExemptionsID, 'DOR Nonprofits', 'page', '/assessor/page/dor-nonprofits', 4, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
 
 -- Child Items under Maps
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, createdat, updatedat)
 VALUES
-    (@MenuID, @MapsID, 'GIS Mapping', 'page', '/gis-mapping', 1, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @MapsID, 'Historical Plats and Sections', 'page', '/historical-plats-and-sections', 2, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @MapsID, 'Zoning', 'page', '/zoning', 3, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
+    (@MenuID, @MapsID, 'GIS Mapping', 'page', '/assessor/page/gis-mapping', 1, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @MapsID, 'Historical Plats and Sections', 'page', '/assessor/page/historical-plats-and-sections', 2, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @MapsID, 'Zoning', 'page', '/assessor/page/zoning', 3, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
 
 -- Top-level Direct Navigation Items
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, createdat, updatedat)
 VALUES
-    (@MenuID, NULL, 'Market Sales Analysis', 'page', '/market-sales-analysis', 40, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, NULL, 'Monthly Sales Reports', 'page', '/monthly-sales-reports', 50, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, NULL, 'Community Meetings', 'page', '/community-meetings', 60, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, NULL, 'Frequently Asked Questions', 'page', '/frequently-asked-questions', 70, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, NULL, 'Property Tax Summary Reports', 'page', '/property-tax-summary-reports', 80, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, NULL, 'Parcel and Sale Search', 'page', '/parcel-and-sale-search', 90, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, NULL, 'Helpful Links & Resources', 'page', '/assessor-resources', 100, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
+    (@MenuID, NULL, 'Market Sales Analysis', 'page', '/assessor/page/market-sales-analysis', 40, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, NULL, 'Monthly Sales Reports', 'page', '/assessor/page/monthly-sales-reports', 50, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, NULL, 'Community Meetings', 'page', '/assessor/page/community-meetings', 60, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, NULL, 'Frequently Asked Questions', 'page', '/assessor/page/frequently-asked-questions', 70, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, NULL, 'Property Tax Summary Reports', 'page', '/assessor/page/property-tax-summary-reports', 80, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, NULL, 'Parcel and Sale Search', 'page', '/assessor/page/parcel-and-sale-search', 90, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, NULL, 'Helpful Links & Resources', 'page', '/assessor/page/assessor-resources', 100, 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME());
 
 PRINT 'Configured navigation items under menu ' + CAST(@MenuID AS VARCHAR(10));
 GO
@@ -342,3 +342,4 @@ WHERE nm.siteid = 'assessor' AND nm.menu_key = 'side';
 
 PRINT 'Assessor extraction complete.';
 GO
+

@@ -259,51 +259,51 @@ DELETE FROM dbo.navigation_menu_items WHERE navigation_menu_id = @MenuID;
 DECLARE @ItemAccounting INT, @ItemElections INT, @ItemLicensing INT, @ItemRecording INT;
 
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, icon, createdat, updatedat)
-VALUES (@MenuID, NULL, 'Accounting', 'page', 'financial-services', 10, 1, 0, 'briefcase', SYSUTCDATETIME(), SYSUTCDATETIME());
+VALUES (@MenuID, NULL, 'Accounting', 'page', '/auditor/page/financial-services', 10, 1, 0, 'briefcase', SYSUTCDATETIME(), SYSUTCDATETIME());
 SET @ItemAccounting = SCOPE_IDENTITY();
 
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, icon, createdat, updatedat)
-VALUES (@MenuID, NULL, 'Elections', 'page', 'elections', 20, 1, 0, 'check-square', SYSUTCDATETIME(), SYSUTCDATETIME());
+VALUES (@MenuID, NULL, 'Elections', 'page', '/auditor/page/elections', 20, 1, 0, 'check-square', SYSUTCDATETIME(), SYSUTCDATETIME());
 SET @ItemElections = SCOPE_IDENTITY();
 
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, icon, createdat, updatedat)
-VALUES (@MenuID, NULL, 'Vehicle & Vessel Licensing', 'page', 'vehicle-licensing', 30, 1, 0, 'truck', SYSUTCDATETIME(), SYSUTCDATETIME());
+VALUES (@MenuID, NULL, 'Vehicle & Vessel Licensing', 'page', '/auditor/page/vehicle-licensing', 30, 1, 0, 'truck', SYSUTCDATETIME(), SYSUTCDATETIME());
 SET @ItemLicensing = SCOPE_IDENTITY();
 
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, icon, createdat, updatedat)
-VALUES (@MenuID, NULL, 'Recording & Records', 'page', 'record-a-document', 40, 1, 0, 'file-text', SYSUTCDATETIME(), SYSUTCDATETIME());
+VALUES (@MenuID, NULL, 'Recording & Records', 'page', '/auditor/page/record-a-document', 40, 1, 0, 'file-text', SYSUTCDATETIME(), SYSUTCDATETIME());
 SET @ItemRecording = SCOPE_IDENTITY();
 
 -- Accounting Children
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, icon, createdat, updatedat)
 VALUES 
-    (@MenuID, @ItemAccounting, 'Financial Services', 'page', 'financial-services', 1, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemAccounting, 'County Budget', 'page', 'county-budget', 2, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemAccounting, 'Comprehensive Annual Financial Report', 'page', 'comprehensive-annual-financial-report', 3, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemAccounting, 'Financial Status Report', 'page', 'financial-status-report', 4, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemAccounting, 'Budget Process', 'page', 'budget-process', 5, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME());
+    (@MenuID, @ItemAccounting, 'Financial Services', 'page', '/auditor/page/financial-services', 1, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemAccounting, 'County Budget', 'page', '/auditor/page/county-budget', 2, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemAccounting, 'Comprehensive Annual Financial Report', 'page', '/auditor/page/comprehensive-annual-financial-report', 3, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemAccounting, 'Financial Status Report', 'page', '/auditor/page/financial-status-report', 4, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemAccounting, 'Budget Process', 'page', '/auditor/page/budget-process', 5, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME());
 
 -- Licensing Children
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, icon, createdat, updatedat)
 VALUES 
-    (@MenuID, @ItemLicensing, 'Vehicle Licensing Overview', 'page', 'vehicle-licensing', 1, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemLicensing, 'Private Licensing Subagents', 'page', 'private-licensing-agencies', 2, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemLicensing, 'Licensing Fees', 'page', 'licensing-fees', 3, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemLicensing, 'Wheeled All-Terrain Vehicles (WATV)', 'page', 'wheeled-all-terrain-vehicles-watv', 4, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemLicensing, 'Mobile Homes', 'page', 'mobile-homes', 5, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemLicensing, 'Quick Title', 'page', 'quick-title-', 6, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemLicensing, 'Special Topics in Titling', 'page', 'special-topics-in-titling', 7, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME());
+    (@MenuID, @ItemLicensing, 'Vehicle Licensing Overview', 'page', '/auditor/page/vehicle-licensing', 1, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemLicensing, 'Private Licensing Subagents', 'page', '/auditor/page/private-licensing-agencies', 2, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemLicensing, 'Licensing Fees', 'page', '/auditor/page/licensing-fees', 3, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemLicensing, 'Wheeled All-Terrain Vehicles (WATV)', 'page', '/auditor/page/wheeled-all-terrain-vehicles-watv', 4, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemLicensing, 'Mobile Homes', 'page', '/auditor/page/mobile-homes', 5, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemLicensing, 'Quick Title', 'page', '/auditor/page/quick-title-', 6, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemLicensing, 'Special Topics in Titling', 'page', '/auditor/page/special-topics-in-titling', 7, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME());
 
 -- Recording Children
 INSERT INTO dbo.navigation_menu_items (navigation_menu_id, parent_item_id, label, destination_type, destination, sort_order, is_active, open_in_new_tab, icon, createdat, updatedat)
 VALUES 
-    (@MenuID, @ItemRecording, 'Record A Document', 'page', 'record-a-document', 1, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemRecording, 'Recording Fees', 'page', 'fees', 2, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemRecording, 'Marriage Licenses', 'page', 'marriage-licenses', 3, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemRecording, 'Property Fraud Notification', 'page', 'recording-notification-service', 4, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemRecording, 'Recording Downloads & Forms', 'page', 'recording-downloads', 5, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemRecording, 'Search Guidance', 'page', 'search-guide', 6, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
-    (@MenuID, @ItemRecording, 'eRecording Services', 'page', 'erecording', 7, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemRecording, 'Record A Document', 'page', '/auditor/page/record-a-document', 1, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemRecording, 'Recording Fees', 'page', '/auditor/page/fees', 2, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemRecording, 'Marriage Licenses', 'page', '/auditor/page/marriage-licenses', 3, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemRecording, 'Property Fraud Notification', 'page', '/auditor/page/recording-notification-service', 4, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemRecording, 'Recording Downloads & Forms', 'page', '/auditor/page/recording-downloads', 5, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemRecording, 'Search Guidance', 'page', '/auditor/page/search-guide', 6, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
+    (@MenuID, @ItemRecording, 'eRecording Services', 'page', '/auditor/page/erecording', 7, 1, 0, 'file', SYSUTCDATETIME(), SYSUTCDATETIME()),
     (@MenuID, @ItemRecording, 'Search Public Documents (Acclaim) ↗', 'url', 'https://acclaim.co.chelan.wa.us/acclaimweb', 8, 1, 1, 'external-link', SYSUTCDATETIME(), SYSUTCDATETIME());
 
 PRINT 'Configured navigation items for Auditor Side Navigation.';
