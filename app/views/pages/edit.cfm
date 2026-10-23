@@ -1,5 +1,11 @@
 <cfoutput>
 <cfscript>
+	if (!StructKeyExists(variables, "page") || !IsStruct(variables.page)) {
+		variables.page = {};
+	}
+	if (!StructKeyExists(variables.page, "sidebarIds") || !IsArray(variables.page.sidebarIds)) {
+		variables.page.sidebarIds = IsSimpleValue(variables.page.sidebarIds ?: "") && Len(Trim(variables.page.sidebarIds ?: "")) ? ListToArray(variables.page.sidebarIds) : [];
+	}
 	folderAttachedHere = false;
 	for (folderCheck in availableFolders) {
 		if (Val(folderCheck.contentId ?: 0) == Val(page.id)) { folderAttachedHere = true; break; }
@@ -1091,7 +1097,7 @@
 										<span>Sidebar &amp; Subpages</span>
 									</div>
 									<div class="pg-accordion-desc" id="summarySidebar">
-										#(page.layout eq 'Right Sidebar' ? (ArrayLen(page.sidebarIds) ? ArrayLen(page.sidebarIds) & ' subpages attached' : 'Right sidebar active (0 selected)') : 'Full width layout')#
+										#(page.layout eq 'Right Sidebar' ? (IsArray(page.sidebarIds) && ArrayLen(page.sidebarIds) ? ArrayLen(page.sidebarIds) & ' subpages attached' : 'Right sidebar active (0 selected)') : 'Full width layout')#
 									</div>
 								</div>
 							</div>
@@ -1113,14 +1119,14 @@
 								<div id="pgSidebarChooser" role="group" aria-label="Assigned sidebars" style="display:flex; flex-direction:column; gap:0; max-height:220px; overflow-y:auto; border:1px solid var(--admin-border); border-radius:var(--radius-sm); padding:0.4rem 0.65rem; background:var(--admin-surface);">
 									<cfloop array="#availableSidebars#" index="sidebarOption">
 										<label style="display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0; border-bottom:1px solid var(--admin-border-subtle); cursor:pointer;">
-											<input type="checkbox" name="sidebarIds" value="#EncodeForHTMLAttribute(sidebarOption.id)#" <cfif ArrayFind(page.sidebarIds, sidebarOption.id)>checked</cfif> onchange="updatePageFeaturesLedStatus();" style="width:16px; height:16px; flex-shrink:0; accent-color:var(--admin-primary);">
+											<input type="checkbox" name="sidebarIds" value="#EncodeForHTMLAttribute(sidebarOption.id)#" <cfif IsArray(page.sidebarIds) && ArrayFind(page.sidebarIds, sidebarOption.id)>checked</cfif> onchange="updatePageFeaturesLedStatus();" style="width:16px; height:16px; flex-shrink:0; accent-color:var(--admin-primary);">
 											<span><strong style="font-size:0.82rem; color:var(--admin-text-main);">#EncodeForHTML(sidebarOption.name)#</strong></span>
 										</label>
 									</cfloop>
 									<cfloop array="#availableSubpages#" index="subpageOption">
 										<div class="pg-subpage-row" style="padding:0.35rem 0; gap:0.5rem;">
 											<label style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; cursor:pointer;">
-												<input type="checkbox" name="sidebarIds" value="subpage-#subpageOption.id#" data-id="#subpageOption.id#" data-subpage-title="#EncodeForHTMLAttribute(subpageOption.title)#" data-content="#EncodeForHTMLAttribute(subpageOption.body)#" data-position="#Val(subpageOption.position)#" <cfif ArrayFindNoCase(page.sidebarIds, "subpage-#subpageOption.id#")>checked</cfif> onchange="updatePageFeaturesLedStatus();" style="width:16px; height:16px; flex-shrink:0; accent-color:var(--admin-primary);">
+												<input type="checkbox" name="sidebarIds" value="subpage-#subpageOption.id#" data-id="#subpageOption.id#" data-subpage-title="#EncodeForHTMLAttribute(subpageOption.title)#" data-content="#EncodeForHTMLAttribute(subpageOption.body)#" data-position="#Val(subpageOption.position)#" <cfif IsArray(page.sidebarIds) && ArrayFindNoCase(page.sidebarIds, "subpage-#subpageOption.id#")>checked</cfif> onchange="updatePageFeaturesLedStatus();" style="width:16px; height:16px; flex-shrink:0; accent-color:var(--admin-primary);">
 												<span><strong data-subpage-title style="font-size:0.82rem; color:var(--admin-text-main);">#EncodeForHTML(subpageOption.title)#</strong></span>
 											</label>
 											<button type="button" class="btn btn-outline btn-xs btn-icon-only" data-edit-subpage title="Edit" aria-label="Edit #EncodeForHTMLAttribute(subpageOption.title)#">#svgIcon(name="edit", size=12)#</button>

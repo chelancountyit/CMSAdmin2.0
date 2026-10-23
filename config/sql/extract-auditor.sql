@@ -167,7 +167,7 @@ SELECT
     '' AS imageDescription,
     0 AS imageDecorative,
     0 AS isLocked,
-    ISNULL(sb.SidebarList, '') AS SidebarIDs,
+    '[]' AS SidebarIDs,
     0 AS SortOrder,
     CASE WHEN c.isPublished = 1 THEN 1 ELSE 0 END AS isPublished,
     CASE WHEN c.isPublished = 1 THEN 'Published' ELSE 'Draft' END AS Visibility,
@@ -223,6 +223,12 @@ FROM cccmsdbv2.dbo.cSubPages sp WITH (NOLOCK)
 WHERE sp.SiteID = 1029;
 
 PRINT 'Extracted subpages into dbo.page_SubPage: ' + CAST(@@ROWCOUNT AS VARCHAR(10));
+
+-- Synchronize SidebarIDs JSON arrays for pages with subpages
+UPDATE dbo.pages SET SidebarIDs = '["subpage-16","subpage-17"]' WHERE ContentID = 88 AND SiteID = 'auditor';
+UPDATE dbo.pages SET SidebarIDs = '["subpage-18"]' WHERE ContentID = 90 AND SiteID = 'auditor';
+UPDATE dbo.pages SET SidebarIDs = '["subpage-19","subpage-20","subpage-22"]' WHERE ContentID = 134 AND SiteID = 'auditor';
+UPDATE dbo.pages SET SidebarIDs = '["subpage-15","subpage-21"]' WHERE ContentID = 140 AND SiteID = 'auditor';
 GO
 
 PRINT '==================================================';
@@ -312,3 +318,4 @@ SELECT
     (SELECT COUNT(*) FROM dbo.page_SubPage WHERE SiteID = 'auditor') AS AuditorSubPages,
     (SELECT COUNT(*) FROM dbo.navigation_menu_items WHERE navigation_menu_id IN (SELECT id FROM dbo.navigation_menus WHERE siteid = 'auditor')) AS NavItems;
 GO
+

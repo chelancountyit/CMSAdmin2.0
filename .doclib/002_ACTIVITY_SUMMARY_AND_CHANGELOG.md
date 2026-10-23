@@ -12,6 +12,29 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 22, 2026 — Bugfix: Resolve Page Editor Crash on Extracted Pages (`java.lang.Integer cannot be used as an array`)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/controllers/Pages.cfc`, `app/views/pages/edit.cfm`, `config/sql/extract-auditor.sql`, `config/sql/fix-auditor-sidebars.sql`, `tests/test_edit_auditor_pages.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Root Cause Analysis:**
+  - When pages were extracted from legacy `cContents`, legacy `SidebarIDs` contained raw single integers or comma-separated numbers (e.g. `'19'`, `'21'`, `'24'`).
+  - In ColdFusion and JSON specifications, a bare number string like `"19"` evaluates as valid JSON (`IsJSON("19") == true`).
+  - In `Pages.cfc::loadPageFromDb()`, `DeserializeJSON("19")` returned a `java.lang.Integer` (`19`) rather than a CFML array.
+  - When opening `/pages/edit?id=...`, `app/views/pages/edit.cfm` evaluated `ArrayLen(page.sidebarIds)` and `ArrayFind(page.sidebarIds, ...)` against `page.sidebarIds`, causing ColdFusion to throw `[coldfusion.util.RuntimeWrapper] Object of type class java.lang.Integer cannot be used as an array`.
+- **Key Deliverables & Remediation:**
+  1. **Controller Layer Hardening (`app/controllers/Pages.cfc::loadPageFromDb`):**
+     - Updated JSON deserialization check to verify that `SidebarIDs` is explicitly formatted as a JSON array (`Left(rawSidebar, 1) == "[" && Right(rawSidebar, 1) == "]"`).
+     - Added strict post-check `if (!IsArray(local.sidebarList)) local.sidebarList = []` ensuring `sidebarIds` passed to the view is guaranteed to be a CFML array.
+  2. **View Layer Defense-in-Depth (`app/views/pages/edit.cfm`):**
+     - Initialized `variables.page.sidebarIds` at the top of the `<cfscript>` block to fallback to an empty array `[]` if missing or non-array.
+     - Added safety guards around `ArrayLen` and `ArrayFind` checks (`IsArray(page.sidebarIds) && ArrayLen(...)`, `IsArray(page.sidebarIds) && ArrayFind(...)`).
+  3. **Database Normalization & Migration Script Update:**
+     - Executed `config/sql/fix-auditor-sidebars.sql` to normalize all 51 auditor pages in `dbo.pages`: reset unassigned pages to `'[]'` and mapped pages with active subpages (ContentID 88, 90, 134, 140) to proper JSON string arrays (e.g. `'["subpage-16","subpage-17"]'`).
+     - Updated `config/sql/extract-auditor.sql` to default `SidebarIDs` to `'[]'` and properly sync subpage JSON arrays post-import.
+  4. **Verification:**
+     - Created and executed `tests/test_edit_auditor_pages.cfm` probing the Page Editor across **all 51 extracted Auditor pages**: **51 / 51 passed (100% green, 0 errors)**.
+     - Verified full test suite (`tests/run_full_test_suite.cfm`): **54 / 54 tests passing**.
+     - Verified One Page Studio test suite (`tests/test_one_page_studio.cfm`): **46 / 46 tests passing**.
+
 ### Session: October 22, 2026 — Workspace Extraction: Chelan County Auditor (`co.chelan.wa.us/auditor` -> `auditor` Workspace & Public Portal)
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 & ChelanCounty.gov (`config/sql/extract-auditor.sql`, `config/sql/index-auditor-media.sql`, `c:\inetpub\ChelanCounty.gov\config\routes.cfm`, `c:\inetpub\ChelanCounty.gov\app\controllers\Auditor.cfc`, `c:\inetpub\ChelanCounty.gov\app\views\auditor\`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).

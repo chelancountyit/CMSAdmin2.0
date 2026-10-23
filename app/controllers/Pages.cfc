@@ -1626,14 +1626,20 @@ component extends="Controller" {
 				local.sidebarList = [];
 				if (Len(Trim(local.row.SidebarIDs))) {
 					try {
-						if (IsJSON(local.row.SidebarIDs)) {
-							local.sidebarList = DeserializeJSON(local.row.SidebarIDs);
+						local.rawSidebar = Trim(local.row.SidebarIDs);
+						// Only deserialize as JSON if it is explicitly a JSON array: starts with [ and ends with ]
+						if (Left(local.rawSidebar, 1) == "[" && Right(local.rawSidebar, 1) == "]" && IsJSON(local.rawSidebar)) {
+							local.parsedJson = DeserializeJSON(local.rawSidebar);
+							local.sidebarList = IsArray(local.parsedJson) ? local.parsedJson : [local.parsedJson];
 						} else {
-							local.sidebarList = ListToArray(local.row.SidebarIDs);
+							local.sidebarList = ListToArray(local.rawSidebar);
 						}
 					} catch (any errSide) {
 						local.sidebarList = [];
 					}
+				}
+				if (!IsArray(local.sidebarList)) {
+					local.sidebarList = [];
 				}
 				local.updatedStr = "";
 				if (IsDate(local.row.Modified)) {
