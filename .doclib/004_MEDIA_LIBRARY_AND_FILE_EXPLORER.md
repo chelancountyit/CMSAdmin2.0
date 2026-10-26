@@ -2,7 +2,7 @@
 **Location:** `.doclib/004_MEDIA_LIBRARY_AND_FILE_EXPLORER.md`  
 **Parent Index:** [000_SERIES_INDEX.md](file:///c:/inetpub/CMSAdmin2.0/.doclib/000_SERIES_INDEX.md)  
 **Classification:** Digital Asset Management (DAM) & Storage Subsystem  
-**Version Parity:** v2.1.1+  
+**Version Parity:** v2.1.325+  
 **Target Audience:** County Authors, Web Administrators, Storage Architects, Full-Stack Engineers
 
 ---
@@ -59,11 +59,15 @@ c:\inetpub\chelan-county\files\
 └── ...
 ```
 
-### NTFS Directory Junctions & IIS Virtual Mapping
+### Assets Domain (`assets.chelancounty.com`) & NTFS Directory Junctions
+All image `src` attributes and document `href` links across CMSAdmin 2.0, `dbo.media_assets`, `dbo.pages`, `dbo.articles`, and `dbo.rfp_solicitations` reference the workspace's configured **`assets_domain`** (stored in `dbo.cms_workspaces.assets_domain`, defaulting to **`assets.chelancounty.com`**):
+- **Canonical Image & Document URL Format:** `https://assets.chelancounty.com/[workspace]/[folder]/[filename]`
+- **Assets Path Display Format:** `assets.chelancounty.com\[workspace]\[folder]`
+
 To allow IIS to serve media files directly while ensuring absolute synchronization with county network paths, CMSAdmin 2.0 leverages Windows NTFS Directory Junctions:
 1. **CMSAdmin Files Junction:**
    `c:\inetpub\CMSAdmin2.0\files\` $\rightarrow$ `c:\inetpub\chelan-county\files\`  
-   Enables web browsers to fetch assets via URL paths such as `/files/pio/images/press-conference.jpg`.
+   Enables web browsers to fetch assets via `https://assets.chelancounty.com/pio/images/press-conference.jpg` (with automatic local `/files/` fallback during local development).
 2. **Shared County Photo Library Junction (`shared images`):**
    `c:\inetpub\chelan-county\files\shared images\` $\rightarrow$ `c:\inetpub\chelan-county\images\picjumbo`  
    `c:\inetpub\CMSAdmin2.0\images\picjumbo\` $\rightarrow$ `c:\inetpub\chelan-county\images\picjumbo`  
@@ -94,28 +98,31 @@ SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 
 CREATE TABLE dbo.media_assets (
-    [id]             INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [site_id]        NVARCHAR(50) NOT NULL,
-    [folder]         NVARCHAR(100) NOT NULL,
-    [filename]       NVARCHAR(255) NOT NULL,
-    [file_path]      NVARCHAR(500) NOT NULL,
-    [web_url]        NVARCHAR(500) NOT NULL,
-    [file_size]      BIGINT NOT NULL DEFAULT 0,
-    [file_ext]       NVARCHAR(50) NOT NULL,
-    [mime_type]      NVARCHAR(100) NULL,
-    [file_hash]      NVARCHAR(64) NULL, -- SHA-256 integrity hash
-    [title]          NVARCHAR(255) NULL,
-    [alt_text]       NVARCHAR(1000) NULL,
-    [caption]        NVARCHAR(1000) NULL,
-    [credit]         NVARCHAR(255) NULL,
-    [is_image]       BIT NOT NULL DEFAULT 0,
-    [width]          INT NULL,
-    [height]         INT NULL,
-    [created_by]     NVARCHAR(255) NULL,
-    [modified_by]    NVARCHAR(255) NULL,
-    [createdat]      DATETIME2(7) NOT NULL DEFAULT (SYSUTCDATETIME()),
-    [updatedat]      DATETIME2(7) NOT NULL DEFAULT (SYSUTCDATETIME()),
-    [deletedat]      DATETIME2(7) NULL
+    [id]                INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [site_id]           NVARCHAR(50) NOT NULL,
+    [folder]            NVARCHAR(300) NOT NULL,
+    [filename]          NVARCHAR(255) NOT NULL,
+    [file_path]         NVARCHAR(500) NOT NULL,
+    [web_url]           NVARCHAR(500) NOT NULL,
+    [file_size]         BIGINT NOT NULL DEFAULT 0,
+    [file_ext]          NVARCHAR(50) NOT NULL,
+    [mime_type]         NVARCHAR(100) NULL,
+    [file_hash]         NVARCHAR(64) NULL, -- SHA-256 integrity hash
+    [title]             NVARCHAR(255) NULL,
+    [alt_text]          NVARCHAR(1000) NULL,
+    [caption]           NVARCHAR(1000) NULL,
+    [credit]            NVARCHAR(255) NULL,
+    [ocr_text]          NVARCHAR(2000) NULL, -- Extracted WinRT OCR / SVG text
+    [is_image]          BIT NOT NULL DEFAULT 0,
+    [width]             INT NULL,
+    [height]            INT NULL,
+    [is_wcag_compliant] BIT NOT NULL DEFAULT 1,
+    [tags]              NVARCHAR(500) NULL,
+    [created_by]        NVARCHAR(100) NULL,
+    [updated_by]        NVARCHAR(100) NULL,
+    [created_at]        DATETIME2(0) NOT NULL DEFAULT (SYSDATETIME()),
+    [updated_at]        DATETIME2(0) NOT NULL DEFAULT (SYSDATETIME()),
+    [deletedat]         DATETIME2(0) NULL
 );
 
 CREATE NONCLUSTERED INDEX [IX_media_assets_site_folder] 
@@ -155,13 +162,13 @@ When an asset is selected, `explorer.js` emits a structured payload:
 ```javascript
 {
   "type": "CMS_MEDIA_SELECTED",
-  "url": "/files/pio/images/2026-commissioners-hearing.jpg",
+  "url": "https://assets.chelancounty.com/pio/images/2026-commissioners-hearing.jpg",
   "alt": "Board of County Commissioners reviewing public safety resolutions",
   "title": "2026 Commissioners Public Hearing",
   "caption": "Commissioners listen to public testimony regarding the annual budget.",
   "credit": "Chelan County PIO Office",
   "data": {
-    "webUrl": "/files/pio/images/2026-commissioners-hearing.jpg",
+    "webUrl": "https://assets.chelancounty.com/pio/images/2026-commissioners-hearing.jpg",
     "name": "2026-commissioners-hearing.jpg",
     "size": 348120,
     "extension": "jpg",
@@ -209,10 +216,41 @@ The `shared images` directory (`c:\inetpub\chelan-county\images\picjumbo`) is sy
 | `updateMeta()` | `/media/metadata` | `POST` | Persists title, alt text, caption, and credit attributes to `dbo.media_assets`. |
 | `deleteFile()` | `/media/delete` | `POST` | Soft-deletes database record and moves physical file to `.trash` archive. |
 | `renameFile()` | `/media/rename` | `POST` | Safely renames files on disk and updates relational URL references. |
+| `crawlFolder()` | `/api/Files.cfc?method=crawlFolder` | `POST` | Recursively crawls a target folder, runs WinRT OCR & visual content detection, generates `.thumbs/` previews, and upserts WCAG 1.1.1 compliant records into `dbo.media_assets`. |
+| `analyzeUploadOcr()` | `/api/Files.cfc?method=analyzeUploadOcr` | `POST` | Runs sub-second pre-flight OCR & visual analysis on a file selected in the upload dropzone to auto-fill Display Title, WCAG Alt Text, Caption, Credit, and Tags before upload. |
 
 ---
 
-## 7. Storage Maintenance & Junction Recovery
+## 7. OCR Content Detection, Folder Auto-Compliance Crawler & On-Upload Pre-Fill
+
+CMSAdmin 2.0 includes a built-in **OCR Content Detection & Folder Auto-Compliance Engine** ([`scripts/crawl-folder-ocr.ps1`](file:///c:/inetpub/CMSAdmin2.0/scripts/crawl-folder-ocr.ps1) and [`api/Files.cfc`](file:///c:/inetpub/CMSAdmin2.0/api/Files.cfc)) that ensures every image on disk or selected for upload receives accurate, screen-reader-ready **WCAG 2.1 AA (`1.1.1 Non-text Content`)** metadata.
+
+### 1. 5-Stage Image Analysis Pipeline
+1. **Windows Native WinRT OCR (`Windows.Media.Ocr.OcrEngine`):** Extracts embedded text from `.jpg`, `.jpeg`, `.png`, `.bmp`, and `.gif` images (flyers, posters, vehicle license plates, signs, screenshots) and strips OCR punctuation artifacts.
+2. **Visual Pixel Composition (`System.Drawing.Bitmap`):** Measures dimensions (`width` × `height`), calculates orientation (`panoramic banner`, `landscape`, `portrait`, `square`), detects alpha transparency, and samples dominant color tones (`lush green botanical foliage`, `sky and water blue tones`, `warm sunlit earth tones`, `dramatic dark background`, `neutral grayscale tones`, etc.).
+3. **SVG XML & Photographer Credit Extraction:** Parses `<title>` / `aria-label` from `.svg` files and extracts photographer/subject credits from `~` filename suffixes (e.g., `Wedding5~Pamela%20Grillo%20Photography.jpg` -> Credit: `Pamela Grillo Photography`).
+4. **SHA-256 Hash De-Duplication & Title Recovery:** Matches hash-named files against human-named files and OCR text.
+5. **Server-Side `.thumbs/` Generation & Database Upsert:** Creates `360x360` max-dimension thumbnails inside `<folder>\.thumbs\<filename>` and upserts all metadata (`alt_text`, `ocr_text`, `title`, `caption`, `credit`, `tags`, `is_wcag_compliant = 1`) into `dbo.media_assets`.
+
+### 2. On-Upload Pre-Flight OCR Auto-Prefill
+Whenever a user selects or drops an image into:
+- **Media Library Quick Upload** (`/media`)
+- **Media Picker Quick Upload** (`/media/picker`)
+- **Full Upload Studio** (`/media/upload`)
+
+The browser immediately posts the file to `/api/Files.cfc?method=analyzeUploadOcr&returnformat=json` (~0.6–0.9s) and automatically pre-fills **Alternative Text (WCAG 1.1.1)**, **Display Title**, **Caption**, **Photographer Credit**, and **Tags**, displaying a live badge with any detected OCR text and visual dimensions/palette.
+
+### 3. Batch Folder Crawl (UI & PowerShell CLI)
+- **From Media Library UI (`/media`):** Click **OCR Crawl & Auto-Comply Folder** in the header (or **OCR Crawl & Make Compliant** in the right-hand folder details inspector), enter/select the folder path, and click **Start OCR Crawl & Make Compliant**.
+- **From PowerShell CLI:**
+  ```powershell
+  cd C:\inetpub\CMSAdmin2.0
+  .\scripts\crawl-folder-ocr.ps1 -FolderPath "C:\inetpub\chelan-county\files\ohme-gardens"
+  ```
+
+---
+
+## 8. Storage Maintenance & Junction Recovery
 
 If NTFS directory junctions are inadvertently broken during server migrations or disk reorganizations, administrators can reconstruct them via elevated PowerShell:
 

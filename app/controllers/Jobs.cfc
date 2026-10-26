@@ -291,7 +291,7 @@ component extends="Controller" {
 					DirectoryCreate(local.uploadDir);
 				}
 				cffile(action="upload", fileField="job_attachment", destination=local.uploadDir, nameConflict="makeunique", result="uploadRes");
-				local.attachment = "/files/hrm/documents/" & uploadRes.serverFile;
+				local.attachment = "https://assets.chelancounty.com/hrm/documents/" & uploadRes.serverFile;
 			} catch (any e) {
 				// keep existing
 			}

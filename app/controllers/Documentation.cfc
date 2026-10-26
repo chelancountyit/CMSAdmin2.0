@@ -22,6 +22,10 @@ component extends="Controller" {
 		variables.pageTitle = "Rich Text Editor (JBDEditor) Guide & Demo";
 	}
 
+	function ocrCrawler() {
+		variables.pageTitle = "Media OCR Content Detection & Folder Auto-Compliance Guide";
+	}
+
 	function startup() {
 		variables.pageTitle = "Startup & Front-End Styles (jbd-templates.css)";
 		var cssPath = expandPath("/stylesheets/jbd-templates.css");

@@ -4,7 +4,9 @@
 <cfparam name="variables.activeWsName" default="#variables.activeWsFolder#">
 <cfparam name="variables.activeWsStoragePath" default="C:\inetpub\chelan-county\files\#variables.activeWsFolder#">
 <cfparam name="variables.activeWsDiskPath" default="C:\inetpub\chelan-county\files\#variables.activeWsFolder#">
-<cfparam name="variables.activeWsAssetsPath" default="assets.chelancounty.gov\#variables.activeWsFolder#">
+<cfparam name="variables.activeWsAssetsProtocol" default="http">
+<cfparam name="variables.activeWsAssetsDomain" default="">
+<cfparam name="variables.activeWsAssetsPath" default="#variables.activeWsAssetsDomain#\#variables.activeWsFolder#">
 <cfparam name="variables.pickerMode" default="document">
 <cfparam name="variables.initialSubfolder" default="documents">
 <cfparam name="variables.callback" default="onMediaSelected">
@@ -59,6 +61,8 @@
      data-ws-virtual-dir="#encodeForHTMLAttribute(variables.activeWsVirtualDir)#"
      data-ws-storage-path="#encodeForHTMLAttribute(variables.activeWsStoragePath)#"
      data-ws-disk-path="#encodeForHTMLAttribute(variables.activeWsDiskPath)#"
+     data-ws-assets-protocol="#encodeForHTMLAttribute(variables.activeWsAssetsProtocol)#"
+     data-ws-assets-domain="#encodeForHTMLAttribute(variables.activeWsAssetsDomain)#"
      data-ws-assets-path="#encodeForHTMLAttribute(variables.activeWsAssetsPath)#"
      data-ws-name="#encodeForHTMLAttribute(variables.activeWsName)#"
      data-initial-folder="#encodeForHTMLAttribute(variables.initialSubfolder)#"
@@ -174,7 +178,7 @@
 						Image URL
 					</label>
 					<div class="media-url-input-group" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-						<input type="text" id="upload-target-url-input" class="form-control media-url-field" placeholder="/files/#encodeForHTMLAttribute(variables.activeWsFolder)#/images/photo.jpg" readonly title="Prospective URL destination on server" style="flex: 1; min-width: 240px; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; padding: 0.6rem 0.85rem !important; font-size: 0.875rem !important; background: ##ffffff !important; color: ##0f172a !important;">
+						<input type="text" id="upload-target-url-input" class="form-control media-url-field" placeholder="#(len(trim(variables.activeWsAssetsDomain)) ? (encodeForHTMLAttribute(variables.activeWsAssetsProtocol) & '://' & encodeForHTMLAttribute(variables.activeWsAssetsDomain)) : '')#/#encodeForHTMLAttribute(variables.activeWsFolder)#/images/photo.jpg" readonly title="Prospective URL destination on server" style="flex: 1; min-width: 240px; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; padding: 0.6rem 0.85rem !important; font-size: 0.875rem !important; background: ##ffffff !important; color: ##0f172a !important;">
 						<button type="button" id="btn-browse-file" class="btn media-btn-browse" title="Browse files on your computer" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; background: ##f1f5f9 !important; font-weight: 600; font-size: 0.875rem; color: ##0f172a !important; cursor: pointer; white-space: nowrap;">
 							#svgIcon(name="folder", size=15)#
 							<span>Browse</span>
@@ -302,7 +306,7 @@
 	</div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=4.5"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=5.1"></script>
 </cfoutput>
 </body>
 </html>

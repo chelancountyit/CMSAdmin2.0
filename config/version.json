@@ -1,11 +1,11 @@
-{
+﻿{
     "major":  2,
     "minor":  1,
-    "build":  3,
-    "version":  "2.1.3",
-    "versionTag":  "v2.1.3",
-    "releaseName":  "Workspace Storage Path & Assets Mapping, RFP Seeding & Workspaces Mega Menu Preview",
-    "releaseDate":  "2026-10-25",
-    "builtAt":  "2026-10-25T23:28:00-07:00",
+    "build":  325,
+    "version":  "2.1.325",
+    "versionTag":  "v2.1.325",
+    "releaseName":  "Workspace Assets Domain Routing, Media OCR Compliance Crawler \u0026 Full-Width Page Layout Parity",
+    "releaseDate":  "2026-10-26",
+    "builtAt":  "2026-10-26T16:02:37-07:00",
     "environment":  "development"
 }

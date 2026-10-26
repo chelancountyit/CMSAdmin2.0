@@ -147,7 +147,7 @@
 						<cfset var cleanBase = ReReplace(ListDeleteAt(mediaFiles.name, ListLen(mediaFiles.name, "."), "."), "[^a-zA-Z0-9_\-]", "_", "all")>
 						<cfset var destFileName = "doc_" & DateFormat(Now(), "yyyymmdd") & "_" & TimeFormat(Now(), "HHmmss") & "_" & cleanBase & "." & imgExt>
 						<cfset var destFilePath = wsDiskFolder & "\" & destFileName>
-						<cfset var webUrl = "/files/" & arguments.activeWorkspace & "/images/" & destFileName>
+						<cfset var webUrl = "https://assets.chelancounty.com/" & arguments.activeWorkspace & "/images/" & destFileName>
 
 						<!--- Deduplication against dbo.media_assets --->
 						<cfset var existingAsset = queryExecute("
@@ -405,7 +405,7 @@
 					<cfif extractedImgs.size gt 3000> <!--- Filter out tiny 1px spacer artifacts --->
 						<cfset var destName = "pdf_" & DateFormat(Now(), "yyyymmdd") & "_" & TimeFormat(Now(), "HHmmss") & "_" & extractedImgs.name>
 						<cfset var destPath = wsDiskFolder & "\" & destName>
-						<cfset var webUrl = "/files/" & arguments.activeWorkspace & "/images/" & destName>
+						<cfset var webUrl = "https://assets.chelancounty.com/" & arguments.activeWorkspace & "/images/" & destName>
 						<cfset var imgBytes = FileReadBinary(tempImgFolder & "\" & extractedImgs.name)>
 						<cfset var imgHash = Hash(imgBytes, "SHA-256")>
 

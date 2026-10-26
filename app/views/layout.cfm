@@ -888,8 +888,8 @@
 			</div>
 
 			<!--- Core Vanilla JS Interactions --->
-			<script src="/javascripts/admin.js?v=1.8" type="text/javascript"></script>
-			<script src="/javascripts/jbdeditor.js?v=2.6" type="text/javascript"></script>
+			<script src="/javascripts/admin.js?v=1.9" type="text/javascript"></script>
+			<script src="/javascripts/jbdeditor.js?v=2.7" type="text/javascript"></script>
 			<cfif structKeyExists(params, "controller") and params.controller eq "forms" and structKeyExists(params, "action") and params.action eq "builder">
 				<script src="/javascripts/form-builder.js?v=2.6" type="text/javascript"></script>
 			</cfif>

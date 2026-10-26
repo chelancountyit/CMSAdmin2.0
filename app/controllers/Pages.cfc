@@ -3397,7 +3397,7 @@ component extends="Controller" {
 						'global', 'Property Owner''s Guide', 'property-owners-guide',
 						'Comprehensive reference covering assessments, market valuation cycles, and rights.',
 						'/images/cta/property-guide.jpg', 'Property assessment calculations and documentation',
-						'CITIZEN GUIDE', 'amber', 'card', 'Download PDF', '/files/assessor/documents/property-owners-guide.pdf',
+						'CITIZEN GUIDE', 'amber', 'card', 'Download PDF', 'https://assets.chelancounty.com/assessor/documents/property-owners-guide.pdf',
 						'pdf', 'link', 1, 'Assessor Services', 3, 1, 'System', SYSUTCDATETIME(), SYSUTCDATETIME()
 					),
 					(
@@ -5357,7 +5357,7 @@ component extends="Controller" {
 						'river-park',
 						'Where the River Meets the Cascade Foothills',
 						'Spacious full-hookup RV sites, tranquil tent camping, river access, and breathtaking mountain vistas in the heart of Chelan County.',
-						'/files/shared/media/lake-chelan-scenic-panorama.jpg',
+						'https://assets.chelancounty.com/shared/media/lake-chelan-scenic-panorama.jpg',
 						'Explore Amenities', '##amenities',
 						'View Rates & Hours', '##rates',
 						1, 'Wenatchee River Park', 'Reserve Online', '##rates',

@@ -4,7 +4,9 @@
 <cfparam name="variables.activeWsName" default="#variables.activeWsFolder#">
 <cfparam name="variables.activeWsStoragePath" default="C:\inetpub\chelan-county\files\#variables.activeWsFolder#">
 <cfparam name="variables.activeWsDiskPath" default="C:\inetpub\chelan-county\files\#variables.activeWsFolder#">
-<cfparam name="variables.activeWsAssetsPath" default="assets.chelancounty.gov\#variables.activeWsFolder#">
+<cfparam name="variables.activeWsAssetsProtocol" default="http">
+<cfparam name="variables.activeWsAssetsDomain" default="">
+<cfparam name="variables.activeWsAssetsPath" default="#variables.activeWsAssetsDomain#\#variables.activeWsFolder#">
 <cfoutput>
 <link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=4.1">
 
@@ -19,6 +21,10 @@
 		</nav>
 	</div>
 	<div class="page-actions" style="display:flex; gap:0.5rem; align-items:center;">
+		<button type="button" class="btn btn-outline btn-sm" id="btnOpenCrawlModal" title="Feed a folder path to crawl images, detect OCR text &amp; visual content, make WCAG 1.1.1 compliant, and save to database">
+			#svgIcon(name="shield", size=15)#
+			<span>OCR Crawl &amp; Auto-Comply Folder</span>
+		</button>
 		<a href="#urlFor(controller='media', action='upload', params='ws=' & variables.activeWsFolder)#" class="btn btn-primary btn-sm" id="btnHeaderUpload">
 			#svgIcon(name="upload", size=15)#
 			<span>Upload Media</span>
@@ -32,6 +38,8 @@
      data-ws-virtual-dir="#encodeForHTMLAttribute(variables.activeWsVirtualDir)#"
      data-ws-storage-path="#encodeForHTMLAttribute(variables.activeWsStoragePath)#"
      data-ws-disk-path="#encodeForHTMLAttribute(variables.activeWsDiskPath)#"
+     data-ws-assets-protocol="#encodeForHTMLAttribute(variables.activeWsAssetsProtocol)#"
+     data-ws-assets-domain="#encodeForHTMLAttribute(variables.activeWsAssetsDomain)#"
      data-ws-assets-path="#encodeForHTMLAttribute(variables.activeWsAssetsPath)#"
      data-ws-name="#encodeForHTMLAttribute(variables.activeWsName)#">
 
@@ -143,7 +151,7 @@
 						Image URL
 					</label>
 					<div class="media-url-input-group" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-						<input type="text" id="upload-target-url-input" class="form-control media-url-field" placeholder="/files/#encodeForHTMLAttribute(variables.activeWsFolder)#/images/photo.jpg" readonly title="Prospective URL destination on server" style="flex: 1; min-width: 240px; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; padding: 0.6rem 0.85rem !important; font-size: 0.875rem !important; background: ##ffffff !important; color: ##0f172a !important;">
+						<input type="text" id="upload-target-url-input" class="form-control media-url-field" placeholder="#(len(trim(variables.activeWsAssetsDomain)) ? (encodeForHTMLAttribute(variables.activeWsAssetsProtocol) & '://' & encodeForHTMLAttribute(variables.activeWsAssetsDomain)) : '')#/#encodeForHTMLAttribute(variables.activeWsFolder)#/images/photo.jpg" readonly title="Prospective URL destination on server" style="flex: 1; min-width: 240px; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; padding: 0.6rem 0.85rem !important; font-size: 0.875rem !important; background: ##ffffff !important; color: ##0f172a !important;">
 						<button type="button" id="btn-browse-file" class="btn media-btn-browse" title="Browse files on your computer" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; background: ##f1f5f9 !important; font-weight: 600; font-size: 0.875rem; color: ##0f172a !important; cursor: pointer; white-space: nowrap;">
 							#svgIcon(name="folder", size=15)#
 							<span>Browse</span>
@@ -269,7 +277,105 @@
 			</form>
 		</div>
 	</div>
+
+	<!--- Modal: OCR Folder Crawler & WCAG 1.1.1 Auto-Compliance Engine --->
+	<div id="mediaCrawlModal" class="modal-backdrop" hidden style="position:fixed; inset:0; background:rgba(15,23,42,0.65); display:none; align-items:center; justify-content:center; z-index:9999; padding:1rem;" role="dialog" aria-modal="true" aria-labelledby="mediaCrawlModalTitle">
+		<div class="admin-card" style="max-width:780px; width:100%; border-radius:12px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.25); overflow:hidden; background:var(--admin-surface, ##fff);">
+			<div class="card-header" style="padding:1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--admin-border-subtle, ##e2e8f0);">
+				<h3 id="mediaCrawlModalTitle" style="margin:0; font-size:1.1rem; font-weight:700; color:var(--admin-text-main); display:flex; align-items:center; gap:0.5rem;">
+					#svgIcon(name="shield", size=18)#
+					<span>OCR Content Detection &amp; Folder Auto-Compliance Crawler</span>
+				</h3>
+				<button type="button" class="btn btn-icon btn-sm" id="btn-close-crawl-modal" aria-label="Close dialog" style="border:none; background:transparent; cursor:pointer;">
+					#svgIcon(name="x", size=16)#
+				</button>
+			</div>
+			<form id="mediaCrawlForm" style="margin:0;">
+				<div class="card-body" style="padding:1.5rem; max-height:76vh; overflow-y:auto;">
+					<p style="margin:0 0 1rem; font-size:0.86rem; color:var(--admin-text-muted); line-height:1.5;">
+						Feed any folder path below to recursively crawl all images and documents, run <strong>Windows OCR Text Recognition</strong> and <strong>Visual Content Analysis</strong> (dimensions, color palette, SVG labels, photographer credits), synthesize <strong>WCAG 2.1 AA (1.1.1)</strong> compliant descriptions, generate <code>.thumbs/</code> previews, and upsert records into <code>dbo.media_assets</code>.
+					</p>
+
+					<div class="form-group" style="margin-bottom:1rem;">
+						<label for="crawl-folder-path" class="form-label" style="font-weight:700; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">
+							<span>Target Folder Path to Crawl</span>
+							<span style="font-size:0.74rem; color:var(--admin-primary); font-weight:600;">Supports Disk Path, Assets URL, or Relative Folder</span>
+						</label>
+						<input type="text" id="crawl-folder-path" name="path" class="form-control mono" style="font-size:0.875rem; width:100%;" placeholder="C:\inetpub\chelan-county\files\#encodeForHTMLAttribute(variables.activeWsFolder)#" required>
+						<div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-top:0.5rem;">
+							<span style="font-size:0.75rem; color:var(--admin-text-muted); font-weight:600;">Quick Fill:</span>
+							<button type="button" class="btn btn-outline btn-xs" id="btn-crawl-preset-current" style="font-size:0.74rem; padding:0.2rem 0.55rem;">Current Open Folder</button>
+							<button type="button" class="btn btn-outline btn-xs" id="btn-crawl-preset-ws" style="font-size:0.74rem; padding:0.2rem 0.55rem;">Current Workspace Root</button>
+							<button type="button" class="btn btn-outline btn-xs" id="btn-crawl-preset-all" style="font-size:0.74rem; padding:0.2rem 0.55rem;">All Workspaces (C:\inetpub\chelan-county\files)</button>
+						</div>
+					</div>
+
+					<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:0.75rem; padding:0.85rem 1rem; background:var(--admin-bg, ##f8fafc); border:1px solid var(--admin-border-subtle, ##e2e8f0); border-radius:8px; margin-bottom:1rem;">
+						<label style="display:flex; align-items:center; gap:0.5rem; font-size:0.83rem; font-weight:600; cursor:pointer; margin:0;">
+							<input type="checkbox" id="crawl-opt-recursive" checked>
+							<span>Include Subfolders (Recursive)</span>
+						</label>
+						<label style="display:flex; align-items:center; gap:0.5rem; font-size:0.83rem; font-weight:600; cursor:pointer; margin:0;">
+							<input type="checkbox" id="crawl-opt-thumbs" checked>
+							<span>Generate 360px Thumbnails (<code>.thumbs</code>)</span>
+						</label>
+						<label style="display:flex; align-items:center; gap:0.5rem; font-size:0.83rem; font-weight:600; cursor:pointer; margin:0;">
+							<input type="checkbox" id="crawl-opt-overwrite">
+							<span>Overwrite Existing Valid Alt Text</span>
+						</label>
+					</div>
+
+					<div id="crawl-error" role="alert" style="color:var(--admin-danger, ##ef4444); font-size:0.83rem; margin-bottom:0.85rem;" hidden></div>
+
+					<!--- Live Crawl Results Summary & Per-Image OCR Table --->
+					<div id="crawl-results-container" hidden style="border-top:1px solid var(--admin-border-subtle, ##e2e8f0); padding-top:1rem; margin-top:0.5rem;">
+						<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.65rem; margin-bottom:1rem;">
+							<div style="background:##f8fafc; border:1px solid ##cbd5e1; border-radius:8px; padding:0.65rem 0.85rem; text-align:center;">
+								<div id="crawl-stat-scanned" style="font-size:1.35rem; font-weight:800; color:##0f172a;">0</div>
+								<div style="font-size:0.73rem; color:##64748b; font-weight:600; text-transform:uppercase;">Files Scanned</div>
+							</div>
+							<div style="background:##f0f9ff; border:1px solid ##bae6fd; border-radius:8px; padding:0.65rem 0.85rem; text-align:center;">
+								<div id="crawl-stat-images" style="font-size:1.35rem; font-weight:800; color:##0369a1;">0</div>
+								<div style="font-size:0.73rem; color:##0369a1; font-weight:600; text-transform:uppercase;">Images Analyzed</div>
+							</div>
+							<div style="background:##f5f3ff; border:1px solid ##ddd6fe; border-radius:8px; padding:0.65rem 0.85rem; text-align:center;">
+								<div id="crawl-stat-ocr" style="font-size:1.35rem; font-weight:800; color:##6d28d9;">0</div>
+								<div style="font-size:0.73rem; color:##6d28d9; font-weight:600; text-transform:uppercase;">OCR Text Found</div>
+							</div>
+							<div style="background:##f0fdf4; border:1px solid ##bbf7d0; border-radius:8px; padding:0.65rem 0.85rem; text-align:center;">
+								<div id="crawl-stat-compliant" style="font-size:1.35rem; font-weight:800; color:##15803d;">0</div>
+								<div style="font-size:0.73rem; color:##15803d; font-weight:600; text-transform:uppercase;">WCAG Compliant</div>
+							</div>
+						</div>
+						<div id="crawl-summary-line" class="mono" style="font-size:0.76rem; color:var(--admin-text-muted); margin-bottom:0.65rem;"></div>
+						<div style="max-height:240px; overflow-y:auto; border:1px solid var(--admin-border-subtle, ##e2e8f0); border-radius:8px;">
+							<table style="width:100%; border-collapse:collapse; font-size:0.79rem;">
+								<thead style="position:sticky; top:0; background:##f1f5f9; border-bottom:1px solid ##cbd5e1; text-align:left;">
+									<tr>
+										<th style="padding:0.5rem 0.65rem;">File</th>
+										<th style="padding:0.5rem 0.65rem;">OCR / Visual Detection</th>
+										<th style="padding:0.5rem 0.65rem;">Generated WCAG 1.1.1 Alt Text</th>
+									</tr>
+								</thead>
+								<tbody id="crawl-results-tbody"></tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+				<div class="card-footer" style="padding:1rem 1.5rem; background:var(--admin-surface-hover, ##f8fafc); border-top:1px solid var(--admin-border-subtle, ##e2e8f0); display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+					<span id="crawl-status-text" style="font-size:0.82rem; color:var(--admin-text-muted); font-weight:600;">Ready to crawl folder.</span>
+					<div style="display:flex; gap:0.5rem; align-items:center;">
+						<button type="button" class="btn btn-outline" id="btn-cancel-crawl-modal">Close</button>
+						<button type="submit" class="btn btn-primary" id="btn-run-crawl">
+							#svgIcon(name="shield", size=15)#
+							<span id="btn-run-crawl-label">Start OCR Crawl &amp; Make Compliant</span>
+						</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=4.5"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=5.1"></script>
 </cfoutput>

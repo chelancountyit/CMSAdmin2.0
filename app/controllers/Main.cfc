@@ -258,7 +258,9 @@ component extends="Controller" {
 
 		// 4. Media Storage Scan for the Active Workspace
 		try {
-			local.mediaDir = "C:\inetpub\chelan-county\files\" & (variables.hasWorkspace ? variables.activeWorkspaceId : "shared");
+			local.mediaDir = variables.hasWorkspace
+				? resolveWorkspaceStorageDiskPath(wsObj=variables.activeWsObj, fallbackWs=variables.activeWorkspaceId)
+				: "C:\inetpub\chelan-county\files\shared";
 			variables.stats.mediaBytes = 0;
 			variables.stats.mediaCount = 0;
 			variables.mediaBreakdown = {
@@ -273,7 +275,7 @@ component extends="Controller" {
 			if (DirectoryExists(local.mediaDir)) {
 				local.fileQuery = DirectoryList(local.mediaDir, true, "query");
 				for (local.fRow in local.fileQuery) {
-					if (local.fRow.type eq "File") {
+					if (local.fRow.type eq "File" && Left(local.fRow.name, 1) neq "." && FindNoCase("\.thumbs", local.fRow.directory) eq 0) {
 						variables.stats.mediaCount++;
 						local.sz = Val(local.fRow.size);
 						variables.stats.mediaBytes += local.sz;

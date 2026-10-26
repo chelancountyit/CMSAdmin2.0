@@ -2,6 +2,70 @@
  * CMSAdmin 2.0 - Core Template Interactions
  * Clean vanilla JavaScript with zero external library dependencies.
  */
+window.resolveLocalAssetFallbackUrl = function (src) {
+  if (!src || typeof src !== "string") return "";
+  const trimmed = src.trim();
+  let rel = "";
+  const match = trimmed.match(/^https?:\/\/[^\/]+\/(.+)$/i);
+  if (match) {
+    rel = match[1].replace(/^\/+/, "");
+  } else if (trimmed.startsWith("/") && !/^\/(files|images)\//i.test(trimmed)) {
+    rel = trimmed.replace(/^\/+/, "");
+  }
+  if (!rel) return "";
+  if (/^(files|images)\//i.test(rel)) return "/" + rel;
+  if (/^shared(?:%20|\s)+images\//i.test(rel)) {
+    return "/images/picjumbo/" + rel.replace(/^shared(?:%20|\s)+images\//i, "");
+  }
+  return "/files/" + rel;
+};
+
+window.healBrokenAssetImage = function (img, evt) {
+  if (!img || img.tagName !== "IMG") return false;
+  const rawSrc = img.getAttribute("src") || "";
+  if (!rawSrc) return false;
+  const fallbackSrc = window.resolveLocalAssetFallbackUrl(rawSrc);
+  if (!fallbackSrc || fallbackSrc === rawSrc) return false;
+
+  if (evt && typeof evt.stopImmediatePropagation === "function") {
+    evt.stopImmediatePropagation();
+  }
+  img.setAttribute("data-canonical-src", rawSrc);
+  img.setAttribute("src", fallbackSrc);
+
+  if (img.id === "featuredImgPreview") {
+    img.style.display = "block";
+    const ph = document.getElementById("featuredImgPlaceholder");
+    if (ph) ph.style.display = "none";
+  } else if (img.id === "contactPhotoImg") {
+    img.style.display = "block";
+    const ph = document.getElementById("contactPhotoPlaceholder");
+    if (ph) ph.style.display = "none";
+  }
+  return true;
+};
+
+if (typeof window !== "undefined") {
+  window.addEventListener("error", function (e) {
+    if (e && e.target && e.target.tagName === "IMG") {
+      window.healBrokenAssetImage(e.target, e);
+    }
+  }, true);
+
+  const scanInitialAssetImages = function () {
+    document.querySelectorAll("img[src]").forEach(function (img) {
+      if (img.complete && img.naturalWidth === 0) {
+        window.healBrokenAssetImage(img, null);
+      }
+    });
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scanInitialAssetImages);
+  } else {
+    scanInitialAssetImages();
+  }
+}
+
 const adminPromptQueue = [];
 let adminPromptActive = false;
 

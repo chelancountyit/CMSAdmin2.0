@@ -176,4 +176,29 @@
 			</div>
 		</div>
 	</article>
+
+	<!--- 6. Media OCR Content Detection & Folder Auto-Compliance Guide --->
+	<article class="admin-card kb-guide-card">
+		<div class="card-body" style="padding:1.35rem; display:flex; align-items:center; justify-content:space-between; gap:1.25rem; flex-wrap:wrap;">
+			<div style="max-width:760px;">
+				<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+					<span class="badge badge-success">ADA WCAG 1.1.1</span>
+					<span class="badge badge-info">Media Library &amp; OCR</span>
+					<span style="font-size:0.8rem; font-weight:600; color:var(--admin-text-muted);">UI &amp; PowerShell CLI</span>
+				</div>
+				<h3 style="font-size:1.05rem; margin:0.3rem 0; color:var(--admin-text-main);">
+					Media OCR Content Detection &amp; Folder Auto-Compliance Guide
+				</h3>
+				<p style="margin:0; color:var(--admin-text-muted); line-height:1.55; font-size:0.9rem;">
+					How to use automatic On-Upload OCR pre-fill for Alternative Text &amp; Display Titles, and how to feed any folder path to recursively crawl images, detect OCR text &amp; visual palettes, generate <code>.thumbs/</code> previews, and populate <code>dbo.media_assets</code>.
+				</p>
+			</div>
+			<div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+				<a href="<cfoutput>#urlFor(controller='documentation', action='ocrCrawler')#</cfoutput>" class="btn btn-outline btn-sm">
+					<span>Read Guide</span>
+					<cfoutput>#svgIcon(name="arrow-right", size=14)#</cfoutput>
+				</a>
+			</div>
+		</div>
+	</article>
 </section>

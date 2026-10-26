@@ -14,7 +14,7 @@ BEGIN
     CREATE TABLE dbo.media_assets (
         id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
         site_id NVARCHAR(50) NOT NULL,                    -- Scoped workspace (e.g. 'assessors', 'pio', 'sheriff', 'global')
-        folder NVARCHAR(100) NOT NULL,                    -- Subfolder under workspace (e.g. 'images', 'documents', 'media')
+        folder NVARCHAR(300) NOT NULL,                    -- Subfolder under workspace (e.g. 'images', 'images/weddings/full', 'documents')
         filename NVARCHAR(255) NOT NULL,                  -- Physical filename (e.g. 'courthouse-2026.jpg')
         file_path NVARCHAR(500) NOT NULL,                 -- Relative disk path ('files/assessors/images/courthouse-2026.jpg')
         web_url NVARCHAR(500) NOT NULL,                   -- Absolute web URL ('/files/assessors/images/courthouse-2026.jpg')
@@ -35,6 +35,7 @@ BEGIN
         height INT NULL,                                  -- Image pixel height
         is_wcag_compliant BIT NOT NULL DEFAULT 1,         -- 0 for images without alt text
         tags NVARCHAR(500) NULL,                          -- Searchable comma-separated tags
+        ocr_text NVARCHAR(2000) NULL,                     -- Extracted WinRT OCR text for flyers, signs, and infographics
         
         -- Lifecycle & Audit
         created_at DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),

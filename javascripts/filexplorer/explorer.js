@@ -22,6 +22,8 @@
 		cfg: { filesRoot: 'C:\\inetpub\\chelan-county\\files\\', webBase: '/files/', systemDepth: 2, maxNameLen: 64, server: '' },
 		ws: '',                // active workspace directory (e.g. "community-development")
 		wsName: '',            // friendly display name
+		assetsProtocol: 'http',
+		assetsDomain: '',
 		online: null,          // null = connecting, true, false
 		path: '',
 		depth: 0,
@@ -109,15 +111,21 @@
 		if (isDir && out.slice(-1) !== '\\') out += '\\';
 		return out;
 	}
+	function getAssetsBaseUrl() {
+		var host = (state.assetsDomain || '').replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+		if (!host) return '';
+		var proto = (state.assetsProtocol === 'https' || /^https:\/\//i.test(state.assetsDomain || '')) ? 'https' : 'http';
+		return proto + '://' + host;
+	}
 	function assetsPath(p, isDir) {
 		var s = segs(p);
 		if (s.length > 0 && s[0].toLowerCase() === 'shared images') {
 			var sub = s.slice(1);
-			var outShared = 'assets.chelancounty.gov\\shared images' + (sub.length ? '\\' + sub.join('\\') : '');
+			var outShared = (state.assetsDomain ? (state.assetsDomain + '\\') : '\\') + 'shared images' + (sub.length ? '\\' + sub.join('\\') : '');
 			if (isDir && outShared.slice(-1) !== '\\') outShared += '\\';
 			return outShared;
 		}
-		var out = 'assets.chelancounty.gov\\' + s.join('\\');
+		var out = (state.assetsDomain ? (state.assetsDomain + '\\') : '\\') + s.join('\\');
 		if (isDir && out.slice(-1) !== '\\') out += '\\';
 		return out;
 	}
@@ -125,11 +133,11 @@
 		var low = (p || '').toLowerCase();
 		if (low.indexOf('shared images/') === 0 || low === 'shared images') {
 			var rel = p.substring(13).replace(/^\//, '');
-			var out = 'https://assets.chelancounty.gov/shared images/' + (rel ? segs(rel).join('/') : '');
+			var out = getAssetsBaseUrl() + '/shared images/' + (rel ? segs(rel).join('/') : '');
 			if (isDir && out.slice(-1) !== '/') out += '/';
 			return out;
 		}
-		var out = 'https://assets.chelancounty.gov/' + p;
+		var out = getAssetsBaseUrl() + '/' + p;
 		if (isDir && out.slice(-1) !== '/') out += '/';
 		return out;
 	}
@@ -137,9 +145,33 @@
 		var low = (p || '').toLowerCase();
 		if (low.indexOf('shared images/') === 0 || low === 'shared images') {
 			var rel = p.substring(13).replace(/^\//, '');
+			return getAssetsBaseUrl() + '/shared%20images/' + (rel ? segs(rel).map(encodeURIComponent).join('/') : '');
+		}
+		return getAssetsBaseUrl() + '/' + segs(p).map(encodeURIComponent).join('/');
+	}
+	function localHref(p) {
+		var low = (p || '').toLowerCase();
+		if (low.indexOf('shared images/') === 0 || low === 'shared images') {
+			var rel = p.substring(13).replace(/^\//, '');
 			return '/images/picjumbo/' + (rel ? segs(rel).map(encodeURIComponent).join('/') : '');
 		}
 		return state.cfg.webBase + segs(p).map(encodeURIComponent).join('/');
+	}
+	function localThumbHref(p) {
+		var s = segs(p);
+		if (!s.length) return localHref(p);
+		var fileName = s[s.length - 1];
+		var dirSegs = s.slice(0, -1);
+		var thumbRel = dirSegs.concat(['.thumbs', fileName]).join('/');
+		return localHref(thumbRel);
+	}
+	function thumbHref(p) {
+		var s = segs(p);
+		if (!s.length) return webHref(p);
+		var fileName = s[s.length - 1];
+		var dirSegs = s.slice(0, -1);
+		var thumbRel = dirSegs.concat(['.thumbs', fileName]).join('/');
+		return webHref(thumbRel);
 	}
 
 	function friendly(name) {
@@ -344,10 +376,12 @@
 			state.cfg.server = String(d.server || '');
 			if (d.filesRoot) state.cfg.filesRoot = String(d.filesRoot);
 			if (d.webBase) state.cfg.webBase = String(d.webBase);
+		if (d.assetsProtocol) state.assetsProtocol = String(d.assetsProtocol);
+		if (typeof d.assetsDomain === 'string') state.assetsDomain = d.assetsDomain;
 			if (d.systemDepth != null) state.cfg.systemDepth = Number(d.systemDepth);
 			if (d.maxNameLen != null) state.cfg.maxNameLen = Number(d.maxNameLen);
 			if (el.webRoot) {
-				el.webRoot.textContent = 'https://assets.chelancounty.gov/' + (state.ws ? state.ws + '/' : '');
+				el.webRoot.textContent = getAssetsBaseUrl() + '/' + (state.ws ? state.ws + '/' : '');
 			}
 			if (el.newName) el.newName.maxLength = state.cfg.maxNameLen;
 			setOnline(state.cfg.server, r.ms);
@@ -465,6 +499,8 @@
 		state.depth = Number(d.depth || 0);
 		if (d.filesRoot) state.cfg.filesRoot = String(d.filesRoot);
 		if (d.webBase) state.cfg.webBase = String(d.webBase);
+		if (d.assetsProtocol) state.assetsProtocol = String(d.assetsProtocol);
+		if (typeof d.assetsDomain === 'string') state.assetsDomain = d.assetsDomain;
 		state.items = sortItems((d.items || []).map(normaliseItem));
 		state.selected = null;
 		if (selectName) {
@@ -667,7 +703,12 @@
 	function thumbFor(it) {
 		var k = it.type === 'file' ? fileKind(it.ext) : null;
 		if (k && k.cls === 'image') {
-			return '<img loading="lazy" decoding="async" alt="" src="' + esc(webHref(itemPath(it))) + '" data-fallback="1">';
+			var fullUrl = webHref(itemPath(it));
+			var useThumb = (it.ext !== 'svg' && it.ext !== 'ico' && it.ext !== 'webp');
+			var srcUrl = useThumb ? thumbHref(itemPath(it)) : fullUrl;
+			var localFull = localHref(itemPath(it));
+			var localThumb = useThumb ? localThumbHref(itemPath(it)) : localFull;
+			return '<img loading="lazy" decoding="async" alt="" src="' + esc(srcUrl) + '" data-full-src="' + esc(fullUrl) + '" data-local-thumb-src="' + esc(localThumb) + '" data-local-src="' + esc(localFull) + '" data-fallback="1">';
 		}
 		return iconFor(it);
 	}
@@ -748,6 +789,24 @@
 	el.items.addEventListener('error', function (e) {
 		var t = e.target;
 		if (t && t.tagName === 'IMG' && t.getAttribute('data-fallback')) {
+			var fullSrc = t.getAttribute('data-full-src');
+			if (fullSrc && t.getAttribute('src') !== fullSrc) {
+				t.setAttribute('src', fullSrc);
+				t.removeAttribute('data-full-src');
+				return;
+			}
+			var localThumbSrc = t.getAttribute('data-local-thumb-src');
+			if (localThumbSrc && t.getAttribute('src') !== localThumbSrc) {
+				t.setAttribute('src', localThumbSrc);
+				t.removeAttribute('data-local-thumb-src');
+				return;
+			}
+			var localSrc = t.getAttribute('data-local-src');
+			if (localSrc && t.getAttribute('src') !== localSrc) {
+				t.setAttribute('src', localSrc);
+				t.removeAttribute('data-local-src');
+				return;
+			}
 			var wrap = document.createElement('span');
 			wrap.innerHTML = svg('image', 't-image');
 			t.replaceWith(wrap.firstChild);
@@ -798,6 +857,7 @@
 				(isCurrent ? '' : '<button type="button" class="btn btn-primary btn-block" data-act="open">Open folder</button>') +
 				(canUpload ? '<button type="button" class="btn ' + (isCurrent ? 'btn-primary' : '') + ' btn-block" data-act="upload"' + (online ? '' : ' disabled') + '>Upload file here</button>' : '') +
 				(canNew ? '<button type="button" class="btn btn-block" data-act="new"' + (online ? '' : ' disabled') + '>New subfolder</button>' : '') +
+				(!isSharedDir ? '<button type="button" class="btn btn-block" data-act="crawl-folder" data-path="' + esc(p) + '"' + (online ? '' : ' disabled') + '>OCR Crawl &amp; Make Compliant</button>' : '') +
 				(canDel && depth > state.cfg.systemDepth
 					? '<button type="button" class="btn btn-danger btn-block' + (armed ? ' confirming' : '') + '" data-act="delete" data-path="' + esc(p) + '"' +
 						(online ? '' : ' disabled') + '>' + (armed ? 'Confirm delete' : 'Delete folder') + '</button>'
@@ -815,7 +875,7 @@
 			var k = fileKind(it.ext);
 			var isSharedFile = fp.toLowerCase().indexOf('shared images') >= 0;
 			var preview = k.cls === 'image'
-				? '<img alt="' + esc(it.altText || it.title || '') + '" src="' + esc(webHref(fp)) + '" data-fallback="1">'
+				? '<img alt="' + esc(it.altText || it.title || '') + '" src="' + esc(webHref(fp)) + '" data-local-src="' + esc(localHref(fp)) + '" data-fallback="1">'
 				: svg(k.cls === 'image' ? 'image' : 'file', 't-' + k.cls);
 			var isPicker = Boolean(state.pickerMode || state.pickerCallback || state.targetInput);
 			var selectLabel = state.pickerMode === 'document' ? 'Select Document' : (state.pickerMode === 'image' ? 'Select Image' : 'Select File');
@@ -858,6 +918,7 @@
 				'<dl>' +
 				(isImg ? '<dt>ADA Accessibility</dt>' + wcagPill : '') +
 				(isImg ? '<dt>Alt text (WCAG 1.1.1)</dt><dd>' + (it.altText ? ('&ldquo;' + esc(it.altText) + '&rdquo;') : '<span style="color:#b45309; font-style:italic;">None specified &mdash; required for screen readers</span>') + '</dd>' : '') +
+				(it.ocrText ? '<dt>OCR Detected Text</dt><dd class="mono" style="font-size:11.5px; background:#f5f3ff; color:#5b21b6; padding:4px 8px; border-radius:6px; border:1px solid #ddd6fe;">' + esc(it.ocrText) + '</dd>' : '') +
 				(it.width && it.height ? '<dt>Dimensions</dt><dd>' + esc(it.width + ' \u00d7 ' + it.height + ' px') + '</dd>' : '') +
 				(it.caption ? '<dt>Caption</dt><dd>' + esc(it.caption) + '</dd>' : '') +
 				(it.credit ? '<dt>Attribution / Credit</dt><dd>' + esc(it.credit) + '</dd>' : '') +
@@ -876,6 +937,12 @@
 		el.details.addEventListener('error', function (e) {
 			var t = e.target;
 			if (t && t.tagName === 'IMG') {
+				var localSrc = t.getAttribute('data-local-src');
+				if (localSrc && t.getAttribute('src') !== localSrc) {
+					t.setAttribute('src', localSrc);
+					t.removeAttribute('data-local-src');
+					return;
+				}
 				var wrap = document.createElement('span');
 				wrap.innerHTML = svg('image', 't-image');
 				t.replaceWith(wrap.firstChild);
@@ -936,7 +1003,7 @@
 		var isSharedPhoto = fp.toLowerCase().indexOf('shared images/') >= 0;
 		if (isSharedPhoto) {
 			var relShared = fp.substring(fp.toLowerCase().indexOf('shared images/') + 14);
-			webUrl = '/images/picjumbo/' + relShared.split('/').map(encodeURIComponent).join('/');
+			webUrl = getAssetsBaseUrl() + '/shared%20images/' + relShared.split('/').map(encodeURIComponent).join('/');
 		}
 		var baseTitle = it.title || it.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || it.name;
 		var altText = it.altText || it.alt_text || baseTitle;
@@ -1119,6 +1186,9 @@
 				handleDelete(p);
 			} else if (act === 'edit-meta') {
 				if (it) openEditMetaModal(it);
+			} else if (act === 'crawl-folder') {
+				var crawlRel = b.getAttribute('data-path') || (it ? itemPath(it) : state.path);
+				openCrawlModal(diskPath(crawlRel, false));
 			}
 		});
 	}
@@ -1257,7 +1327,78 @@
 			el.uploadTargetUrl.value = '';
 			el.uploadTargetUrl.placeholder = webPath(p, true) + 'photo.jpg';
 		}
+		state.lastUploadOcr = null;
+		var ocrBadge = $('upload-ocr-status-badge');
+		if (ocrBadge) { ocrBadge.hidden = true; ocrBadge.innerHTML = ''; }
 		showUploadError('');
+	}
+
+	function ensureUploadOcrBadge() {
+		var badge = $('upload-ocr-status-badge');
+		if (!badge && el.uploadAlt && el.uploadAlt.parentNode) {
+			badge = document.createElement('div');
+			badge.id = 'upload-ocr-status-badge';
+			badge.hidden = true;
+			badge.style.cssText = 'margin-top:0.35rem; font-size:0.76rem; padding:0.35rem 0.65rem; border-radius:6px; display:flex; align-items:center; gap:0.4rem; line-height:1.35;';
+			el.uploadAlt.parentNode.insertBefore(badge, el.uploadAlt.nextSibling);
+		}
+		return badge;
+	}
+
+	async function runUploadOcrPrefill(file) {
+		if (!file) return;
+		var badge = ensureUploadOcrBadge();
+		if (badge) {
+			badge.hidden = false;
+			badge.style.background = '#f0f9ff';
+			badge.style.border = '1px solid #bae6fd';
+			badge.style.color = '#0369a1';
+			badge.innerHTML = '<span>Running OCR &amp; visual content detection to auto-fill Alt Text &amp; Title&hellip;</span>';
+		}
+		try {
+			var p = state.path || state.ws || '';
+			var segList = segs(p);
+			var ws = segList.length > 0 ? segList[0] : (state.ws || '');
+			var sub = segList.length > 1 ? segList.slice(1).join('/') : 'images';
+
+			var fd = new FormData();
+			fd.append('mediaFile', file);
+			fd.append('ws', ws);
+			fd.append('subfolder', sub);
+
+			var res = await fetch('/api/Files.cfc?method=analyzeUploadOcr&returnformat=json', {
+				method: 'POST',
+				headers: { 'X-Requested-With': 'FileExplorer' },
+				body: fd
+			});
+			var raw = await res.text();
+			var data = parseJSON(raw);
+			if (!data || data.ok !== true) {
+				if (badge) badge.hidden = true;
+				return;
+			}
+
+			state.lastUploadOcr = data;
+			if (el.uploadTitle && data.title) {
+				el.uploadTitle.value = data.title;
+			}
+			if (el.uploadAlt && data.altText) {
+				el.uploadAlt.value = data.altText;
+				el.uploadAlt.style.borderColor = '#16a34a';
+				el.uploadAlt.style.boxShadow = '0 0 0 3px rgba(22, 163, 74, 0.12)';
+			}
+			if (badge) {
+				badge.hidden = false;
+				badge.style.background = '#f0fdf4';
+				badge.style.border = '1px solid #bbf7d0';
+				badge.style.color = '#166534';
+				var ocrSnippet = data.ocrText ? (' &bull; OCR Text: <strong class="mono">&ldquo;' + esc(data.ocrText) + '&rdquo;</strong>') : '';
+				var toneSnippet = data.visualTone ? (' &bull; ' + esc((data.width && data.height ? data.width + '\u00d7' + data.height + ' ' : '') + data.visualTone)) : '';
+				badge.innerHTML = '<span><strong>Auto-filled via OCR &amp; Content Detection</strong>' + ocrSnippet + toneSnippet + '</span>';
+			}
+		} catch (err) {
+			if (badge) badge.hidden = true;
+		}
 	}
 
 	function handleFileSelected(file) {
@@ -1266,8 +1407,8 @@
 			return;
 		}
 
-		if (el.uploadTitle && !el.uploadTitle.value) {
-			var clean = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
+		var clean = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
+		if (el.uploadTitle) {
 			el.uploadTitle.value = clean.charAt(0).toUpperCase() + clean.slice(1);
 		}
 
@@ -1276,17 +1417,23 @@
 		var reqBadge = $('upload-alt-required-badge');
 
 		if (el.uploadAlt) {
+			el.uploadAlt.value = '';
 			if (isImg) {
 				el.uploadAlt.required = true;
 				if (reqBadge) reqBadge.style.display = 'inline';
-				if (!el.uploadAlt.value) {
-					el.uploadAlt.placeholder = 'Required: Describe "' + file.name + '" for screen readers (WCAG 1.1.1)...';
-				}
+				el.uploadAlt.placeholder = 'Analyzing "' + file.name + '" via OCR & visual content detection...';
 			} else {
 				el.uploadAlt.required = false;
 				if (reqBadge) reqBadge.style.display = 'none';
 				el.uploadAlt.placeholder = 'Optional description (not an image)...';
 			}
+		}
+
+		if (isImg) {
+			runUploadOcrPrefill(file);
+		} else {
+			var badge = $('upload-ocr-status-badge');
+			if (badge) badge.hidden = true;
 		}
 
 		if (el.selectedName) el.selectedName.textContent = file.name;
@@ -1501,6 +1648,12 @@
 			fd.append('path', p);
 			if (el.uploadTitle && el.uploadTitle.value.trim()) fd.append('title', el.uploadTitle.value.trim());
 			if (altVal) fd.append('altText', altVal);
+			if (state.lastUploadOcr) {
+				if (state.lastUploadOcr.ocrText) fd.append('ocrText', state.lastUploadOcr.ocrText);
+				if (state.lastUploadOcr.caption) fd.append('caption', state.lastUploadOcr.caption);
+				if (state.lastUploadOcr.credit) fd.append('credit', state.lastUploadOcr.credit);
+				if (state.lastUploadOcr.tags) fd.append('tags', state.lastUploadOcr.tags);
+			}
 			fd.append('format', 'json');
 
 			if (el.btnDoUpload) el.btnDoUpload.disabled = true;
@@ -1666,7 +1819,9 @@
 			var newWs = e.detail.storageFolder || e.detail.virtualDir || e.detail.id;
 			state.ws = newWs;
 			state.wsName = e.detail.name || friendly(newWs);
-			if (el.webRoot) el.webRoot.textContent = 'https://assets.chelancounty.gov/' + state.ws + '/';
+			if (e.detail.assetsDomain) state.assetsDomain = e.detail.assetsDomain;
+			if (e.detail.assetsProtocol) state.assetsProtocol = e.detail.assetsProtocol;
+			if (el.webRoot) el.webRoot.textContent = getAssetsBaseUrl() + '/' + state.ws + '/';
 			navigate(newWs);
 		}
 	});
@@ -1689,7 +1844,7 @@
 
 		if (el.editMetaThumb) {
 			if (isImg) {
-				el.editMetaThumb.innerHTML = '<img src="' + esc(webHref(fp)) + '" alt="" style="width:100%; height:100%; object-fit:cover;">';
+				el.editMetaThumb.innerHTML = '<img src="' + esc(webHref(fp)) + '" data-local-src="' + esc(localHref(fp)) + '" onerror="if(this.dataset.localSrc && this.src !== this.dataset.localSrc){var l=this.dataset.localSrc;delete this.dataset.localSrc;this.src=l;}" alt="" style="width:100%; height:100%; object-fit:cover;">';
 			} else {
 				el.editMetaThumb.innerHTML = svg('file', 't-file');
 			}
@@ -1860,6 +2015,170 @@
 	}
 
 	// ------------------------------------------------------------------
+	// OCR Content Detection & Folder Auto-Compliance Crawler Modal
+	// ------------------------------------------------------------------
+	var crawlModal = $('mediaCrawlModal');
+	var btnOpenCrawlModal = $('btnOpenCrawlModal');
+	var btnCloseCrawlModal = $('btn-close-crawl-modal');
+	var btnCancelCrawlModal = $('btn-cancel-crawl-modal');
+	var crawlForm = $('mediaCrawlForm');
+	var crawlPathInput = $('crawl-folder-path');
+	var crawlOptRecursive = $('crawl-opt-recursive');
+	var crawlOptThumbs = $('crawl-opt-thumbs');
+	var crawlOptOverwrite = $('crawl-opt-overwrite');
+	var crawlError = $('crawl-error');
+	var crawlResultsContainer = $('crawl-results-container');
+	var crawlStatScanned = $('crawl-stat-scanned');
+	var crawlStatImages = $('crawl-stat-images');
+	var crawlStatOcr = $('crawl-stat-ocr');
+	var crawlStatCompliant = $('crawl-stat-compliant');
+	var crawlSummaryLine = $('crawl-summary-line');
+	var crawlResultsTbody = $('crawl-results-tbody');
+	var crawlStatusText = $('crawl-status-text');
+	var btnRunCrawl = $('btn-run-crawl');
+	var btnRunCrawlLabel = $('btn-run-crawl-label');
+
+	function openCrawlModal(initialPath) {
+		if (!crawlModal) return;
+		var defaultPath = initialPath || diskPath(state.path || state.ws || '', false);
+		if (crawlPathInput) crawlPathInput.value = defaultPath;
+		if (crawlError) { crawlError.hidden = true; crawlError.textContent = ''; }
+		if (crawlStatusText) crawlStatusText.textContent = 'Ready to crawl folder.';
+		crawlModal.hidden = false;
+		crawlModal.style.display = 'flex';
+		if (crawlPathInput) crawlPathInput.focus();
+	}
+
+	function closeCrawlModal() {
+		if (!crawlModal) return;
+		crawlModal.hidden = true;
+		crawlModal.style.display = 'none';
+	}
+
+	if (btnOpenCrawlModal) {
+		btnOpenCrawlModal.addEventListener('click', function () {
+			var it = selectedItem();
+			var targetRel = (it && it.type === 'dir') ? itemPath(it) : (state.path || state.ws || '');
+			openCrawlModal(diskPath(targetRel, false));
+		});
+	}
+	if (btnCloseCrawlModal) btnCloseCrawlModal.addEventListener('click', closeCrawlModal);
+	if (btnCancelCrawlModal) btnCancelCrawlModal.addEventListener('click', closeCrawlModal);
+	if (crawlModal) {
+		crawlModal.addEventListener('click', function (e) {
+			if (e.target === crawlModal) closeCrawlModal();
+		});
+		crawlModal.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') closeCrawlModal();
+		});
+	}
+
+	var btnPresetCurrent = $('btn-crawl-preset-current');
+	var btnPresetWs = $('btn-crawl-preset-ws');
+	var btnPresetAll = $('btn-crawl-preset-all');
+	if (btnPresetCurrent) {
+		btnPresetCurrent.addEventListener('click', function () {
+			if (crawlPathInput) crawlPathInput.value = diskPath(state.path || state.ws || '', false);
+		});
+	}
+	if (btnPresetWs) {
+		btnPresetWs.addEventListener('click', function () {
+			if (crawlPathInput) crawlPathInput.value = diskPath(state.ws || '', false);
+		});
+	}
+	if (btnPresetAll) {
+		btnPresetAll.addEventListener('click', function () {
+			if (crawlPathInput) crawlPathInput.value = 'C:\\inetpub\\chelan-county\\files';
+		});
+	}
+
+	if (crawlForm) {
+		crawlForm.addEventListener('submit', async function (e) {
+			e.preventDefault();
+			var targetPath = crawlPathInput ? crawlPathInput.value.trim() : '';
+			if (!targetPath) {
+				if (crawlError) { crawlError.hidden = false; crawlError.textContent = 'Please enter a folder path to crawl.'; }
+				return;
+			}
+			if (crawlError) { crawlError.hidden = true; crawlError.textContent = ''; }
+			if (btnRunCrawl) btnRunCrawl.disabled = true;
+			if (btnRunCrawlLabel) btnRunCrawlLabel.textContent = 'Running OCR & Visual Analysis...';
+			if (crawlStatusText) crawlStatusText.textContent = 'Scanning images, extracting OCR text, and updating database...';
+
+			try {
+				var fd = new URLSearchParams();
+				fd.set('path', targetPath);
+				fd.set('ws', state.ws || '');
+				fd.set('recursive', (crawlOptRecursive && crawlOptRecursive.checked) ? 'true' : 'false');
+				fd.set('generateThumbs', (crawlOptThumbs && crawlOptThumbs.checked) ? 'true' : 'false');
+				fd.set('overwriteAlt', (crawlOptOverwrite && crawlOptOverwrite.checked) ? 'true' : 'false');
+
+				var res = await fetch('/api/Files.cfc?method=crawlFolder&returnformat=json', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+						'X-Requested-With': 'FileExplorer'
+					},
+					body: fd.toString()
+				});
+				var rawText = await res.text();
+				var data = parseJSON(rawText);
+
+				if (btnRunCrawl) btnRunCrawl.disabled = false;
+				if (btnRunCrawlLabel) btnRunCrawlLabel.textContent = 'Start OCR Crawl & Make Compliant';
+
+				if (!data || data.ok !== true) {
+					var msg = (data && data.error) ? data.error : 'Failed to crawl folder.';
+					if (crawlError) { crawlError.hidden = false; crawlError.textContent = msg; }
+					if (crawlStatusText) crawlStatusText.textContent = 'Crawl failed.';
+					return;
+				}
+
+				if (crawlResultsContainer) crawlResultsContainer.hidden = false;
+				if (crawlStatScanned) crawlStatScanned.textContent = String(data.filesScanned || 0);
+				if (crawlStatImages) crawlStatImages.textContent = String(data.imagesProcessed || 0);
+				if (crawlStatOcr) crawlStatOcr.textContent = String(data.ocrDetectedCount || 0);
+				if (crawlStatCompliant) crawlStatCompliant.textContent = String(data.imagesProcessed || 0);
+				if (crawlSummaryLine) {
+					crawlSummaryLine.textContent = 'Target: ' + (data.targetDiskPath || targetPath) +
+						' \u00b7 Inserted: ' + (data.inserted || 0) +
+						' \u00b7 Updated: ' + (data.updated || 0) +
+						' \u00b7 Newly Compliant: ' + (data.madeCompliant || 0) +
+						' \u00b7 Time: ' + (data.durationMs || 0) + ' ms';
+				}
+				if (crawlStatusText) {
+					crawlStatusText.textContent = 'Completed! ' + (data.imagesProcessed || 0) + ' images verified WCAG 1.1.1 compliant.';
+				}
+
+				if (crawlResultsTbody) {
+					var rows = (data.items || []).filter(function (x) { return x.isImage; }).map(function (item) {
+						var ocrBadge = item.ocrText
+							? '<div style="font-family:monospace; font-size:0.74rem; background:#f5f3ff; color:#5b21b6; padding:2px 6px; border-radius:4px; border:1px solid #ddd6fe; margin-bottom:2px;">OCR: &ldquo;' + esc(item.ocrText) + '&rdquo;</div>'
+							: '';
+						var toneBadge = item.visualTone
+							? '<span style="font-size:0.72rem; color:#64748b;">' + esc((item.width && item.height ? item.width + '\u00d7' + item.height + ' \u00b7 ' : '') + item.visualTone) + '</span>'
+							: '';
+						return '<tr style="border-bottom:1px solid #e2e8f0;">' +
+							'<td style="padding:0.45rem 0.65rem; font-weight:600; color:#0f172a; word-break:break-all;">' + esc(item.filename) + '<div class="mono" style="font-size:0.7rem; color:#64748b; font-weight:400;">' + esc(item.siteId + '/' + item.folder) + '</div></td>' +
+							'<td style="padding:0.45rem 0.65rem;">' + ocrBadge + toneBadge + '</td>' +
+							'<td style="padding:0.45rem 0.65rem; color:#166534; font-weight:500;">' + esc(item.altText || '') + '</td>' +
+							'</tr>';
+					}).join('');
+					crawlResultsTbody.innerHTML = rows || '<tr><td colspan="3" style="padding:0.75rem; text-align:center; color:#64748b;">No image files found in target folder.</td></tr>';
+				}
+
+				toast('OCR Crawl complete: ' + (data.imagesProcessed || 0) + ' images WCAG compliant.');
+				await load(state.path, state.selected);
+			} catch (err) {
+				if (btnRunCrawl) btnRunCrawl.disabled = false;
+				if (btnRunCrawlLabel) btnRunCrawlLabel.textContent = 'Start OCR Crawl & Make Compliant';
+				if (crawlError) { crawlError.hidden = false; crawlError.textContent = 'Network error: ' + (err.message || 'could not complete crawl'); }
+				if (crawlStatusText) crawlStatusText.textContent = 'Error during crawl.';
+			}
+		});
+	}
+
+	// ------------------------------------------------------------------
 	// Boot
 	// ------------------------------------------------------------------
 	function boot() {
@@ -1868,6 +2187,8 @@
 		if (container) {
 			state.ws = container.getAttribute('data-ws') || container.getAttribute('data-ws-virtual-dir') || '';
 			state.wsName = container.getAttribute('data-ws-name') || '';
+			state.assetsProtocol = container.getAttribute('data-ws-assets-protocol') || 'http';
+			state.assetsDomain = container.getAttribute('data-ws-assets-domain') || '';
 			state.initialFolder = container.getAttribute('data-initial-folder') || '';
 			state.pickerMode = container.getAttribute('data-picker-mode') || '';
 			state.pickerCallback = container.getAttribute('data-picker-callback') || '';

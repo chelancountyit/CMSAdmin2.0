@@ -93,6 +93,9 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 					local.item["type"] = "file";
 					local.item["size"] = val(local.q.size[local.i]);
 					local.item["ext"]  = (find(".", local.name) ? lCase(listLast(local.name, ".")) : "");
+					if (listFindNoCase("jpg,jpeg,png,gif,bmp", local.item["ext"]) > 0) {
+						local.item["hasThumb"] = ensureImageThumbnail(local.target.abs, local.name);
+					}
 					if (local.isSharedImages) {
 						local.item["isReadOnly"] = true;
 					}
@@ -103,24 +106,35 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			// Enrich files with persistent metadata from dbo.media_assets
 			try {
 				local.wsTarget = local.target.depth >= 1 ? local.target.segments[1] : local.cleanWs;
-				local.folderTarget = local.target.depth >= 2 ? local.target.segments[2] : "";
+				local.folderSegs = [];
+				if (local.target.depth >= 2) {
+					for (local.sIdx = 2; local.sIdx <= local.target.depth; local.sIdx++) {
+						arrayAppend(local.folderSegs, local.target.segments[local.sIdx]);
+					}
+				}
+				local.folderTarget = arrayLen(local.folderSegs) > 0 ? arrayToList(local.folderSegs, "/") : "";
+				local.topFolderTarget = local.target.depth >= 2 ? local.target.segments[2] : "";
 				if (len(local.wsTarget) && arrayLen(local.files) > 0) {
 					local.qMeta = queryExecute("
 						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-						SELECT id, filename, title, alt_text, caption, credit, file_hash, is_wcag_compliant, tags, width, height
+						SELECT id, filename, folder, title, alt_text, caption, credit, ocr_text, file_hash, is_wcag_compliant, tags, width, height
 						FROM dbo.media_assets
 						WHERE deletedat IS NULL
 						  AND (site_id = :site_id OR (:ws_code <> '' AND site_id = :ws_code))
-						  AND (:folder = '' OR folder = :folder)
+						  AND (:folder = '' OR folder = :folder OR folder = :top_folder)
 					", {
 						site_id: { value: local.wsTarget, cfsqltype: "cf_sql_nvarchar" },
 						ws_code: { value: local.wsInfo.code ?: "", cfsqltype: "cf_sql_nvarchar" },
-						folder: { value: local.folderTarget, cfsqltype: "cf_sql_nvarchar" }
+						folder: { value: local.folderTarget, cfsqltype: "cf_sql_nvarchar" },
+						top_folder: { value: local.topFolderTarget, cfsqltype: "cf_sql_nvarchar" }
 					}, { datasource: "ChelanCountyWebsite" });
 
 					local.metaMap = {};
 					for (local.mRow in local.qMeta) {
-						local.metaMap[lCase(local.mRow.filename)] = local.mRow;
+						local.mKey = lCase(local.mRow.filename);
+						if (!structKeyExists(local.metaMap, local.mKey) || compareNoCase(local.mRow.folder, local.folderTarget) == 0) {
+							local.metaMap[local.mKey] = local.mRow;
+						}
 					}
 
 					for (local.fItem in local.files) {
@@ -132,6 +146,7 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 							local.fItem["altText"] = local.m.alt_text ?: "";
 							local.fItem["caption"] = local.m.caption ?: "";
 							local.fItem["credit"] = local.m.credit ?: "";
+							local.fItem["ocrText"] = local.m.ocr_text ?: "";
 							local.fItem["hash"] = local.m.file_hash ?: "";
 							local.fItem["isWcagCompliant"] = (isBoolean(local.m.is_wcag_compliant) && local.m.is_wcag_compliant);
 							local.fItem["tags"] = local.m.tags ?: "";
@@ -219,23 +234,25 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			}
 
 			return {
-				"ok"         : true,
-				"path"       : javaCast("string", local.target.rel),
-				"depth"      : local.target.depth,
-				"canCreate"  : (local.target.depth >= local.cfg.systemDepth && !local.isSharedImages),
-				"canDelete"  : (local.target.depth > local.cfg.systemDepth && !local.isSharedImages),
-				"isReadOnly" : local.isSharedImages,
-				"diskPath"    : diskPathOf(local.target.segments, true),
-				"assetsPath"  : assetsPathOf(local.target.segments, true),
-				"storagePath" : javaCast("string", len(local.wsInfo.storagePath) ? local.wsInfo.storagePath : diskPathOf(local.target.segments, false)),
-				"webPath"     : webPathOf(local.target.rel, true),
-				"webBase"     : local.cfg.webBase,
-				"filesRoot"   : local.cfg.filesRoot,
-				"ws"          : javaCast("string", local.cleanWs),
-				"branches"   : local.branches,
-				"tree"       : local.tree,
-				"sharedTree" : local.sharedTree,
-				"items"      : local.items
+				"ok"           : true,
+				"path"         : javaCast("string", local.target.rel),
+				"depth"        : local.target.depth,
+				"canCreate"    : (local.target.depth >= local.cfg.systemDepth && !local.isSharedImages),
+				"canDelete"    : (local.target.depth > local.cfg.systemDepth && !local.isSharedImages),
+				"isReadOnly"   : local.isSharedImages,
+				"diskPath"     : diskPathOf(local.target.segments, true),
+				"assetsProtocol": javaCast("string", local.wsInfo.assetsProtocol),
+				"assetsDomain" : javaCast("string", local.wsInfo.assetsDomain),
+				"assetsPath"   : assetsPathOf(local.target.segments, true, local.wsInfo.assetsDomain),
+				"storagePath"  : javaCast("string", len(local.wsInfo.storagePath) ? local.wsInfo.storagePath : diskPathOf(local.target.segments, false)),
+				"webPath"      : webPathOf(local.target.rel, true, local.wsInfo.assetsDomain, local.wsInfo.assetsProtocol),
+				"webBase"      : local.cfg.webBase,
+				"filesRoot"    : local.cfg.filesRoot,
+				"ws"           : javaCast("string", local.cleanWs),
+				"branches"     : local.branches,
+				"tree"         : local.tree,
+				"sharedTree"   : local.sharedTree,
+				"items"        : local.items
 			};
 		} catch (any e) {
 			return handleError(e);
@@ -331,7 +348,14 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			if (!directoryExists(local.target.abs)) {
 				return fail("That folder does not exist.");
 			}
-			// Empty means truly empty, including hidden entries.
+			// Check for visible items; clean up internal .thumbs cache if folder is otherwise empty
+			local.visCounts = countChildren(local.target.abs);
+			if (local.visCounts.dirs > 0 || local.visCounts.files > 0) {
+				return fail("Only empty folders can be deleted. Remove its contents first.");
+			}
+			if (directoryExists(local.target.abs & "\.thumbs")) {
+				try { directoryDelete(local.target.abs & "\.thumbs", true); } catch (any ignoreThumbDel) {}
+			}
 			if (arrayLen(directoryList(local.target.abs, false, "name"))) {
 				return fail("Only empty folders can be deleted. Remove its contents first.");
 			}
@@ -355,7 +379,7 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 	private string function normalizeIncomingPath(string rawPath = "") {
 		local.p = replace(trim(arguments.rawPath), "\", "/", "all");
 		local.p = reReplaceNoCase(local.p, "^https?://", "");
-		local.p = reReplaceNoCase(local.p, "^assets\.chelancounty\.gov/?", "");
+		local.p = reReplaceNoCase(local.p, "^assets\.chelancounty\.(com|gov)/?", "");
 		local.p = reReplaceNoCase(local.p, "^[a-z]:/inetpub/chelan-county/files/?", "");
 		local.p = reReplaceNoCase(local.p, "^[a-z]:/inetpub/cmsadmin2\.0/files/?", "");
 		local.p = reReplaceNoCase(local.p, "^/inetpub/chelan-county/files/?", "");
@@ -370,7 +394,9 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 		local.res = {
 			"code"          : local.raw,
 			"storageFolder" : normalizeIncomingPath(local.raw),
-			"storagePath"   : ""
+			"storagePath"   : "",
+			"assetsProtocol": "http",
+			"assetsDomain"  : ""
 		};
 		if (!len(local.raw) || lCase(local.raw) == "global" || lCase(local.raw) == "all") {
 			local.res.storageFolder = "";
@@ -379,7 +405,7 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 		try {
 			local.qWs = queryExecute("
 				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-				SELECT TOP 1 code, alias, virtual_directory, folder_path, storage_path
+				SELECT TOP 1 code, alias, virtual_directory, folder_path, storage_path, assets_domain
 				FROM dbo.cms_workspaces
 				WHERE deletedat IS NULL
 				  AND (
@@ -400,6 +426,15 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				local.folder = normalizeIncomingPath(local.rawStorage);
 				if (len(local.folder)) {
 					local.res.storageFolder = local.folder;
+				}
+				local.rawAssetsDomain = len(trim(local.qWs.assets_domain ?: "")) ? trim(local.qWs.assets_domain) : "";
+				local.res.assetsProtocol = reFindNoCase("^https://", local.rawAssetsDomain) ? "https" : "http";
+				local.rawAssetsDomain = reReplace(reReplaceNoCase(local.rawAssetsDomain, "^https?://", ""), "/+$", "");
+				local.res.assetsDomain = local.rawAssetsDomain;
+				local.rawAssetsDomain = reReplaceNoCase(local.rawAssetsDomain, "^https?://", "");
+				local.rawAssetsDomain = reReplace(local.rawAssetsDomain, "/+$", "");
+				if (len(local.rawAssetsDomain) && lCase(local.rawAssetsDomain) neq "assets.chelancounty.gov") {
+					local.res.assetsDomain = local.rawAssetsDomain;
 				}
 			}
 		} catch (any ignore) {}
@@ -585,9 +620,12 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 		return local.p;
 	}
 
-	private string function assetsPathOf(required array segments, boolean trailing = true) {
+	private string function assetsPathOf(required array segments, boolean trailing = true, string assetsDomain = "") {
+		local.dom = trim(arguments.assetsDomain);
+		local.prefix = len(local.dom) ? (local.dom & "\") : "\";
+
 		if (arrayLen(arguments.segments) > 0 && lcase(arguments.segments[1]) == "shared images") {
-			local.p = "assets.chelancounty.gov\shared images";
+			local.p = local.prefix & "shared images";
 			if (arrayLen(arguments.segments) > 1) {
 				local.subSegs = [];
 				for (local.i = 2; local.i <= arrayLen(arguments.segments); local.i++) {
@@ -598,21 +636,25 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			if (arguments.trailing && right(local.p, 1) != "\") local.p &= "\";
 			return local.p;
 		}
-		local.p = "assets.chelancounty.gov\" & arrayToList(arguments.segments, "\");
+		local.p = local.prefix & arrayToList(arguments.segments, "\");
 		if (arguments.trailing && right(local.p, 1) != "\") local.p &= "\";
 		return local.p;
 	}
 
-	private string function webPathOf(required string rel, boolean trailing = true) {
+	private string function webPathOf(required string rel, boolean trailing = true, string assetsDomain = "", string assetsProtocol = "http") {
+		local.proto = (lcase(trim(arguments.assetsProtocol)) == "https" || reFindNoCase("^https://", arguments.assetsDomain)) ? "https" : "http";
+		local.dom = reReplace(reReplaceNoCase(trim(arguments.assetsDomain), "^https?://", ""), "/+$", "");
+		local.prefix = len(local.dom) ? (local.proto & "://" & local.dom) : "";
+
 		local.low = lcase(trim(arguments.rel));
 		if (local.low == "shared images" || left(local.low, 14) == "shared images/") {
 			local.remainder = trim(mid(arguments.rel, 14, len(arguments.rel)));
 			if (left(local.remainder, 1) == "/") local.remainder = mid(local.remainder, 2, len(local.remainder));
-			local.p = "https://assets.chelancounty.gov/shared images/" & local.remainder;
+			local.p = local.prefix & "/shared images/" & local.remainder;
 			if (arguments.trailing && right(local.p, 1) != "/") local.p &= "/";
 			return local.p;
 		}
-		local.p = "https://assets.chelancounty.gov/" & arguments.rel;
+		local.p = local.prefix & "/" & arguments.rel;
 		if (arguments.trailing && right(local.p, 1) != "/") local.p &= "/";
 		return local.p;
 	}
@@ -756,6 +798,177 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 		}
 	}
 
+	/**
+	 * Recursively crawls a target folder, runs Windows OCR & Visual Content Detection on images,
+	 * generates WCAG 2.1 AA (1.1.1) compliant alt_text, creates .thumbs previews, and upserts to dbo.media_assets.
+	 */
+	remote struct function crawlFolder(
+		string path = "",
+		string ws = "",
+		string recursive = "true",
+		string overwriteAlt = "false",
+		string generateThumbs = "true"
+	) returnformat="json" {
+		noCache();
+		try {
+			local.reqPath = trim(arguments.path);
+			if (!len(local.reqPath) && len(trim(arguments.ws))) {
+				local.reqPath = trim(arguments.ws);
+			}
+			if (!len(local.reqPath)) {
+				local.reqPath = "C:\inetpub\chelan-county\files";
+			}
+
+			if (findNoCase("shared images", local.reqPath) > 0) {
+				return fail("Shared stock images library is read-only.");
+			}
+
+			local.scriptPath = "C:\inetpub\CMSAdmin2.0\scripts\crawl-folder-ocr.ps1";
+			if (!fileExists(local.scriptPath)) {
+				return fail("OCR Crawler script not found at " & local.scriptPath);
+			}
+
+			local.cmdArgs = [
+				"powershell.exe",
+				"-NoProfile",
+				"-ExecutionPolicy", "Bypass",
+				"-File", local.scriptPath,
+				"-FolderPath", local.reqPath
+			];
+			if (len(trim(arguments.ws))) {
+				arrayAppend(local.cmdArgs, "-Workspace");
+				arrayAppend(local.cmdArgs, trim(arguments.ws));
+			}
+			if (arguments.recursive eq "false" || arguments.recursive eq "0") {
+				arrayAppend(local.cmdArgs, "-Recursive:$false");
+			}
+			if (arguments.overwriteAlt eq "true" || arguments.overwriteAlt eq "1") {
+				arrayAppend(local.cmdArgs, "-OverwriteExistingAlt");
+			}
+			if (arguments.generateThumbs eq "false" || arguments.generateThumbs eq "0") {
+				arrayAppend(local.cmdArgs, "-GenerateThumbs:$false");
+			}
+
+			local.pb = createObject("java", "java.lang.ProcessBuilder").init(local.cmdArgs);
+			local.pb.redirectErrorStream(true);
+			local.proc = local.pb.start();
+
+			local.isr = createObject("java", "java.io.InputStreamReader").init(local.proc.getInputStream(), "UTF-8");
+			local.br = createObject("java", "java.io.BufferedReader").init(local.isr);
+			local.sb = createObject("java", "java.lang.StringBuilder").init();
+			local.line = local.br.readLine();
+			while (!isNull(local.line)) {
+				local.sb.append(local.line).append(chr(10));
+				local.line = local.br.readLine();
+			}
+			local.br.close();
+			local.proc.waitFor();
+
+			local.rawOut = trim(local.sb.toString());
+			// Find the JSON object in the output
+			local.jsonStart = find("{", local.rawOut);
+			if (local.jsonStart > 0) {
+				local.jsonStr = mid(local.rawOut, local.jsonStart, len(local.rawOut) - local.jsonStart + 1);
+				if (isJSON(local.jsonStr)) {
+					return deserializeJSON(local.jsonStr);
+				}
+			}
+			return fail("OCR Crawler returned unexpected output: " & left(local.rawOut, 300));
+		} catch (any e) {
+			return handleError(e);
+		}
+	}
+
+	/**
+	 * Pre-flight OCR & Visual Content Analyzer for a file selected in the Upload dropzone.
+	 * Runs Windows WinRT OCR + pixel palette analysis on the temporary uploaded file and returns
+	 * suggested Display Title, WCAG 1.1.1 Alt Text, OCR Text, Caption, Credit, and Tags.
+	 */
+	remote struct function analyzeUploadOcr(
+		any mediaFile = "",
+		string ws = "",
+		string subfolder = "images"
+	) returnformat="json" {
+		noCache();
+		local.tempDir = getTempDirectory() & "ocr_upload_" & lCase(replace(createUUID(), "-", "", "all"));
+		try {
+			if (!structKeyExists(form, "mediaFile") || !len(trim(form.mediaFile))) {
+				return fail("No file provided for OCR analysis.");
+			}
+
+			directoryCreate(local.tempDir);
+			local.uploaded = fileUpload(local.tempDir, "mediaFile", "*/*", "overwrite");
+			local.tempFilePath = local.tempDir & "\" & local.uploaded.serverFile;
+
+			local.wsCode = len(trim(arguments.ws)) ? trim(arguments.ws) : "shared";
+			local.subFolderClean = len(trim(arguments.subfolder)) ? trim(arguments.subfolder) : "images";
+			local.scriptPath = "C:\inetpub\CMSAdmin2.0\scripts\crawl-folder-ocr.ps1";
+
+			local.cmdArgs = [
+				"powershell.exe",
+				"-NoProfile",
+				"-ExecutionPolicy", "Bypass",
+				"-File", local.scriptPath,
+				"-FolderPath", local.tempFilePath,
+				"-Workspace", local.wsCode,
+				"-SubFolder", local.subFolderClean,
+				"-JsonOnly"
+			];
+
+			local.pb = createObject("java", "java.lang.ProcessBuilder").init(local.cmdArgs);
+			local.pb.redirectErrorStream(true);
+			local.proc = local.pb.start();
+
+			local.isr = createObject("java", "java.io.InputStreamReader").init(local.proc.getInputStream(), "UTF-8");
+			local.br = createObject("java", "java.io.BufferedReader").init(local.isr);
+			local.sb = createObject("java", "java.lang.StringBuilder").init();
+			local.line = local.br.readLine();
+			while (!isNull(local.line)) {
+				local.sb.append(local.line).append(chr(10));
+				local.line = local.br.readLine();
+			}
+			local.br.close();
+			local.proc.waitFor();
+
+			local.rawOut = trim(local.sb.toString());
+			local.jsonStart = find("{", local.rawOut);
+			if (local.jsonStart > 0) {
+				local.jsonStr = mid(local.rawOut, local.jsonStart, len(local.rawOut) - local.jsonStart + 1);
+				if (isJSON(local.jsonStr)) {
+					local.parsed = deserializeJSON(local.jsonStr);
+					if (structKeyExists(local.parsed, "items") && isArray(local.parsed.items) && arrayLen(local.parsed.items) > 0) {
+						local.it = local.parsed.items[1];
+						return {
+							"ok": true,
+							"success": true,
+							"filename": local.it.filename ?: local.uploaded.serverFile,
+							"title": local.it.title ?: "",
+							"altText": local.it.altText ?: "",
+							"ocrText": local.it.ocrText ?: "",
+							"caption": local.it.caption ?: "",
+							"credit": local.it.credit ?: "",
+							"tags": local.it.tags ?: "",
+							"visualTone": local.it.visualTone ?: "",
+							"orientation": local.it.orientation ?: "",
+							"width": val(local.it.width ?: 0),
+							"height": val(local.it.height ?: 0),
+							"durationMs": val(local.parsed.durationMs ?: 0)
+						};
+					}
+				}
+			}
+			return fail("Could not analyze file via OCR.");
+		} catch (any e) {
+			return handleError(e);
+		} finally {
+			try {
+				if (directoryExists(local.tempDir)) {
+					directoryDelete(local.tempDir, true);
+				}
+			} catch (any ignoreClean) {}
+		}
+	}
+
 	private struct function handleError(required any e) {
 		if (structKeyExists(arguments.e, "type") && arguments.e.type == "FX.User") {
 			return fail(arguments.e.message);
@@ -777,6 +990,23 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 		local.juncPath &= "shared images";
 
 		try {
+			local.iisAssetsRoot = "C:\inetpub\chelan-county\assets.chelancounty.gov";
+			if (directoryExists(local.iisAssetsRoot) && directoryExists("C:\inetpub\chelan-county\files")) {
+				local.qDirs = directoryList("C:\inetpub\chelan-county\files", false, "query");
+				for (local.dRow in local.qDirs) {
+					if (compareNoCase(local.dRow.type, "dir") == 0 && left(local.dRow.name, 1) != ".") {
+						local.wsJunc = local.iisAssetsRoot & "\" & local.dRow.name;
+						local.wsTarget = "C:\inetpub\chelan-county\files\" & local.dRow.name;
+						if (!directoryExists(local.wsJunc)) {
+							local.pbWs = createObject("java", "java.lang.ProcessBuilder").init([
+								"cmd.exe", "/c", "mklink", "/J", local.wsJunc, local.wsTarget
+							]);
+							local.pWs = local.pbWs.start();
+							local.pWs.waitFor();
+						}
+					}
+				}
+			}
 			if (!directoryExists(local.targetPath)) {
 				directoryCreate(local.targetPath);
 			}
@@ -788,6 +1018,32 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				local.p.waitFor();
 			}
 		} catch (any ignore) {}
+	}
+
+	/**
+	 * Ensures a 360x360 max-dimension thumbnail exists at <dirAbs>\.thumbs\<fileName>
+	 */
+	private boolean function ensureImageThumbnail(required string dirAbs, required string fileName) {
+		try {
+			local.srcPath = arguments.dirAbs & "\" & arguments.fileName;
+			local.thumbDir = arguments.dirAbs & "\.thumbs";
+			local.thumbPath = local.thumbDir & "\" & arguments.fileName;
+			if (fileExists(local.thumbPath)) return true;
+			if (!fileExists(local.srcPath)) return false;
+
+			if (!directoryExists(local.thumbDir)) {
+				directoryCreate(local.thumbDir);
+			}
+			local.cfImg = imageRead(local.srcPath);
+			local.info = imageInfo(local.cfImg);
+			if (val(local.info.width) > 360 || val(local.info.height) > 360) {
+				imageScaleToFit(local.cfImg, 360, 360, "bilinear");
+			}
+			imageWrite(local.cfImg, local.thumbPath, 0.82, true);
+			return fileExists(local.thumbPath);
+		} catch (any ignoreThumbErr) {
+			return false;
+		}
 	}
 }
 

@@ -11,6 +11,24 @@
   // 1. DOM, SELECTION & SANITIZER UTILITIES
   // ==========================================
 
+  function toLocalAssetPreviewUrl(src) {
+    if (!src || typeof src !== 'string') return '';
+    const trimmed = src.trim();
+    let rel = '';
+    const match = trimmed.match(/^https?:\/\/[^\/]+\/(.+)$/i);
+    if (match) {
+      rel = match[1].replace(/^\/+/, '');
+    } else if (trimmed.startsWith('/') && !/^\/(files|images)\//i.test(trimmed)) {
+      rel = trimmed.replace(/^\/+/, '');
+    }
+    if (!rel) return '';
+    if (/^(files|images)\//i.test(rel)) return '/' + rel;
+    if (/^shared(?:%20|\s)+images\//i.test(rel)) {
+      return '/images/picjumbo/' + rel.replace(/^shared(?:%20|\s)+images\//i, '');
+    }
+    return '/files/' + rel;
+  }
+
   function escapeHTML(str) {
     if (str === null || str === undefined) return '';
     return String(str)
@@ -2137,6 +2155,17 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
         }
       };
       testImg.onerror = () => {
+        const fallbackSrc = !testImg.dataset.fallbackTried ? toLocalAssetPreviewUrl(src) : '';
+        if (fallbackSrc && fallbackSrc !== src) {
+          testImg.dataset.fallbackTried = '1';
+          if (previewImg) {
+            previewImg.setAttribute('data-canonical-src', src);
+            previewImg.src = fallbackSrc;
+            previewImg.style.display = 'block';
+          }
+          testImg.src = fallbackSrc;
+          return;
+        }
         if (naturalBadge) {
           naturalBadge.textContent = 'Preview unavailable';
           naturalBadge.style.display = 'inline-block';
@@ -5471,10 +5500,10 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
 
     let captionHtml = '';
     if (caption || credit) {
-      captionHtml = `\\n    <figcaption class="jbd-image-caption">${caption ? `<span>${escapeHTML(caption)}</span>` : ''}${credit ? `<span class="jbd-image-credit">Photo: ${escapeHTML(credit)}</span>` : ''}</figcaption>`;
+      captionHtml = `\n    <figcaption class="jbd-image-caption">${caption ? `<span>${escapeHTML(caption)}</span>` : ''}${credit ? `<span class="jbd-image-credit">Photo: ${escapeHTML(credit)}</span>` : ''}</figcaption>`;
     }
 
-    return `<figure class="${classes}" style="width: ${width || '100%'}; max-width: 100%;">${imgTag}${captionHtml}\\n</figure>`;
+    return `<figure class="${classes}" style="width: ${width || '100%'}; max-width: 100%;">${imgTag}${captionHtml}</figure>`;
   }
 
   openImageModal(existingImage = null) {
@@ -5522,7 +5551,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
       else if (targetForStyles.classList.contains('jbd-image-shadow-sm')) shadow = 'shadow-sm';
 
       currentData = {
-        src: existingImage.getAttribute('src') || '',
+        src: existingImage.getAttribute('data-canonical-src') || existingImage.getAttribute('src') || '',
         alt: existingImage.getAttribute('alt') || '',
         isDecorative: existingImage.getAttribute('alt') === '' || existingImage.getAttribute('role') === 'presentation',
         caption: captionText,
@@ -5560,7 +5589,7 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     insertAtCursor(this.contentArea, html, this.savedSelectionRange);
 
     const allImgs = Array.from(this.contentArea.querySelectorAll('img'));
-    const newImg = allImgs.find(img => img.getAttribute('src') === data.src) || allImgs[allImgs.length - 1];
+    const newImg = allImgs.find(img => (img.getAttribute('data-canonical-src') || img.getAttribute('src')) === data.src) || allImgs[allImgs.length - 1];
     if (newImg) {
       this.selectImage(newImg);
     }
@@ -5800,6 +5829,18 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
       }
     };
     this.contentArea.addEventListener('dragover', this._handleDragOver);
+    this._handleImageLoadError = (e) => {
+      const img = e.target;
+      if (!img || img.tagName !== 'IMG') return;
+      const rawSrc = img.getAttribute('src') || '';
+      if (!rawSrc) return;
+      const fallbackSrc = toLocalAssetPreviewUrl(rawSrc);
+      if (fallbackSrc && fallbackSrc !== rawSrc) {
+        img.setAttribute('data-canonical-src', rawSrc);
+        img.setAttribute('src', fallbackSrc);
+      }
+    };
+    this.contentArea.addEventListener('error', this._handleImageLoadError, true);
     this.contentArea.addEventListener('drop', this._handleDrop);
   }
 
@@ -6020,6 +6061,9 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
     }
     if (this._handleDragOver) {
       this.contentArea.removeEventListener('dragover', this._handleDragOver);
+    }
+    if (this._handleImageLoadError) {
+      this.contentArea.removeEventListener('error', this._handleImageLoadError, true);
     }
     if (this._handleDrop) {
       this.contentArea.removeEventListener('drop', this._handleDrop);
@@ -7168,6 +7212,18 @@ static openAnchorDialog({ currentName = '', currentText = '', onConfirm }) {
 
     getHTML() {
       let html = this.contentArea.innerHTML;
+      if (html.includes('data-canonical-src')) {
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        temp.querySelectorAll('img[data-canonical-src]').forEach(img => {
+          const canonical = img.getAttribute('data-canonical-src');
+          if (canonical) {
+            img.setAttribute('src', canonical);
+          }
+          img.removeAttribute('data-canonical-src');
+        });
+        html = temp.innerHTML;
+      }
       if (html.includes('jbd-image-active')) {
         html = html.replace(/\s*\bjbd-image-active\b/g, '');
       }

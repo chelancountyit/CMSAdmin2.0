@@ -478,6 +478,9 @@
 									</cfif>
 									<span>files/#EncodeForHTML(local.virtualDir)#</span>
 								</div>
+								<div style="font-size:0.71rem; color:var(--admin-primary); margin-top:0.2rem; font-family:monospace;">
+									#EncodeForHTML(Len(Trim(local.w.assets_domain ?: '')) ? ((local.w.assets_protocol ?: 'http') & '://' & Trim(local.w.assets_domain)) : '')#/#EncodeForHTML(local.virtualDir)#
+								</div>
 							</td>
 
 							<!--- 3. Department & Category --->
@@ -694,6 +697,10 @@
 											<div class="ws-detail-row">
 												<span class="ws-detail-label">Domain Name:</span>
 												<span class="ws-detail-val"><code>#EncodeForHTML(local.w.domain_name ?: 'www.chelancounty.gov')#</code></span>
+											</div>
+											<div class="ws-detail-row">
+												<span class="ws-detail-label">Assets Domain:</span>
+												<span class="ws-detail-val"><code style="color:var(--admin-primary); font-weight:600;">#EncodeForHTML(Len(Trim(local.w.assets_domain ?: '')) ? ((local.w.assets_protocol ?: 'http') & '://' & Trim(local.w.assets_domain)) : '/ (relative /[url])')#</code></span>
 											</div>
 											<div class="ws-detail-row">
 												<span class="ws-detail-label">Custom Redirect URL:</span>

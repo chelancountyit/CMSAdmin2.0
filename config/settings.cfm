@@ -68,10 +68,10 @@
 	// Application Versioning (v2.1.[build])
 	set(appMajorVersion=2);
 	set(appMinorVersion=1);
-	set(appBuildNumber=2);
-	set(appVersion="2.1.2");
-	set(appVersionTag="v2.1.2");
-	set(appBuildDisplay="v2.1.2 (Build 2)");
+	set(appBuildNumber=325);
+	set(appVersion="2.1.325");
+	set(appVersionTag="v2.1.325");
+	set(appBuildDisplay="v2.1.325 (Build 325)");
 
 	// CLI-Appends-Here
 </cfscript>

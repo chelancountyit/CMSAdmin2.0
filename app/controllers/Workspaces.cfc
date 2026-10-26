@@ -140,6 +140,7 @@ component extends="Controller" {
 					local.w.id & " " & 
 					(StructKeyExists(local.w, "virtual_directory") ? local.w.virtual_directory : "") & " " & 
 					(StructKeyExists(local.w, "domain_name") ? local.w.domain_name : "") & " " & 
+					(StructKeyExists(local.w, "assets_domain") ? local.w.assets_domain : "") & " " & 
 					(StructKeyExists(local.w, "storage_path") ? local.w.storage_path : "") & " " & 
 					(StructKeyExists(local.w, "project_path") ? local.w.project_path : "") & " " & 
 					(StructKeyExists(local.w, "department") ? local.w.department : "") & " " & 
@@ -200,6 +201,7 @@ component extends="Controller" {
 			virtual_directory: "",
 			storage_path: "",
 			domain_name: "www.chelancounty.gov",
+			assets_domain: "assets.chelancounty.com",
 			project_path: "C:\inetpub\chelan-county",
 			color: "##7e22ce",
 			department: "",
@@ -263,6 +265,17 @@ component extends="Controller" {
 		local.deptCategory = StructKeyExists(params, "department_category") ? Trim(params.department_category) : "";
 		local.redirectUrl = StructKeyExists(params, "redirect_url") ? Trim(params.redirect_url) : "";
 		local.domainName = StructKeyExists(params, "domain_name") && Len(Trim(params.domain_name)) ? Trim(params.domain_name) : "www.chelancounty.gov";
+		local.assetsDomain = StructKeyExists(params, "assets_domain") ? Trim(params.assets_domain) : "";
+		local.assetsProtocol = (StructKeyExists(params, "assets_protocol") && ListFindNoCase("http,https", Trim(params.assets_protocol))) ? LCase(Trim(params.assets_protocol)) : (ReFindNoCase("^https://", local.assetsDomain) ? "https" : "http");
+		local.assetsDomain = REReplaceNoCase(local.assetsDomain, "^https?://", "");
+		local.assetsDomain = REReplace(local.assetsDomain, "/+$", "");
+		local.assetsDomain = Len(local.assetsDomain) ? (local.assetsProtocol & "://" & local.assetsDomain) : "";
+		local.domainProtocol = (StructKeyExists(params, "domain_protocol") && ListFindNoCase("http,https", Trim(params.domain_protocol))) ? LCase(Trim(params.domain_protocol)) : (ReFindNoCase("^https://", local.domainName) ? "https" : "");
+		if (Len(local.domainProtocol)) {
+			local.domainHost = REReplace(REReplaceNoCase(local.domainName, "^https?://", ""), "/+$", "");
+			if (!Len(local.domainHost)) local.domainHost = "www.chelancounty.gov";
+			local.domainName = local.domainProtocol & "://" & local.domainHost;
+		}
 		local.storagePath = StructKeyExists(params, "storage_path") && Len(Trim(params.storage_path)) ? Trim(params.storage_path) : ("files/" & local.cleanId);
 		local.projectPath = StructKeyExists(params, "project_path") && Len(Trim(params.project_path)) ? Trim(params.project_path) : "C:\inetpub\chelan-county";
 		local.leadershipType = (StructKeyExists(params, "leadership_type") && params.leadership_type eq "elected") ? "elected" : "dept_head";
@@ -303,6 +316,7 @@ component extends="Controller" {
 			virtual_directory: local.cleanId,
 			storage_path: local.storagePath,
 			domain_name: local.domainName,
+			assets_domain: local.assetsDomain,
 			project_path: local.projectPath,
 			department: local.department,
 			department_category: local.deptCategory,
@@ -354,6 +368,7 @@ component extends="Controller" {
 				department_category: { value: local.deptCategory, cfsqltype: "cf_sql_varchar" },
 				storage_path: { value: local.storagePath, cfsqltype: "cf_sql_varchar" },
 				domain_name: { value: local.domainName, cfsqltype: "cf_sql_varchar" },
+				assets_domain: { value: local.assetsDomain, cfsqltype: "cf_sql_varchar" },
 				project_path: { value: local.projectPath, cfsqltype: "cf_sql_varchar" },
 				leadership_type: { value: local.leadershipType, cfsqltype: "cf_sql_varchar" },
 				contact_photo: { value: local.contactPhoto, cfsqltype: "cf_sql_varchar" },
@@ -395,6 +410,7 @@ component extends="Controller" {
 						department_category = :department_category,
 						storage_path = :storage_path,
 						domain_name = :domain_name,
+						assets_domain = :assets_domain,
 						project_path = :project_path,
 						leadership_type = :leadership_type,
 						contact_photo = :contact_photo,
@@ -421,13 +437,13 @@ component extends="Controller" {
 					INSERT INTO cms_workspaces (
 						code, name, alias, type, badge, badge_class, icon, description,
 						folder_path, virtual_directory, redirect_url, department, department_category,
-						storage_path, domain_name, project_path, leadership_type, contact_photo, job_title,
+						storage_path, domain_name, assets_domain, project_path, leadership_type, contact_photo, job_title,
 						contact_first_name, contact_last_name, contact_email, contact_phone, contact_fax,
 						address, address2, city, state, zip, office_hours, is_active, is_system, sort_order, color
 					) VALUES (
 						:code, :name, :alias, :type, :badge, :badge_class, :icon, :description,
 						:folder_path, :virtual_directory, :redirect_url, :department, :department_category,
-						:storage_path, :domain_name, :project_path, :leadership_type, :contact_photo, :job_title,
+						:storage_path, :domain_name, :assets_domain, :project_path, :leadership_type, :contact_photo, :job_title,
 						:contact_first_name, :contact_last_name, :contact_email, :contact_phone, :contact_fax,
 						:address, :address2, :city, :state, :zip, :office_hours, 1, 0, 100, :color
 					)
@@ -468,7 +484,7 @@ component extends="Controller" {
 				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT id, code, name, alias, type, badge, badge_class, icon, description,
 				       folder_path, virtual_directory, redirect_url, department, department_category,
-				       storage_path, domain_name, project_path, leadership_type, job_title, contact_photo,
+				       storage_path, domain_name, assets_domain, project_path, leadership_type, job_title, contact_photo,
 				       contact_first_name, contact_last_name, contact_email, contact_phone, contact_fax,
 				       address, address2, city, state, zip, office_hours, is_active, is_system, sort_order, color
 				FROM cms_workspaces
@@ -495,6 +511,7 @@ component extends="Controller" {
 					virtual_directory: local.row.virtual_directory,
 					storage_path: (StructKeyExists(local.row, "storage_path") && Len(local.row.storage_path ?: "")) ? local.row.storage_path : (StructKeyExists(local.row, "folder_path") ? local.row.folder_path : ("files/" & local.row.code)),
 					domain_name: (StructKeyExists(local.row, "domain_name") && Len(local.row.domain_name ?: "")) ? local.row.domain_name : "www.chelancounty.gov",
+					assets_domain: (StructKeyExists(local.row, "assets_domain") && Len(Trim(local.row.assets_domain ?: ""))) ? Trim(local.row.assets_domain) : "",
 					project_path: (StructKeyExists(local.row, "project_path") && Len(local.row.project_path ?: "")) ? local.row.project_path : "C:\inetpub\chelan-county",
 					department: local.row.department,
 					department_category: local.row.department_category,
@@ -559,6 +576,8 @@ component extends="Controller" {
 			virtual_directory: StructKeyExists(local.targetWs, "virtual_directory") ? local.targetWs.virtual_directory : local.targetWs.id,
 			storage_path: StructKeyExists(local.targetWs, "storage_path") ? local.targetWs.storage_path : (StructKeyExists(local.targetWs, "folderPath") ? local.targetWs.folderPath : ("files/" & local.targetWs.id)),
 			domain_name: StructKeyExists(local.targetWs, "domain_name") ? local.targetWs.domain_name : "www.chelancounty.gov",
+			assets_protocol: (StructKeyExists(local.targetWs, "assets_domain") && ReFindNoCase("^https://", local.targetWs.assets_domain)) ? "https" : "http",
+			assets_domain: (StructKeyExists(local.targetWs, "assets_domain") && Len(Trim(local.targetWs.assets_domain))) ? Trim(local.targetWs.assets_domain) : "",
 			project_path: StructKeyExists(local.targetWs, "project_path") ? local.targetWs.project_path : "C:\inetpub\chelan-county",
 			color: (StructKeyExists(local.targetWs, "color") && Len(Trim(local.targetWs.color))) ? Trim(local.targetWs.color) : (local.targetWs.type eq "dept" ? "##7e22ce" : (local.targetWs.type eq "site" ? "##10b981" : "##0073aa")),
 			department: StructKeyExists(local.targetWs, "department") ? local.targetWs.department : local.targetWs.name,
@@ -622,6 +641,17 @@ component extends="Controller" {
 		local.deptCategory = StructKeyExists(params, "department_category") ? Trim(params.department_category) : "";
 		local.redirectUrl = StructKeyExists(params, "redirect_url") ? Trim(params.redirect_url) : "";
 		local.domainName = StructKeyExists(params, "domain_name") && Len(Trim(params.domain_name)) ? Trim(params.domain_name) : (StructKeyExists(local.existing, "domain_name") ? local.existing.domain_name : "www.chelancounty.gov");
+		local.assetsDomain = StructKeyExists(params, "assets_domain") ? Trim(params.assets_domain) : (StructKeyExists(local.existing, "assets_domain") ? Trim(local.existing.assets_domain) : "");
+		local.assetsProtocol = (StructKeyExists(params, "assets_protocol") && ListFindNoCase("http,https", Trim(params.assets_protocol))) ? LCase(Trim(params.assets_protocol)) : (ReFindNoCase("^https://", local.assetsDomain) ? "https" : "http");
+		local.assetsDomain = REReplaceNoCase(local.assetsDomain, "^https?://", "");
+		local.assetsDomain = REReplace(local.assetsDomain, "/+$", "");
+		local.assetsDomain = Len(local.assetsDomain) ? (local.assetsProtocol & "://" & local.assetsDomain) : "";
+		local.domainProtocol = (StructKeyExists(params, "domain_protocol") && ListFindNoCase("http,https", Trim(params.domain_protocol))) ? LCase(Trim(params.domain_protocol)) : (ReFindNoCase("^https://", local.domainName) ? "https" : "");
+		if (Len(local.domainProtocol)) {
+			local.domainHost = REReplace(REReplaceNoCase(local.domainName, "^https?://", ""), "/+$", "");
+			if (!Len(local.domainHost)) local.domainHost = "www.chelancounty.gov";
+			local.domainName = local.domainProtocol & "://" & local.domainHost;
+		}
 		local.storagePath = StructKeyExists(params, "storage_path") && Len(Trim(params.storage_path)) ? Trim(params.storage_path) : (StructKeyExists(local.existing, "storage_path") ? local.existing.storage_path : ("files/" & local.cleanId));
 		local.projectPath = StructKeyExists(params, "project_path") && Len(Trim(params.project_path)) ? Trim(params.project_path) : (StructKeyExists(local.existing, "project_path") ? local.existing.project_path : "C:\inetpub\chelan-county");
 		local.leadershipType = (StructKeyExists(params, "leadership_type") && params.leadership_type eq "elected") ? "elected" : "dept_head";
@@ -652,6 +682,7 @@ component extends="Controller" {
 		local.existing.department_category = local.deptCategory;
 		local.existing.redirect_url = local.redirectUrl;
 		local.existing.domain_name = local.domainName;
+		local.existing.assets_domain = local.assetsDomain;
 		local.existing.storage_path = local.storagePath;
 		local.existing.project_path = local.projectPath;
 		local.existing.virtual_directory = local.cleanId;
@@ -717,6 +748,7 @@ component extends="Controller" {
 					department_category = :department_category,
 					storage_path = :storage_path,
 					domain_name = :domain_name,
+					assets_domain = :assets_domain,
 					project_path = :project_path,
 					leadership_type = :leadership_type,
 					contact_photo = :contact_photo,
@@ -749,6 +781,7 @@ component extends="Controller" {
 				department_category: { value: local.deptCategory, cfsqltype: "cf_sql_varchar" },
 				storage_path: { value: local.storagePath, cfsqltype: "cf_sql_varchar" },
 				domain_name: { value: local.domainName, cfsqltype: "cf_sql_varchar" },
+				assets_domain: { value: local.assetsDomain, cfsqltype: "cf_sql_varchar" },
 				project_path: { value: local.projectPath, cfsqltype: "cf_sql_varchar" },
 				leadership_type: { value: local.leadershipType, cfsqltype: "cf_sql_varchar" },
 				contact_photo: { value: local.contactPhoto, cfsqltype: "cf_sql_varchar" },
@@ -766,6 +799,27 @@ component extends="Controller" {
 				office_hours: { value: local.existing.contact.office_hours, cfsqltype: "cf_sql_varchar" },
 				color: { value: local.color, cfsqltype: "cf_sql_varchar" },
 				code: { value: local.existing.id, cfsqltype: "cf_sql_varchar" }
+			}, { datasource: "ChelanCountyWebsite" });
+			try {
+				local.urlPrefix = Len(local.assetsDomain) ? (local.assetsDomain & "/") : "/";
+				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					UPDATE dbo.media_assets
+					SET web_url = :prefix + CASE
+						WHEN LEFT(LTRIM(RTRIM(file_path)), 6) = 'files/' THEN SUBSTRING(LTRIM(RTRIM(file_path)), 7, LEN(file_path))
+						WHEN LEFT(LTRIM(RTRIM(file_path)), 1) = '/' THEN SUBSTRING(LTRIM(RTRIM(file_path)), 2, LEN(file_path))
+						ELSE LTRIM(RTRIM(file_path))
+					END
+					WHERE site_id = :siteId AND deletedat IS NULL AND file_path IS NOT NULL
+				", {
+					prefix: { value: local.urlPrefix, cfsqltype: "cf_sql_nvarchar" },
+					siteId: { value: local.existing.id, cfsqltype: "cf_sql_nvarchar" }
+				}, { datasource: "ChelanCountyWebsite" });
+			} catch (any mediaSyncErr) {
+			
+			// (end media sync)
+			} if (false) queryExecute("", { dummy: 1
+
 			}, { datasource: "ChelanCountyWebsite" });
 		} catch (any dberr) {
 			StructDelete(application, "cmsWorkspacesList");
@@ -856,6 +910,23 @@ component extends="Controller" {
 		try {
 			if (!DirectoryExists(local.targetPath)) {
 				DirectoryCreate(local.targetPath);
+			}
+			local.iisAssetsRoot = "C:\inetpub\chelan-county\assets.chelancounty.gov";
+			if (DirectoryExists(local.iisAssetsRoot) && DirectoryExists("C:\inetpub\chelan-county\files")) {
+				local.qDirs = DirectoryList("C:\inetpub\chelan-county\files", false, "query");
+				for (local.dRow in local.qDirs) {
+					if (CompareNoCase(local.dRow.type, "dir") == 0 && Left(local.dRow.name, 1) neq ".") {
+						local.wsJunc = local.iisAssetsRoot & "\" & local.dRow.name;
+						local.wsTarget = "C:\inetpub\chelan-county\files\" & local.dRow.name;
+						if (!DirectoryExists(local.wsJunc)) {
+							local.pbWs = createObject("java", "java.lang.ProcessBuilder").init([
+								"cmd.exe", "/c", "mklink", "/J", local.wsJunc, local.wsTarget
+							]);
+							local.pWs = local.pbWs.start();
+							local.pWs.waitFor();
+						}
+					}
+				}
 			}
 			if (!DirectoryExists(local.juncPath)) {
 				local.pb = createObject("java", "java.lang.ProcessBuilder").init([

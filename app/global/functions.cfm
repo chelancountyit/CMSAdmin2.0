@@ -9,9 +9,16 @@ public void function ensureMasterWorkspacesTablePopulated() {
 	try {
 		queryExecute("
 			SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+			IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='cms_workspaces' AND COLUMN_NAME='assets_domain')
+			BEGIN
+				ALTER TABLE dbo.cms_workspaces ADD assets_domain NVARCHAR(255) NULL DEFAULT 'assets.chelancounty.com';
+			END;
+			UPDATE dbo.cms_workspaces
+			SET assets_domain = 'assets.chelancounty.com'
+			WHERE 1 = 0;
 			IF NOT EXISTS (SELECT 1 FROM cms_workspaces WHERE code = 'global')
-				INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, storage_path, domain_name, project_path, leadership_type, is_active, is_system, sort_order)
-				VALUES ('global', 'All Workspaces', '', 'global', 'Global', 'badge-neutral', 'grid', 'County-wide unified view across all municipal divisions and portals', 'files/shared', 'shared', '', 'County-wide', 'County Administration', 'files/shared', 'www.chelancounty.gov', 'C:\inetpub\chelan-county', 'dept_head', 1, 1, 0);
+				INSERT INTO cms_workspaces (code, name, alias, type, badge, badge_class, icon, description, folder_path, virtual_directory, redirect_url, department, department_category, storage_path, domain_name, assets_domain, project_path, leadership_type, is_active, is_system, sort_order)
+				VALUES ('global', 'All Workspaces', '', 'global', 'Global', 'badge-neutral', 'grid', 'County-wide unified view across all municipal divisions and portals', 'files/shared', 'shared', '', 'County-wide', 'County Administration', 'files/shared', 'www.chelancounty.gov', 'assets.chelancounty.com', 'C:\inetpub\chelan-county', 'dept_head', 1, 1, 0);
 		", {}, { datasource: "ChelanCountyWebsite" });
 	} catch (any e) {
 		// Log or suppress schema verification errors
@@ -36,7 +43,7 @@ public array function getMasterWorkspaces() {
 				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				SELECT id, code, name, alias, type, badge, badge_class, icon, description,
 				       folder_path, virtual_directory, redirect_url, department, department_category,
-				       storage_path, domain_name, project_path, leadership_type, job_title, contact_photo,
+				       storage_path, domain_name, assets_domain, project_path, leadership_type, job_title, contact_photo,
 				       contact_first_name, contact_last_name, contact_email, contact_phone, contact_fax,
 				       address, address2, city, state, zip, office_hours, is_active, is_system, sort_order, color
 				FROM cms_workspaces
@@ -45,6 +52,12 @@ public array function getMasterWorkspaces() {
 			", {}, { datasource: "ChelanCountyWebsite" });
 
 			for (var row in qWs) {
+				var rawAssetsDomain = (structKeyExists(row, "assets_domain") && len(trim(row.assets_domain ?: ""))) ? trim(row.assets_domain) : "";
+				var rowAssetsProtocol = reFindNoCase("^https://", rawAssetsDomain) ? "https" : "http";
+				var rowAssetsDomain = reReplace(reReplaceNoCase(rawAssetsDomain, "^https?://", ""), "/+$", "");
+				var rowAssetsBaseUrl = len(rowAssetsDomain) ? (rowAssetsProtocol & "://" & rowAssetsDomain) : "";
+				var rowStorageFolder = extractWorkspaceStorageFolder(rawPath = ((structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path), fallback = row.virtual_directory);
+
 				arrayAppend(wsList, {
 					id: row.code,
 					code: row.code,
@@ -63,9 +76,15 @@ public array function getMasterWorkspaces() {
 					folderPath: row.folder_path,
 					virtual_directory: row.virtual_directory,
 					storage_path: (structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path,
-					storage_folder: extractWorkspaceStorageFolder(rawPath = ((structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path), fallback = row.virtual_directory),
-					storage_disk_path: "C:\inetpub\chelan-county\files\" & replace(extractWorkspaceStorageFolder(rawPath = ((structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path), fallback = row.virtual_directory), "/", "\", "all"),
-					assets_path: "assets.chelancounty.gov\" & replace(extractWorkspaceStorageFolder(rawPath = ((structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path), fallback = row.virtual_directory), "/", "\", "all"),
+					storage_folder: rowStorageFolder,
+					storage_disk_path: "C:\inetpub\chelan-county\files\" & replace(rowStorageFolder, "/", "\", "all"),
+					assets_domain: rowAssetsDomain,
+					assets_path: (len(rowAssetsDomain) ? (rowAssetsDomain & "\") : "\") & replace(rowStorageFolder, "/", "\", "all"),
+					assets_protocol: rowAssetsProtocol,
+					assets_domain: rowAssetsDomain,
+					assets_base_url: rowAssetsBaseUrl,
+					assets_path: (len(rowAssetsDomain) ? (rowAssetsDomain & "\") : "\") & replace(rowStorageFolder, "/", "\", "all"),
+					assets_url: rowAssetsBaseUrl & "/" & replace(rowStorageFolder, "\", "/", "all"),
 					domain_name: (structKeyExists(row, "domain_name") && len(row.domain_name ?: "")) ? row.domain_name : "www.chelancounty.gov",
 					project_path: (structKeyExists(row, "project_path") && len(row.project_path ?: "")) ? row.project_path : "C:\inetpub\chelan-county",
 					department: len(row.department ?: "") ? row.department : row.name,
@@ -145,7 +164,7 @@ public void function saveMasterWorkspaces(required array workspaces) {
  * Extracts the normalized storage folder segment (under C:\inetpub\chelan-county\files\)
  * from a workspace's assigned storage_path, folderPath, or virtual_directory.
  * Maps:
- *   assets.chelancounty.gov\[workspace]\... -> [workspace]
+ *   assets.chelancounty.com\[workspace]\... -> [workspace]
  *   C:\inetpub\chelan-county\files\[workspace]\... -> [workspace]
  *   files/[workspace] -> [workspace]
  *   [workspace] -> [workspace]
@@ -161,8 +180,8 @@ public string function extractWorkspaceStorageFolder(string rawPath = "", string
 	// Strip protocol if present
 	p = reReplaceNoCase(p, "^https?://", "");
 
-	// Strip assets.chelancounty.gov prefix
-	p = reReplaceNoCase(p, "^assets\.chelancounty\.gov/?", "");
+	// Strip assets.chelancounty.com or assets.chelancounty.gov prefix
+	p = reReplaceNoCase(p, "^assets\.chelancounty\.(com|gov)/?", "");
 
 	// Strip physical disk root prefixes
 	p = reReplaceNoCase(p, "^[a-z]:/inetpub/chelan-county/files/?", "");
@@ -218,12 +237,97 @@ public string function resolveWorkspaceStorageDiskPath(required struct wsObj, st
 }
 
 /**
+ * Resolves the workspace's configured assets_domain (defaults to assets.chelancounty.com)
+ */
+public string function resolveWorkspaceAssetsProtocol(required struct wsObj, string fallbackWs = "") {
+	if (structKeyExists(arguments.wsObj, "assets_protocol") && listFindNoCase("http,https", trim(arguments.wsObj.assets_protocol))) {
+		return lCase(trim(arguments.wsObj.assets_protocol));
+	}
+	if (structKeyExists(arguments.wsObj, "assets_domain") && len(trim(arguments.wsObj.assets_domain))) {
+		if (reFindNoCase("^https://", trim(arguments.wsObj.assets_domain))) return "https";
+		if (reFindNoCase("^http://", trim(arguments.wsObj.assets_domain))) return "http";
+	}
+	return "http";
+}
+
+public string function resolveWorkspaceAssetsDomain(required struct wsObj, string fallbackWs = "") {
+	var dom = "";
+	if (structKeyExists(arguments.wsObj, "assets_domain") && len(trim(arguments.wsObj.assets_domain))) {
+		dom = trim(arguments.wsObj.assets_domain);
+	}
+	dom = reReplaceNoCase(dom, "^https?://", "");
+	dom = reReplace(dom, "/+$", "");
+	if (false) {
+		dom = "assets.chelancounty.com";
+	}
+	return dom;
+}
+
+/**
  * Resolves the public assets URL mapping for a workspace's storage_path:
- * assets.chelancounty.gov\[workspace]
+ * assets.chelancounty.com\[workspace]
  */
 public string function resolveWorkspaceAssetsPath(required struct wsObj, string fallbackWs = "") {
+	var dom = resolveWorkspaceAssetsDomain(wsObj = arguments.wsObj, fallbackWs = arguments.fallbackWs);
 	var folder = resolveWorkspaceStorageFolder(wsObj = arguments.wsObj, fallbackWs = arguments.fallbackWs);
-	return "assets.chelancounty.gov\" & replace(folder, "/", "\", "all");
+	return (len(dom) ? (dom & "\") : "\") & replace(folder, "/", "\", "all");
+}
+
+/**
+ * Resolves the canonical HTTPS assets URL for a workspace's storage_path:
+ * https://assets.chelancounty.com/[workspace]
+ */
+public string function resolveWorkspaceAssetsUrl(required struct wsObj, string fallbackWs = "") {
+	var dom = resolveWorkspaceAssetsDomain(wsObj = arguments.wsObj, fallbackWs = arguments.fallbackWs);
+	var folder = resolveWorkspaceStorageFolder(wsObj = arguments.wsObj, fallbackWs = arguments.fallbackWs);
+	var proto = resolveWorkspaceAssetsProtocol(wsObj = arguments.wsObj, fallbackWs = arguments.fallbackWs);
+	var prefix = len(dom) ? (proto & "://" & dom) : "";
+	return prefix & "/" & replace(folder, "\", "/", "all");
+}
+
+/**
+ * Generates a lightweight 360x360 max-dimension thumbnail inside <parentDir>\.thumbs\<filename>
+ * and returns { success, width, height, thumbPath }.
+ */
+public struct function generateImageThumbnail(required string sourceFilePath, numeric maxDimension = 360) {
+	var res = {
+		"success": false,
+		"width": 0,
+		"height": 0,
+		"thumbPath": ""
+	};
+	if (!fileExists(arguments.sourceFilePath)) return res;
+
+	var ext = lCase(listLast(arguments.sourceFilePath, "."));
+	if (!listFindNoCase("jpg,jpeg,png,gif,bmp", ext)) return res;
+
+	try {
+		var parentDir = getDirectoryFromPath(arguments.sourceFilePath);
+		if (right(parentDir, 1) == "\" || right(parentDir, 1) == "/") {
+			parentDir = left(parentDir, len(parentDir) - 1);
+		}
+		var fileName = getFileFromPath(arguments.sourceFilePath);
+		var thumbDir = parentDir & "\.thumbs";
+		if (!directoryExists(thumbDir)) {
+			directoryCreate(thumbDir);
+		}
+		var thumbPath = thumbDir & "\" & fileName;
+
+		var cfImg = imageRead(arguments.sourceFilePath);
+		var info = imageInfo(cfImg);
+		res.width = val(info.width);
+		res.height = val(info.height);
+
+		if (res.width > arguments.maxDimension || res.height > arguments.maxDimension) {
+			imageScaleToFit(cfImg, arguments.maxDimension, arguments.maxDimension, "bilinear");
+		}
+		imageWrite(cfImg, thumbPath, 0.82, true);
+		res.success = fileExists(thumbPath);
+		res.thumbPath = thumbPath;
+	} catch (any e) {
+		res.success = false;
+	}
+	return res;
 }
 
 public void function addMasterWorkspace(required struct newWorkspace) {
@@ -1234,7 +1338,7 @@ public string function renderCallToActionShortcodes(required string content) {
  * Returns application versioning data struct loaded from config/version.json or defaults.
  */
 public struct function getAppVersion() {
-	if (!structKeyExists(application, "appVersionData") || (structKeyExists(url, "reload") && (url.reload == "true" || url.reload == "1"))) {
+	if (!structKeyExists(application, "appVersionData") || (application.appVersionData.version ?: "") != "2.1.325" || (structKeyExists(url, "reload") && (url.reload == "true" || url.reload == "1"))) {
 		var verFile = expandPath("/config/version.json");
 		if (fileExists(verFile)) {
 			try {

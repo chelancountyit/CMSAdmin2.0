@@ -88,9 +88,9 @@ All departmental assets and pages are partitioned by `siteid` (workspace slug, e
 
 CMSAdmin 2.0 tracks versioning using standard semantic releases parameterized by build increments:
 
-- **Format:** `v2.1.[build]` (e.g. `v2.1.1`)
+- **Format:** `v2.1.[build]` (Current Release: `v2.1.325`)
 - **Single Source of Truth:** [`config/version.json`](file:///c:/inetpub/CMSAdmin2.0/config/version.json)
-- **Framework Configuration:** [`config/settings.cfm`](file:///c:/inetpub/CMSAdmin2.0/config/settings.cfm) (`set(appVersion="2.1.1"); set(appBuildNumber=1);`)
+- **Framework Configuration:** [`config/settings.cfm`](file:///c:/inetpub/CMSAdmin2.0/config/settings.cfm) (`set(appVersion="2.1.325"); set(appBuildNumber=325);`)
 - **Global Helper Functions:**
   - `getAppVersion()`: Returns structured version metadata struct.
   - `appVersion()`: Returns semantic version string (e.g. `"2.1.1"`).

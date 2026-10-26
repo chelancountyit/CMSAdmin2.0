@@ -132,20 +132,28 @@
 						<label for="selectWs" class="form-label" style="font-weight:600;">Destination Workspace <span style="color:var(--admin-danger);">*</span></label>
 						<cfset local.defaultStorageFolder = variables.defaultWs>
 						<cfset local.defaultDiskPath = "C:\inetpub\chelan-county\files\" & variables.defaultWs>
-						<cfset local.defaultAssetsPath = "assets.chelancounty.gov\" & variables.defaultWs>
+						<cfset local.defaultAssetsProtocol = "http">
+						<cfset local.defaultAssetsDomain = "">
+						<cfset local.defaultAssetsPath = "\" & variables.defaultWs>
 						<select id="selectWs" name="workspace" class="form-control" style="width:100%;" onchange="updatePathPreview()">
 							<cfloop array="#variables.workspaces#" index="local.ws">
 								<cfset local.wsFolder = structKeyExists(local.ws, "storageFolder") && len(local.ws.storageFolder) ? local.ws.storageFolder : local.ws.id>
 								<cfset local.wsDisk = structKeyExists(local.ws, "diskPath") && len(local.ws.diskPath) ? local.ws.diskPath : ("C:\inetpub\chelan-county\files\" & local.wsFolder)>
-								<cfset local.wsAssets = structKeyExists(local.ws, "assetsPath") && len(local.ws.assetsPath) ? local.ws.assetsPath : ("assets.chelancounty.gov\" & local.wsFolder)>
+								<cfset local.wsAssetsProtocol = structKeyExists(local.ws, "assetsProtocol") && len(local.ws.assetsProtocol) ? local.ws.assetsProtocol : "http">
+								<cfset local.wsAssetsDomain = structKeyExists(local.ws, "assetsDomain") ? trim(local.ws.assetsDomain) : "">
+								<cfset local.wsAssets = structKeyExists(local.ws, "assetsPath") && len(local.ws.assetsPath) ? local.ws.assetsPath : ((len(local.wsAssetsDomain) ? (local.wsAssetsDomain & "\") : "\") & local.wsFolder)>
 								<cfif local.ws.id eq variables.defaultWs or local.wsFolder eq variables.defaultWs>
 									<cfset local.defaultStorageFolder = local.wsFolder>
 									<cfset local.defaultDiskPath = local.wsDisk>
+									<cfset local.defaultAssetsProtocol = local.wsAssetsProtocol>
+									<cfset local.defaultAssetsDomain = local.wsAssetsDomain>
 									<cfset local.defaultAssetsPath = local.wsAssets>
 								</cfif>
 								<option value="#encodeForHTMLAttribute(local.ws.id)#"
 								        data-storage-folder="#encodeForHTMLAttribute(local.wsFolder)#"
 								        data-disk-path="#encodeForHTMLAttribute(local.wsDisk)#"
+								        data-assets-protocol="#encodeForHTMLAttribute(local.wsAssetsProtocol)#"
+								        data-assets-domain="#encodeForHTMLAttribute(local.wsAssetsDomain)#"
 								        data-assets-path="#encodeForHTMLAttribute(local.wsAssets)#"
 								        <cfif local.ws.id eq variables.defaultWs or local.wsFolder eq variables.defaultWs>selected</cfif>>
 									#encodeForHTML(local.ws.name)# (#encodeForHTML(local.wsFolder)#)
@@ -169,7 +177,7 @@
 					<span>Storage Path:</span>
 					<strong id="destinationPathText">#encodeForHTML(local.defaultDiskPath)#\#encodeForHTML(variables.defaultFolder)#\</strong>
 					<span style="color:var(--admin-text-muted); margin-left:0.5rem;">&bull; Web URL:</span>
-					<strong id="destinationAssetsPathText" style="color:var(--admin-primary);">https://assets.chelancounty.gov/#encodeForHTML(local.defaultStorageFolder)#/#encodeForHTML(variables.defaultFolder)#/</strong>
+					<strong id="destinationAssetsPathText" style="color:var(--admin-primary);">#(len(local.defaultAssetsDomain) ? (encodeForHTML(local.defaultAssetsProtocol) & '://' & encodeForHTML(local.defaultAssetsDomain)) : '')#/#encodeForHTML(local.defaultStorageFolder)#/#encodeForHTML(variables.defaultFolder)#/</strong>
 				</div>
 			</div>
 		</div>
@@ -216,7 +224,7 @@
 						Image URL
 					</label>
 					<div class="media-url-input-group" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-						<input type="text" id="destinationPathUrlInput" class="form-control media-url-field" placeholder="https://assets.chelancounty.gov/#encodeForHTMLAttribute(local.defaultStorageFolder)#/#encodeForHTMLAttribute(variables.defaultFolder)#/photo.jpg" readonly title="Prospective URL destination on server" style="flex: 1; min-width: 240px; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; padding: 0.6rem 0.85rem !important; font-size: 0.875rem !important; background: ##ffffff !important; color: ##0f172a !important;">
+						<input type="text" id="destinationPathUrlInput" class="form-control media-url-field" placeholder="#(len(local.defaultAssetsDomain) ? (encodeForHTMLAttribute(local.defaultAssetsProtocol) & '://' & encodeForHTMLAttribute(local.defaultAssetsDomain)) : '')#/#encodeForHTMLAttribute(local.defaultStorageFolder)#/#encodeForHTMLAttribute(variables.defaultFolder)#/photo.jpg" readonly title="Prospective URL destination on server" style="flex: 1; min-width: 240px; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; padding: 0.6rem 0.85rem !important; font-size: 0.875rem !important; background: ##ffffff !important; color: ##0f172a !important;">
 						<button type="button" id="btnBrowseFileStudio" class="btn media-btn-browse" title="Browse files on your computer" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; background: ##f1f5f9 !important; font-weight: 600; font-size: 0.875rem; color: ##0f172a !important; cursor: pointer; white-space: nowrap;">
 							#svgIcon(name="folder", size=15)#
 							<span>Browse</span>
@@ -240,8 +248,12 @@
 						<span>Alternative Text (Image Description) <span id="uploadAltRequiredIndicator" style="color:var(--admin-danger); font-weight:700;">* Required for Images (WCAG 1.1.1)</span></span>
 						<span style="font-size:0.75rem; color:var(--admin-primary); font-weight:600;">ADA Title II Mandatory</span>
 					</label>
+					<input type="hidden" id="uploadOcrText" name="ocrText" value="">
 					<textarea id="uploadAlt" name="altText" class="form-control" rows="3" style="width:100%; transition:border-color 0.2s, box-shadow 0.2s;" placeholder="Describe the visual subjects, text, and context of this image for blind and low-vision users using screen readers..." oninput="updateAltCharCount(this.value)"></textarea>
-					<div id="uploadAltCharCount" style="text-align:right; font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.25rem;">0 / 150 rec.</div>
+					<div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-top:0.25rem;">
+						<div id="uploadStudioOcrBadge" hidden style="font-size:0.78rem; padding:0.3rem 0.65rem; border-radius:6px;"></div>
+						<div id="uploadAltCharCount" style="text-align:right; font-size:0.75rem; color:var(--admin-text-muted); margin-left:auto;">0 / 150 rec.</div>
+					</div>
 					
 					<!--- Decorative Image Toggle Option (WCAG H67) --->
 					<div class="form-check" style="margin-top:0.65rem; display:flex; align-items:center; gap:0.5rem;">
@@ -322,7 +334,7 @@
 							<tr>
 								<td>
 									<cfif variables.recentUploads.is_image eq 1>
-										<img src="#encodeForHTMLAttribute(variables.recentUploads.web_url)#" alt="#encodeForHTMLAttribute(variables.recentUploads.alt_text)#" class="table-thumb" onerror="this.src='/images/county-seal.svg';">
+										<img src="#encodeForHTMLAttribute(variables.recentUploads.web_url)#" data-local-src="/files/#encodeForHTMLAttribute(variables.recentUploads.site_id)#/#encodeForHTMLAttribute(variables.recentUploads.folder)#/#encodeForHTMLAttribute(variables.recentUploads.filename)#" alt="#encodeForHTMLAttribute(variables.recentUploads.alt_text)#" class="table-thumb" onerror="if(this.dataset.localSrc && this.src !== this.dataset.localSrc){const l=this.dataset.localSrc;delete this.dataset.localSrc;this.src=l;}else{this.src='/images/county-seal.svg';}">
 									<cfelse>
 										<div class="table-thumb-placeholder">
 											#svgIcon(name="document", size=18)#
@@ -344,7 +356,7 @@
 								</td>
 								<td>
 									<div style="font-size:0.8rem; font-family:monospace;">
-										files/#encodeForHTML(variables.recentUploads.site_id)#/#encodeForHTML(variables.recentUploads.folder)#
+										https://assets.chelancounty.com/#encodeForHTML(variables.recentUploads.site_id)#/#encodeForHTML(variables.recentUploads.folder)#
 									</div>
 									<cfif Val(variables.recentUploads.width) gt 0 and Val(variables.recentUploads.height) gt 0>
 										<div style="font-size:0.75rem; color:var(--admin-text-muted);">
@@ -425,7 +437,12 @@
 		const folderEl = document.getElementById('selectSubfolder');
 		const folder = folderEl ? folderEl.value : 'images';
 		const file = fileName || '';
-		return file ? `https://assets.chelancounty.gov/${storageFolder}/${folder}/${file}` : `https://assets.chelancounty.gov/${storageFolder}/${folder}/photo.jpg`;
+		const wsEl = document.getElementById('selectWs');
+		const opt = (wsEl && wsEl.options) ? wsEl.options[wsEl.selectedIndex] : null;
+		const assetsDomain = (opt && opt.getAttribute('data-assets-domain') || '').trim();
+		const assetsProto = (opt && opt.getAttribute('data-assets-protocol')) || 'http';
+		const prefix = assetsDomain ? `${assetsProto}://${assetsDomain}` : '';
+		return file ? `${prefix}/${storageFolder}/${folder}/${file}` : `${prefix}/${storageFolder}/${folder}/photo.jpg`;
 	}
 
 	function updatePathPreview() {
@@ -441,7 +458,10 @@
 		}
 		const assetsText = document.getElementById('destinationAssetsPathText');
 		if (assetsText) {
-			assetsText.textContent = `https://assets.chelancounty.gov/${storageFolder}/${folder}/`;
+			const assetsDomain = (opt && opt.getAttribute('data-assets-domain') || '').trim();
+			const assetsProto = (opt && opt.getAttribute('data-assets-protocol')) || 'http';
+			const prefix = assetsDomain ? `${assetsProto}://${assetsDomain}` : '';
+			assetsText.textContent = `${prefix}/${storageFolder}/${folder}/`;
 		}
 		const urlInput = document.getElementById('destinationPathUrlInput');
 		if (urlInput) {
@@ -494,26 +514,30 @@
 				urlInput.value = getCurrentWebUrl(f.name);
 			}
 
-			// Auto populate title if blank
-			if (titleInput && !titleInput.value) {
-				const clean = f.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
+			// Auto populate title initially from filename
+			const clean = f.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
+			if (titleInput) {
 				titleInput.value = clean.charAt(0).toUpperCase() + clean.slice(1);
 			}
 
-			// Pre-fill prompt for alt text if image & enforce required state
+			// Pre-fill prompt for alt text if image & run OCR + Visual Content Detection
 			const isImg = /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(f.name);
 			const reqIndicator = document.getElementById('uploadAltRequiredIndicator');
+			const ocrBadge = document.getElementById('uploadStudioOcrBadge');
+			const ocrHidden = document.getElementById('uploadOcrText');
+			if (ocrHidden) ocrHidden.value = '';
+
 			if (altInput) {
 				if (isImg) {
 					altInput.required = true;
 					if (reqIndicator) reqIndicator.style.display = 'inline';
-					if (!altInput.value) {
-						altInput.placeholder = `Required: Describe "${f.name}" for screen readers to satisfy ADA WCAG AA (WCAG 1.1.1)...`;
-					}
+					altInput.placeholder = `Analyzing "${f.name}" via OCR & visual content detection...`;
+					runStudioOcrPrefill(f);
 				} else {
 					altInput.required = false;
 					if (reqIndicator) reqIndicator.style.display = 'none';
 					altInput.placeholder = 'Optional description (not an image)...';
+					if (ocrBadge) ocrBadge.hidden = true;
 				}
 			}
 		} else {
@@ -524,6 +548,72 @@
 				urlInput.value = '';
 				urlInput.placeholder = getCurrentWebUrl('');
 			}
+			const ocrBadge = document.getElementById('uploadStudioOcrBadge');
+			if (ocrBadge) ocrBadge.hidden = true;
+		}
+	}
+
+	async function runStudioOcrPrefill(file) {
+		const ocrBadge = document.getElementById('uploadStudioOcrBadge');
+		const titleInput = document.getElementById('uploadTitle');
+		const altInput = document.getElementById('uploadAlt');
+		const captionInput = document.getElementById('uploadCaption');
+		const creditInput = document.getElementById('uploadCredit');
+		const tagsInput = document.getElementById('uploadTags');
+		const ocrHidden = document.getElementById('uploadOcrText');
+		const wsEl = document.getElementById('selectWs');
+		const folderEl = document.getElementById('selectSubfolder');
+
+		if (ocrBadge) {
+			ocrBadge.hidden = false;
+			ocrBadge.style.background = '#f0f9ff';
+			ocrBadge.style.border = '1px solid #bae6fd';
+			ocrBadge.style.color = '#0369a1';
+			ocrBadge.textContent = 'Running OCR & visual content detection to auto-fill Alt Text & Title...';
+		}
+
+		try {
+			const fd = new FormData();
+			fd.append('mediaFile', file);
+			fd.append('ws', (wsEl && wsEl.value) ? wsEl.value : 'shared');
+			fd.append('subfolder', (folderEl && folderEl.value) ? folderEl.value : 'images');
+
+			const res = await fetch('/api/Files.cfc?method=analyzeUploadOcr&returnformat=json', {
+				method: 'POST',
+				headers: { 'X-Requested-With': 'FileExplorer' },
+				body: fd
+			});
+			let raw = await res.text();
+			if (raw.startsWith('//')) raw = raw.slice(2);
+			const data = JSON.parse(raw);
+			if (!data || data.ok !== true) {
+				if (ocrBadge) ocrBadge.hidden = true;
+				return;
+			}
+
+			if (titleInput && data.title) titleInput.value = data.title;
+			if (altInput && data.altText) {
+				altInput.value = data.altText;
+				altInput.style.borderColor = '#16a34a';
+				altInput.style.boxShadow = '0 0 0 3px rgba(22, 163, 74, 0.12)';
+				updateAltCharCount(altInput.value);
+			}
+			if (captionInput && !captionInput.value && data.caption) captionInput.value = data.caption;
+			if (creditInput && !creditInput.value && data.credit) creditInput.value = data.credit;
+			if (tagsInput && !tagsInput.value && data.tags) tagsInput.value = data.tags;
+			if (ocrHidden && data.ocrText) ocrHidden.value = data.ocrText;
+
+			if (ocrBadge) {
+				ocrBadge.hidden = false;
+				ocrBadge.style.background = '#f0fdf4';
+				ocrBadge.style.border = '1px solid #bbf7d0';
+				ocrBadge.style.color = '#166534';
+				const ocrPart = data.ocrText ? ` • OCR Text: "${data.ocrText}"` : '';
+				const tonePart = data.visualTone ? ` • ${data.width && data.height ? data.width + '×' + data.height + ' ' : ''}${data.visualTone}` : '';
+				ocrBadge.textContent = `Auto-filled via OCR & Content Detection${ocrPart}${tonePart}`;
+			}
+		} catch (e) {
+			if (ocrBadge) ocrBadge.hidden = true;
 		}
 	}
 

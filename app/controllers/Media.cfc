@@ -83,12 +83,14 @@ component extends="Controller" {
 
 		variables.activeWsFolder = local.vDir;
 		variables.activeWsVirtualDir = local.vDir;
+		variables.activeWsAssetsProtocol = resolveWorkspaceAssetsProtocol(wsObj=local.wsObj, fallbackWs=variables.currentWs);
+		variables.activeWsAssetsDomain = resolveWorkspaceAssetsDomain(wsObj=local.wsObj, fallbackWs=variables.currentWs);
+		variables.activeWsAssetsPath = Len(local.vDir) ? ((Len(variables.activeWsAssetsDomain) ? (variables.activeWsAssetsDomain & "\") : "\") & Replace(local.vDir, "/", "\", "all")) : "";
+		variables.activeWsAssetsProtocol = resolveWorkspaceAssetsProtocol(wsObj=local.wsObj, fallbackWs=variables.currentWs);
+		variables.activeWsAssetsDomain = resolveWorkspaceAssetsDomain(wsObj=local.wsObj, fallbackWs=variables.currentWs);
 		variables.activeWsStoragePath = (StructKeyExists(local.wsObj, "storage_path") && Len(Trim(local.wsObj.storage_path))) ? Trim(local.wsObj.storage_path) : (Len(local.vDir) ? ("C:\inetpub\chelan-county\files\" & Replace(local.vDir, "/", "\", "all")) : "");
 		variables.activeWsDiskPath = Len(local.vDir) ? ("C:\inetpub\chelan-county\files\" & Replace(local.vDir, "/", "\", "all")) : "";
-		variables.activeWsAssetsPath = Len(local.vDir) ? ("assets.chelancounty.gov\" & Replace(local.vDir, "/", "\", "all")) : "";
-		variables.activeWsStoragePath = (StructKeyExists(local.wsObj, "storage_path") && Len(Trim(local.wsObj.storage_path))) ? Trim(local.wsObj.storage_path) : (Len(local.vDir) ? ("C:\inetpub\chelan-county\files\" & Replace(local.vDir, "/", "\", "all")) : "");
-		variables.activeWsDiskPath = Len(local.vDir) ? ("C:\inetpub\chelan-county\files\" & Replace(local.vDir, "/", "\", "all")) : "";
-		variables.activeWsAssetsPath = Len(local.vDir) ? ("assets.chelancounty.gov\" & Replace(local.vDir, "/", "\", "all")) : "";
+		variables.activeWsAssetsPath = Len(local.vDir) ? ((Len(variables.activeWsAssetsDomain) ? (variables.activeWsAssetsDomain & "\") : "\") & Replace(local.vDir, "/", "\", "all")) : "";
 
 		// Friendly name
 		variables.activeWsName = Len(variables.currentWs) && StructKeyExists(local.wsObj, "name") && Len(Trim(local.wsObj.name)) ? local.wsObj.name : "Please select a workspace";
@@ -206,6 +208,9 @@ component extends="Controller" {
 
 		variables.activeWsFolder = local.vDir;
 		variables.activeWsVirtualDir = local.vDir;
+		variables.activeWsAssetsProtocol = resolveWorkspaceAssetsProtocol(wsObj=local.wsObj, fallbackWs=variables.currentWs);
+		variables.activeWsAssetsDomain = resolveWorkspaceAssetsDomain(wsObj=local.wsObj, fallbackWs=variables.currentWs);
+		variables.activeWsAssetsPath = Len(local.vDir) ? ((Len(variables.activeWsAssetsDomain) ? (variables.activeWsAssetsDomain & "\") : "\") & Replace(local.vDir, "/", "\", "all")) : "";
 
 		variables.activeWsName = Len(variables.currentWs) && StructKeyExists(local.wsObj, "name") && Len(Trim(local.wsObj.name)) ? local.wsObj.name : "Please select a workspace";
 		for (local.w in variables.workspaces) {
@@ -363,15 +368,18 @@ component extends="Controller" {
 					local.dupWarning = " (Note: Identical file already exists at '" & local.dupAsset.file_path & "' [SHA-256: " & Left(local.fileHash, 12) & "...])";
 				}
 
-				// Compute image dimensions
+				// Compute image dimensions & generate server-side .thumbs/ preview
 				local.width = "";
 				local.height = "";
+				local.thumbGenerated = false;
 				if (local.isImg && ListFindNoCase("jpg,jpeg,png,gif,bmp", local.ext) > 0) {
 					try {
-						local.cfImg = ImageRead(local.uploadedPath);
-						local.imgInfo = ImageInfo(local.cfImg);
-						local.width = local.imgInfo.width;
-						local.height = local.imgInfo.height;
+						local.thumbRes = generateImageThumbnail(sourceFilePath=local.uploadedPath, maxDimension=360);
+						if (Val(local.thumbRes.width) > 0) {
+							local.width = local.thumbRes.width;
+							local.height = local.thumbRes.height;
+						}
+						local.thumbGenerated = local.thumbRes.success;
 					} catch (any imgErr) {}
 				}
 
@@ -421,29 +429,62 @@ component extends="Controller" {
 
 				local.mime = StructKeyExists(local.uploaded, "contentType") && StructKeyExists(local.uploaded, "contentSubType")
 					? (local.uploaded.contentType & "/" & local.uploaded.contentSubType) : "";
+				local.assetsDomain = resolveWorkspaceAssetsDomain(wsObj=local.wsObj, fallbackWs=local.ws);
 				local.relPath = "files/" & local.storageFolder & "/" & local.subfolder & "/" & local.uploaded.serverFile;
-				local.webUrl = "/files/" & local.storageFolder & "/" & local.subfolder & "/" & local.uploaded.serverFile;
-				local.assetsUrl = "assets.chelancounty.gov\" & Replace(local.storageFolder, "/", "\", "all") & "\" & Replace(local.subfolder, "/", "\", "all") & "\" & local.uploaded.serverFile;
+				local.assetsProtocol = resolveWorkspaceAssetsProtocol(wsObj=local.wsObj, fallbackWs=local.ws);
+				local.webUrl = (Len(local.assetsDomain) ? (local.assetsProtocol & "://" & local.assetsDomain) : "") & "/" & local.storageFolder & "/" & local.subfolder & "/" & local.uploaded.serverFile;
+				local.assetsUrl = (Len(local.assetsDomain) ? (local.assetsDomain & "\") : "\") & Replace(local.storageFolder, "/", "\", "all") & "\" & Replace(local.subfolder, "/", "\", "all") & "\" & local.uploaded.serverFile;
 				local.diskFilePath = local.targetDir & "\" & local.uploaded.serverFile;
 				local.userEmail = StructKeyExists(session, "user") && StructKeyExists(session.user, "email")
 					? session.user.email : (StructKeyExists(session, "username") ? session.username : "admin");
 
-				// Persist into dbo.media_assets
+				local.ocrText = StructKeyExists(params, "ocrText") ? Trim(params.ocrText) : "";
+
+				// Persist into dbo.media_assets (Upsert to respect IX_media_assets_site_folder_file)
 				queryExecute("
 					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-					INSERT INTO dbo.media_assets (
-						site_id, folder, filename, file_path, web_url,
-						file_size, file_ext, mime_type, file_hash,
-						title, alt_text, caption, credit,
-						is_image, width, height, is_wcag_compliant, tags,
-						created_by, created_at, updated_at
-					) VALUES (
-						:site_id, :folder, :filename, :file_path, :web_url,
-						:file_size, :file_ext, :mime_type, :file_hash,
-						:title, :alt_text, :caption, :credit,
-						:is_image, :width, :height, :is_wcag_compliant, :tags,
-						:created_by, SYSDATETIME(), SYSDATETIME()
+					IF EXISTS (
+						SELECT 1 FROM dbo.media_assets
+						WHERE site_id = :site_id AND folder = :folder AND filename = :filename AND deletedat IS NULL
 					)
+					BEGIN
+						UPDATE dbo.media_assets
+						SET file_path = :file_path,
+						    web_url = :web_url,
+						    file_size = :file_size,
+						    file_ext = :file_ext,
+						    mime_type = :mime_type,
+						    file_hash = :file_hash,
+						    title = :title,
+						    alt_text = :alt_text,
+						    caption = :caption,
+						    credit = :credit,
+						    ocr_text = :ocr_text,
+						    is_image = :is_image,
+						    width = :width,
+						    height = :height,
+						    is_wcag_compliant = :is_wcag_compliant,
+						    tags = :tags,
+						    updated_by = :created_by,
+						    updated_at = SYSDATETIME()
+						WHERE site_id = :site_id AND folder = :folder AND filename = :filename AND deletedat IS NULL;
+					END
+					ELSE
+					BEGIN
+						INSERT INTO dbo.media_assets (
+							site_id, folder, filename, file_path, web_url,
+							file_size, file_ext, mime_type, file_hash,
+							title, alt_text, caption, credit, ocr_text,
+							is_image, width, height, is_wcag_compliant, tags,
+							created_by, created_at, updated_at
+						) VALUES (
+							:site_id, :folder, :filename, :file_path, :web_url,
+							:file_size, :file_ext, :mime_type, :file_hash,
+							:title, :alt_text, :caption, :credit, :ocr_text,
+							:is_image, :width, :height, :is_wcag_compliant, :tags,
+							:created_by, SYSDATETIME(), SYSDATETIME()
+						);
+					END
 				", {
 					site_id: { value: local.ws, cfsqltype: "cf_sql_nvarchar" },
 					folder: { value: local.subfolder, cfsqltype: "cf_sql_nvarchar" },
@@ -458,6 +499,7 @@ component extends="Controller" {
 					alt_text: { value: local.altText, cfsqltype: "cf_sql_nvarchar" },
 					caption: { value: local.caption, cfsqltype: "cf_sql_nvarchar" },
 					credit: { value: local.credit, cfsqltype: "cf_sql_nvarchar" },
+					ocr_text: { value: local.ocrText, cfsqltype: "cf_sql_nvarchar" },
 					is_image: { value: local.isImg ? 1 : 0, cfsqltype: "cf_sql_bit" },
 					width: { value: Val(local.width) > 0 ? Val(local.width) : JavaCast("null", ""), cfsqltype: "cf_sql_integer", null: (Val(local.width) <= 0) },
 					height: { value: Val(local.height) > 0 ? Val(local.height) : JavaCast("null", ""), cfsqltype: "cf_sql_integer", null: (Val(local.height) <= 0) },
@@ -467,7 +509,7 @@ component extends="Controller" {
 				}, { datasource: "ChelanCountyWebsite" });
 
 				local.result.success = true;
-				local.result.message = "File '" & local.uploaded.serverFile & "' successfully uploaded to " & local.targetDir & " (assets.chelancounty.gov\" & Replace(local.storageFolder, "/", "\", "all") & "\" & local.subfolder & ") and registered in media database." & local.wcagNotice & local.dupWarning;
+				local.result.message = "File '" & local.uploaded.serverFile & "' successfully uploaded to " & local.targetDir & " (" & local.assetsDomain & "\" & Replace(local.storageFolder, "/", "\", "all") & "\" & local.subfolder & ") and registered in media database." & local.wcagNotice & local.dupWarning;
 				local.result.file = {
 					"name": local.uploaded.serverFile,
 					"size": local.uploaded.fileSize,
@@ -624,7 +666,7 @@ component extends="Controller" {
 					CREATE TABLE dbo.media_assets (
 						id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
 						site_id NVARCHAR(50) NOT NULL,
-						folder NVARCHAR(100) NOT NULL,
+						folder NVARCHAR(300) NOT NULL,
 						filename NVARCHAR(255) NOT NULL,
 						file_path NVARCHAR(500) NOT NULL,
 						web_url NVARCHAR(500) NOT NULL,
@@ -636,6 +678,7 @@ component extends="Controller" {
 						alt_text NVARCHAR(1000) NULL,
 						caption NVARCHAR(1000) NULL,
 						credit NVARCHAR(255) NULL,
+						ocr_text NVARCHAR(2000) NULL,
 						is_image BIT NOT NULL DEFAULT 0,
 						width INT NULL,
 						height INT NULL,
@@ -647,6 +690,16 @@ component extends="Controller" {
 						updated_by NVARCHAR(100) NULL,
 						deletedat DATETIME2(0) NULL
 					);
+				END;
+
+				IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='media_assets' AND COLUMN_NAME='folder' AND CHARACTER_MAXIMUM_LENGTH < 300)
+				BEGIN
+					ALTER TABLE dbo.media_assets ALTER COLUMN folder NVARCHAR(300) NOT NULL;
+				END;
+
+				IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='media_assets' AND COLUMN_NAME='ocr_text')
+				BEGIN
+					ALTER TABLE dbo.media_assets ADD ocr_text NVARCHAR(2000) NULL;
 				END;
 
 				IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_media_assets_site_folder_file' AND object_id = OBJECT_ID('dbo.media_assets'))
@@ -697,11 +750,11 @@ component extends="Controller" {
 
 		local.wsDirs = DirectoryList(local.rootDir, false, "query");
 		for (local.wRow in local.wsDirs) {
-			if (local.wRow.type eq "Dir") {
+			if (local.wRow.type eq "Dir" && Left(local.wRow.name, 1) neq ".") {
 				local.wsName = local.wRow.name;
 				local.subFolders = DirectoryList(local.wRow.directory & "\" & local.wsName, false, "query");
 				for (local.fRow in local.subFolders) {
-					if (local.fRow.type eq "Dir") {
+					if (local.fRow.type eq "Dir" && Left(local.fRow.name, 1) neq ".") {
 						local.folderName = local.fRow.name;
 						local.filesInFolder = DirectoryList(local.fRow.directory & "\" & local.folderName, false, "query");
 						for (local.fileRow in local.filesInFolder) {
@@ -748,7 +801,7 @@ component extends="Controller" {
 											folder: { value: local.folderName, cfsqltype: "cf_sql_nvarchar" },
 											filename: { value: local.fileRow.name, cfsqltype: "cf_sql_nvarchar" },
 											file_path: { value: local.relPath, cfsqltype: "cf_sql_nvarchar" },
-											web_url: { value: "/" & local.relPath, cfsqltype: "cf_sql_nvarchar" },
+											web_url: { value: "https://assets.chelancounty.com/" & local.wsName & "/" & local.folderName & "/" & local.fileRow.name, cfsqltype: "cf_sql_nvarchar" },
 											file_size: { value: local.fileRow.size, cfsqltype: "cf_sql_bigint" },
 											file_ext: { value: local.ext, cfsqltype: "cf_sql_nvarchar" },
 											file_hash: { value: local.fileHash, cfsqltype: "cf_sql_nvarchar" },
@@ -790,6 +843,23 @@ component extends="Controller" {
 				local.p = local.pb.start();
 				local.p.waitFor();
 			}
+			local.iisAssetsRoot = "C:\inetpub\chelan-county\assets.chelancounty.gov";
+			if (DirectoryExists(local.iisAssetsRoot) && DirectoryExists("C:\inetpub\chelan-county\files")) {
+				local.qDirs = DirectoryList("C:\inetpub\chelan-county\files", false, "query");
+				for (local.dRow in local.qDirs) {
+					if (CompareNoCase(local.dRow.type, "dir") == 0 && Left(local.dRow.name, 1) neq ".") {
+						local.wsJunc = local.iisAssetsRoot & "\" & local.dRow.name;
+						local.wsTarget = "C:\inetpub\chelan-county\files\" & local.dRow.name;
+						if (!DirectoryExists(local.wsJunc)) {
+							local.pbWs = createObject("java", "java.lang.ProcessBuilder").init([
+								"cmd.exe", "/c", "mklink", "/J", local.wsJunc, local.wsTarget
+							]);
+							local.pWs = local.pbWs.start();
+							local.pWs.waitFor();
+						}
+					}
+				}
+			}
 		} catch (any ignore) {}
 	}
 
@@ -809,6 +879,8 @@ component extends="Controller" {
 			if (local.w.id == "global") continue;
 			local.sFolder = resolveWorkspaceStorageFolder(wsObj=local.w, fallbackWs=local.w.id);
 			local.sDisk = resolveWorkspaceStorageDiskPath(wsObj=local.w, fallbackWs=local.w.id);
+			local.sAssetsProtocol = resolveWorkspaceAssetsProtocol(wsObj=local.w, fallbackWs=local.w.id);
+			local.sAssetsDomain = resolveWorkspaceAssetsDomain(wsObj=local.w, fallbackWs=local.w.id);
 			local.sAssets = resolveWorkspaceAssetsPath(wsObj=local.w, fallbackWs=local.w.id);
 			local.entry = {
 				id: local.w.id,
@@ -819,6 +891,8 @@ component extends="Controller" {
 				storageFolder: local.sFolder,
 				storagePath: (StructKeyExists(local.w, "storage_path") && Len(Trim(local.w.storage_path))) ? Trim(local.w.storage_path) : local.sDisk,
 				diskPath: local.sDisk,
+				assetsProtocol: local.sAssetsProtocol,
+				assetsDomain: local.sAssetsDomain,
 				assetsPath: local.sAssets,
 				defaultPath: "files/" & local.sFolder
 			};
@@ -1059,7 +1133,7 @@ component extends="Controller" {
 		if (DirectoryExists(local.rootDir)) {
 			local.wsDirs = DirectoryList(local.rootDir, false, "query");
 			for (local.wRow in local.wsDirs) {
-				if (local.wRow.type eq "Dir") {
+				if (local.wRow.type eq "Dir" && Left(local.wRow.name, 1) neq ".") {
 					local.wsName = local.wRow.name;
 
 					// Strict workspace isolation: only scan folders assigned to this workspace!
@@ -1078,7 +1152,7 @@ component extends="Controller" {
 
 					local.subFolders = DirectoryList(local.wRow.directory & "\" & local.wsName, false, "query");
 					for (local.fRow in local.subFolders) {
-						if (local.fRow.type eq "Dir") {
+						if (local.fRow.type eq "Dir" && Left(local.fRow.name, 1) neq ".") {
 							local.folderName = local.fRow.name;
 							local.filesInFolder = DirectoryList(local.fRow.directory & "\" & local.folderName, false, "query");
 							for (local.fileRow in local.filesInFolder) {
@@ -1131,7 +1205,7 @@ component extends="Controller" {
 										"dateModified": local.fileRow.dateLastModified,
 										"dateFormatted": DateFormat(local.fileRow.dateLastModified, "mmm dd, yyyy") & " at " & TimeFormat(local.fileRow.dateLastModified, "h:mm tt"),
 										"relativePath": "files/" & local.wsName & "/" & local.folderName & "/" & local.fileRow.name,
-										"webUrl": "/files/" & local.wsName & "/" & local.folderName & "/" & local.fileRow.name,
+										"webUrl": "https://assets.chelancounty.com/" & local.wsName & "/" & local.folderName & "/" & local.fileRow.name,
 										"absolutePath": "C:\inetpub\chelan-county\files\" & local.wsName & "\" & local.folderName & "\" & local.fileRow.name,
 										"author": local.author,
 										"tags": local.tags

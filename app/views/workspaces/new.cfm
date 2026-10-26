@@ -162,7 +162,7 @@
 					<input type="text" id="site_name" name="site_name" class="form-control" placeholder="Please enter site name" required autocomplete="off" oninput="autoSuggestVirtualDir(this.value)" value="#EncodeForHTMLAttribute(variables.workspace.site_name ?: '')#">
 				</div>
 
-				<div class="ws-grid-2">
+				<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem;">
 					<div>
 						<label for="virtual_directory" class="ws-form-label">Virtual Directory <span style="color:var(--admin-danger);">*</span></label>
 						<input type="text" id="virtual_directory" name="virtual_directory" class="form-control" placeholder="This should match the IIS virtual directory" required autocomplete="off" value="#EncodeForHTMLAttribute(variables.workspace.virtual_directory ?: '')#">
@@ -172,9 +172,35 @@
 					</div>
 					<div>
 						<label for="domain_name" class="ws-form-label">Domain Name</label>
-						<input type="text" id="domain_name" name="domain_name" class="form-control" placeholder="e.g. www.chelancounty.gov" autocomplete="off" value="#EncodeForHTMLAttribute(variables.workspace.domain_name ?: 'www.chelancounty.gov')#">
+						<cfset local.rawDomName = Trim(variables.workspace.domain_name ?: 'www.chelancounty.gov')>
+						<cfset local.domProto = ReFindNoCase("^https://", local.rawDomName) ? "https" : "http">
+						<cfset local.domHostOnly = REReplace(REReplaceNoCase(local.rawDomName, "^https?://", ""), "/+$", "")>
+						<cfif !Len(local.domHostOnly)><cfset local.domHostOnly = "www.chelancounty.gov"></cfif>
+						<div style="display:flex; align-items:stretch;">
+							<select id="domain_protocol" name="domain_protocol" class="form-control" aria-label="Domain Protocol (HTTP or HTTPS)" style="width:88px; flex-shrink:0; border-top-right-radius:0; border-bottom-right-radius:0; border-right:0; background:var(--admin-surface-hover, ##f8fafc); font-weight:600; font-family:monospace; font-size:0.8rem; padding-left:0.45rem; padding-right:0.25rem;">
+								<option value="http" <cfif local.domProto eq "http">selected</cfif>>http://</option>
+								<option value="https" <cfif local.domProto eq "https">selected</cfif>>https://</option>
+							</select>
+							<input type="text" id="domain_name" name="domain_name" class="form-control" placeholder="e.g. www.chelancounty.gov" autocomplete="off" value="#EncodeForHTMLAttribute(local.domHostOnly)#" style="border-top-left-radius:0; border-bottom-left-radius:0; flex:1; min-width:0;" oninput="if(/^https?:\/\//i.test(this.value)){document.getElementById('domain_protocol').value=/^https:/i.test(this.value)?'https':'http';this.value=this.value.replace(/^https?:\/\//i,'');}">
+						</div>
 						<small style="color:var(--admin-text-muted); font-size:0.73rem; display:block; margin-top:0.25rem;">
 							Canonical web hostname
+						</small>
+					</div>
+					<div>
+						<label for="assets_domain" class="ws-form-label">Assets Domain</label>
+						<cfset local.rawAssetsDom = Trim(variables.workspace.assets_domain ?: '')>
+						<cfset local.assetsProto = ReFindNoCase("^https://", local.rawAssetsDom) ? "https" : "http">
+						<cfset local.assetsHostOnly = REReplace(REReplaceNoCase(local.rawAssetsDom, "^https?://", ""), "/+$", "")>
+						<div style="display:flex; align-items:stretch;">
+							<select id="assets_protocol" name="assets_protocol" class="form-control" aria-label="Assets Domain Protocol (HTTP or HTTPS)" style="width:88px; flex-shrink:0; border-top-right-radius:0; border-bottom-right-radius:0; border-right:0; background:var(--admin-surface-hover, ##f8fafc); font-weight:600; font-family:monospace; font-size:0.8rem; padding-left:0.45rem; padding-right:0.25rem;">
+								<option value="http" <cfif local.assetsProto eq "http">selected</cfif>>http://</option>
+								<option value="https" <cfif local.assetsProto eq "https">selected</cfif>>https://</option>
+							</select>
+							<input type="text" id="assets_domain" name="assets_domain" class="form-control" placeholder="e.g. assets.chelancounty.com" autocomplete="off" value="#EncodeForHTMLAttribute(local.assetsHostOnly)#" style="border-top-left-radius:0; border-bottom-left-radius:0; flex:1; min-width:0;" oninput="if(/^https?:\/\//i.test(this.value)){document.getElementById('assets_protocol').value=/^https:/i.test(this.value)?'https':'http';this.value=this.value.replace(/^https?:\/\//i,'');}">
+						</div>
+						<small style="color:var(--admin-text-muted); font-size:0.73rem; display:block; margin-top:0.25rem;">
+							Public domain for images &amp; documents
 						</small>
 					</div>
 				</div>
