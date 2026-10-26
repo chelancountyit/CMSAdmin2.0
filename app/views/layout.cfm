@@ -210,6 +210,7 @@
 				activeWsVirtualDir = (structKeyExists(activeWsObj, "virtual_directory") && len(trim(activeWsObj.virtual_directory)))
 					? trim(activeWsObj.virtual_directory)
 					: (activeWsObj.id eq 'global' ? 'shared' : activeWsObj.id);
+				activeWsStorageFolder = resolveWorkspaceStorageFolder(activeWsObj, activeWsVirtualDir);
 				activeWsPrimaryColor = (len(trim(activeWsObj.id ?: "")) && structKeyExists(activeWsObj, "color") && REFindNoCase("^##[0-9a-fA-F]{3,6}$", trim(activeWsObj.color)))
 					? trim(activeWsObj.color)
 					: "##0073aa";
@@ -299,7 +300,7 @@
 						</button>
 
 						<!--- Workspace Dropdown (Department or Site Selector) --->
-						<div class="dropdown header-workspace-dropdown" id="workspaceDropdownContainer" data-user-role="<cfoutput>#activeRole#</cfoutput>" data-is-admin="<cfoutput>#(isAdmin ? 'true' : 'false')#</cfoutput>" data-active-ws-id="<cfoutput>#activeWsObj.id#</cfoutput>" data-active-ws-color="<cfoutput>#EncodeForHTMLAttribute(activeWsPrimaryColor)#</cfoutput>" data-active-ws-virtual-dir="<cfoutput>#activeWsVirtualDir#</cfoutput>" data-dashboard-url="<cfoutput>#urlFor(controller='main', action='index')#</cfoutput>">
+						<div class="dropdown header-workspace-dropdown" id="workspaceDropdownContainer" data-user-role="<cfoutput>#activeRole#</cfoutput>" data-is-admin="<cfoutput>#(isAdmin ? 'true' : 'false')#</cfoutput>" data-active-ws-id="<cfoutput>#activeWsObj.id#</cfoutput>" data-active-ws-color="<cfoutput>#EncodeForHTMLAttribute(activeWsPrimaryColor)#</cfoutput>" data-active-ws-virtual-dir="<cfoutput>#activeWsVirtualDir#</cfoutput>" data-active-ws-storage-folder="<cfoutput>#activeWsStorageFolder#</cfoutput>" data-dashboard-url="<cfoutput>#urlFor(controller='main', action='index')#</cfoutput>">
 							<button type="button" class="workspace-btn" id="workspaceDropdownBtn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Switch Workspace">
 								<span class="workspace-btn-icon" id="activeWsIcon" style="background:var(--admin-primary-light); color:var(--admin-primary);">
 									<cfoutput>#svgIcon(name=activeWsObj.icon, size=16)#</cfoutput>
@@ -345,8 +346,9 @@
 										<div class="workspace-menu-section-title"><cfoutput>#(isAdmin ? 'Departments' : 'Assigned Departments')#</cfoutput></div>
 										<cfloop array="#deptWorkspaces#" index="local.w">
 											<cfset local.wVirtDir = (StructKeyExists(local.w, "virtual_directory") && Len(Trim(local.w.virtual_directory))) ? Trim(local.w.virtual_directory) : local.w.id>
+											<cfset local.wStorageFolder = resolveWorkspaceStorageFolder(local.w, local.wVirtDir)>
 											<cfset local.wColor = (StructKeyExists(local.w, "color") && Len(Trim(local.w.color))) ? Trim(local.w.color) : "##7e22ce">
-											<button type="button" class="workspace-item <cfif activeWsObj.id eq local.w.id>is-active</cfif>" data-ws-id="<cfoutput>#local.w.id#</cfoutput>" data-ws-name="<cfoutput>#local.w.name#</cfoutput>" data-ws-type="dept" data-ws-color="<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>" data-ws-badge="<cfoutput>#local.w.badge#</cfoutput>" data-ws-badge-cls="<cfoutput>#local.w.badgeClass#</cfoutput>" data-ws-icon="<cfoutput>#local.w.icon#</cfoutput>" data-ws-virtual-dir="<cfoutput>#local.wVirtDir#</cfoutput>">
+											<button type="button" class="workspace-item <cfif activeWsObj.id eq local.w.id>is-active</cfif>" data-ws-id="<cfoutput>#local.w.id#</cfoutput>" data-ws-name="<cfoutput>#local.w.name#</cfoutput>" data-ws-type="dept" data-ws-color="<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>" data-ws-badge="<cfoutput>#local.w.badge#</cfoutput>" data-ws-badge-cls="<cfoutput>#local.w.badgeClass#</cfoutput>" data-ws-icon="<cfoutput>#local.w.icon#</cfoutput>" data-ws-virtual-dir="<cfoutput>#local.wVirtDir#</cfoutput>" data-ws-storage-folder="<cfoutput>#local.wStorageFolder#</cfoutput>">
 												<span class="workspace-item-icon icon-<cfoutput>#local.w.id#</cfoutput>" style="background:color-mix(in srgb, <cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput> 12%, ##ffffff); color:<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>;">
 													<cfoutput>#svgIcon(name=local.w.icon, size=16)#</cfoutput>
 												</span>
@@ -373,8 +375,9 @@
 										<div class="workspace-menu-section-title"><cfoutput>#(isAdmin ? 'Sites & Portals' : 'Assigned Sites & Portals')#</cfoutput></div>
 										<cfloop array="#siteWorkspaces#" index="local.w">
 											<cfset local.wVirtDir = (StructKeyExists(local.w, "virtual_directory") && Len(Trim(local.w.virtual_directory))) ? Trim(local.w.virtual_directory) : local.w.id>
+											<cfset local.wStorageFolder = resolveWorkspaceStorageFolder(local.w, local.wVirtDir)>
 											<cfset local.wColor = (StructKeyExists(local.w, "color") && Len(Trim(local.w.color))) ? Trim(local.w.color) : "##10b981">
-											<button type="button" class="workspace-item <cfif activeWsObj.id eq local.w.id>is-active</cfif>" data-ws-id="<cfoutput>#local.w.id#</cfoutput>" data-ws-name="<cfoutput>#local.w.name#</cfoutput>" data-ws-type="site" data-ws-color="<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>" data-ws-badge="<cfoutput>#local.w.badge#</cfoutput>" data-ws-badge-cls="<cfoutput>#local.w.badgeClass#</cfoutput>" data-ws-icon="<cfoutput>#local.w.icon#</cfoutput>" data-ws-virtual-dir="<cfoutput>#local.wVirtDir#</cfoutput>">
+											<button type="button" class="workspace-item <cfif activeWsObj.id eq local.w.id>is-active</cfif>" data-ws-id="<cfoutput>#local.w.id#</cfoutput>" data-ws-name="<cfoutput>#local.w.name#</cfoutput>" data-ws-type="site" data-ws-color="<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>" data-ws-badge="<cfoutput>#local.w.badge#</cfoutput>" data-ws-badge-cls="<cfoutput>#local.w.badgeClass#</cfoutput>" data-ws-icon="<cfoutput>#local.w.icon#</cfoutput>" data-ws-virtual-dir="<cfoutput>#local.wVirtDir#</cfoutput>" data-ws-storage-folder="<cfoutput>#local.wStorageFolder#</cfoutput>">
 												<span class="workspace-item-icon icon-site" style="background:color-mix(in srgb, <cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput> 12%, ##ffffff); color:<cfoutput>#EncodeForHTMLAttribute(local.wColor)#</cfoutput>;">
 													<cfoutput>#svgIcon(name=local.w.icon, size=16)#</cfoutput>
 												</span>
@@ -768,10 +771,11 @@
 											<cfoutput>#svgIcon(name="chevron-right", size=14, class="nav-caret")#</cfoutput>
 										</a>
 										<ul class="nav-submenu">
-											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'action') and params.action eq 'index' and (not structKeyExists(params, 'type') or params.type eq 'all') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='index')#</cfoutput>" class="submenu-link">All Workspaces</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'action') and params.action eq 'index' and (not structKeyExists(params, 'type') or params.type eq 'all') and (not structKeyExists(params, 'preview') or params.preview neq 'megamenu') ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='index')#</cfoutput>" class="submenu-link">All Workspaces</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'action') and params.action eq 'new' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='new')#</cfoutput>" class="submenu-link">Add New Workspace</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'type') and params.type eq 'dept' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='index', params='type=dept')#</cfoutput>" class="submenu-link">Departments</a></li>
 											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'type') and params.type eq 'site' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='index', params='type=site')#</cfoutput>" class="submenu-link">Sites &amp; Portals</a></li>
+											<li class="submenu-item <cfoutput>#(structKeyExists(params, 'controller') and params.controller eq 'workspaces' and structKeyExists(params, 'preview') and params.preview eq 'megamenu' ? 'active' : '')#</cfoutput>"><a href="<cfoutput>#urlFor(controller='workspaces', action='index', params='preview=megamenu')#</cfoutput>" class="submenu-link" id="navLinkWorkspaceMegaMenuPreview">Mega Menu Preview</a></li>
 										</ul>
 									</li>
 
@@ -884,7 +888,7 @@
 			</div>
 
 			<!--- Core Vanilla JS Interactions --->
-			<script src="/javascripts/admin.js?v=1.7" type="text/javascript"></script>
+			<script src="/javascripts/admin.js?v=1.8" type="text/javascript"></script>
 			<script src="/javascripts/jbdeditor.js?v=2.6" type="text/javascript"></script>
 			<cfif structKeyExists(params, "controller") and params.controller eq "forms" and structKeyExists(params, "action") and params.action eq "builder">
 				<script src="/javascripts/form-builder.js?v=2.6" type="text/javascript"></script>

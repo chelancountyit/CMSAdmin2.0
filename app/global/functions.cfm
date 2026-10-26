@@ -63,6 +63,9 @@ public array function getMasterWorkspaces() {
 					folderPath: row.folder_path,
 					virtual_directory: row.virtual_directory,
 					storage_path: (structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path,
+					storage_folder: extractWorkspaceStorageFolder(rawPath = ((structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path), fallback = row.virtual_directory),
+					storage_disk_path: "C:\inetpub\chelan-county\files\" & replace(extractWorkspaceStorageFolder(rawPath = ((structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path), fallback = row.virtual_directory), "/", "\", "all"),
+					assets_path: "assets.chelancounty.gov\" & replace(extractWorkspaceStorageFolder(rawPath = ((structKeyExists(row, "storage_path") && len(row.storage_path ?: "")) ? row.storage_path : row.folder_path), fallback = row.virtual_directory), "/", "\", "all"),
 					domain_name: (structKeyExists(row, "domain_name") && len(row.domain_name ?: "")) ? row.domain_name : "www.chelancounty.gov",
 					project_path: (structKeyExists(row, "project_path") && len(row.project_path ?: "")) ? row.project_path : "C:\inetpub\chelan-county",
 					department: len(row.department ?: "") ? row.department : row.name,
@@ -136,6 +139,91 @@ public array function getMasterWorkspaces() {
 
 public void function saveMasterWorkspaces(required array workspaces) {
 	application.cmsWorkspacesList = arguments.workspaces;
+}
+
+/**
+ * Extracts the normalized storage folder segment (under C:\inetpub\chelan-county\files\)
+ * from a workspace's assigned storage_path, folderPath, or virtual_directory.
+ * Maps:
+ *   assets.chelancounty.gov\[workspace]\... -> [workspace]
+ *   C:\inetpub\chelan-county\files\[workspace]\... -> [workspace]
+ *   files/[workspace] -> [workspace]
+ *   [workspace] -> [workspace]
+ */
+public string function extractWorkspaceStorageFolder(string rawPath = "", string fallback = "") {
+	var p = trim(arguments.rawPath);
+	if (!len(p)) p = trim(arguments.fallback);
+	if (!len(p)) return "shared";
+
+	// Normalize slashes to forward slashes for parsing
+	p = replace(p, "\", "/", "all");
+
+	// Strip protocol if present
+	p = reReplaceNoCase(p, "^https?://", "");
+
+	// Strip assets.chelancounty.gov prefix
+	p = reReplaceNoCase(p, "^assets\.chelancounty\.gov/?", "");
+
+	// Strip physical disk root prefixes
+	p = reReplaceNoCase(p, "^[a-z]:/inetpub/chelan-county/files/?", "");
+	p = reReplaceNoCase(p, "^[a-z]:/inetpub/cmsadmin2\.0/files/?", "");
+	p = reReplaceNoCase(p, "^/inetpub/chelan-county/files/?", "");
+	p = reReplaceNoCase(p, "^/inetpub/cmsadmin2\.0/files/?", "");
+
+	// Strip leading /files/ or files/
+	p = reReplaceNoCase(p, "^/?files/?", "");
+
+	// Trim leading/trailing slashes
+	p = reReplace(p, "^/+|/+$", "", "all");
+
+	// Guard against traversal
+	p = replace(p, "..", "", "all");
+	p = reReplace(p, "^/+|/+$", "", "all");
+
+	if (!len(p) || lCase(p) == "global" || lCase(p) == "all") {
+		if (len(trim(arguments.fallback)) && lCase(trim(arguments.fallback)) != "global" && lCase(trim(arguments.fallback)) != "all") {
+			return extractWorkspaceStorageFolder(rawPath = arguments.fallback, fallback = "");
+		}
+		return "shared";
+	}
+	return p;
+}
+
+/**
+ * Resolves the workspace's storage folder name under C:\inetpub\chelan-county\files\
+ * Prioritizes the workspace's assigned storage_path first.
+ */
+public string function resolveWorkspaceStorageFolder(required struct wsObj, string fallbackWs = "") {
+	var raw = "";
+	if (structKeyExists(arguments.wsObj, "storage_path") && len(trim(arguments.wsObj.storage_path))) {
+		raw = trim(arguments.wsObj.storage_path);
+	} else if (structKeyExists(arguments.wsObj, "folderPath") && len(trim(arguments.wsObj.folderPath))) {
+		raw = trim(arguments.wsObj.folderPath);
+	} else if (structKeyExists(arguments.wsObj, "folder_path") && len(trim(arguments.wsObj.folder_path))) {
+		raw = trim(arguments.wsObj.folder_path);
+	} else if (structKeyExists(arguments.wsObj, "virtual_directory") && len(trim(arguments.wsObj.virtual_directory))) {
+		raw = trim(arguments.wsObj.virtual_directory);
+	}
+	var fb = len(trim(arguments.fallbackWs)) ? trim(arguments.fallbackWs) : (structKeyExists(arguments.wsObj, "virtual_directory") ? trim(arguments.wsObj.virtual_directory) : "");
+	return extractWorkspaceStorageFolder(rawPath = raw, fallback = fb);
+}
+
+/**
+ * Resolves the physical disk directory for a workspace's storage_path:
+ * C:\inetpub\chelan-county\files\[workspace]
+ */
+public string function resolveWorkspaceStorageDiskPath(required struct wsObj, string fallbackWs = "") {
+	var folder = resolveWorkspaceStorageFolder(wsObj = arguments.wsObj, fallbackWs = arguments.fallbackWs);
+	return "C:\inetpub\chelan-county\files\" & replace(folder, "/", "\", "all");
+}
+
+/**
+ * Resolves the public assets URL mapping for a workspace's storage_path:
+ * assets.chelancounty.gov\[workspace]
+ */
+public string function resolveWorkspaceAssetsPath(required struct wsObj, string fallbackWs = "") {
+	var folder = resolveWorkspaceStorageFolder(wsObj = arguments.wsObj, fallbackWs = arguments.fallbackWs);
+	return "assets.chelancounty.gov\" & replace(folder, "/", "\", "all");
 }
 
 public void function addMasterWorkspace(required struct newWorkspace) {

@@ -24,17 +24,13 @@ component extends="Controller" {
 		variables.workspaces = getWorkspacesList();
 		variables.currentWs = activeWorkspaceId();
 
-		// Resolve canonical workspace object
+		// Resolve canonical workspace object and its assigned storage_path
 		local.wsObj = resolveUserActiveWorkspace(requestedWs=variables.currentWs, role=local.role);
 		local.vDir = "";
+		local.wsDisk = "";
 		if (Len(variables.currentWs)) {
-			if (StructKeyExists(local.wsObj, "virtual_directory") && Len(Trim(local.wsObj.virtual_directory))) {
-				local.vDir = Trim(local.wsObj.virtual_directory);
-			} else if (StructKeyExists(local.wsObj, "virtualdir") && Len(Trim(local.wsObj.virtualdir))) {
-				local.vDir = Trim(local.wsObj.virtualdir);
-			}
-
-			if (!Len(local.vDir)) {
+			local.vDir = resolveWorkspaceStorageFolder(wsObj=local.wsObj, fallbackWs=variables.currentWs);
+			if (!Len(local.vDir) || local.vDir eq "shared") {
 				local.targetFolders = getFoldersForWorkspace(variables.currentWs);
 				for (local.f in local.targetFolders) {
 					if (DirectoryExists("C:\inetpub\chelan-county\files\" & local.f)) {
@@ -47,11 +43,11 @@ component extends="Controller" {
 				}
 			}
 
-			// Ensure \files\[workspace.virtual_directory]\images|documents|shared images exists on disk
+			// Ensure C:\inetpub\chelan-county\files\[storageFolder]\images|documents exists on disk
 			local.rootDisk = "C:\inetpub\chelan-county\files\";
-			local.vDir = Replace(Replace(Trim(local.vDir), "\", "/", "all"), "/", "", "all");
+			local.vDir = extractWorkspaceStorageFolder(rawPath=local.vDir, fallback=variables.currentWs);
 			if (Len(local.vDir)) {
-				local.wsDisk = local.rootDisk & local.vDir;
+				local.wsDisk = local.rootDisk & Replace(local.vDir, "/", "\", "all");
 				try {
 					if (!DirectoryExists(local.wsDisk)) {
 						DirectoryCreate(local.wsDisk);
@@ -87,6 +83,12 @@ component extends="Controller" {
 
 		variables.activeWsFolder = local.vDir;
 		variables.activeWsVirtualDir = local.vDir;
+		variables.activeWsStoragePath = (StructKeyExists(local.wsObj, "storage_path") && Len(Trim(local.wsObj.storage_path))) ? Trim(local.wsObj.storage_path) : (Len(local.vDir) ? ("C:\inetpub\chelan-county\files\" & Replace(local.vDir, "/", "\", "all")) : "");
+		variables.activeWsDiskPath = Len(local.vDir) ? ("C:\inetpub\chelan-county\files\" & Replace(local.vDir, "/", "\", "all")) : "";
+		variables.activeWsAssetsPath = Len(local.vDir) ? ("assets.chelancounty.gov\" & Replace(local.vDir, "/", "\", "all")) : "";
+		variables.activeWsStoragePath = (StructKeyExists(local.wsObj, "storage_path") && Len(Trim(local.wsObj.storage_path))) ? Trim(local.wsObj.storage_path) : (Len(local.vDir) ? ("C:\inetpub\chelan-county\files\" & Replace(local.vDir, "/", "\", "all")) : "");
+		variables.activeWsDiskPath = Len(local.vDir) ? ("C:\inetpub\chelan-county\files\" & Replace(local.vDir, "/", "\", "all")) : "";
+		variables.activeWsAssetsPath = Len(local.vDir) ? ("assets.chelancounty.gov\" & Replace(local.vDir, "/", "\", "all")) : "";
 
 		// Friendly name
 		variables.activeWsName = Len(variables.currentWs) && StructKeyExists(local.wsObj, "name") && Len(Trim(local.wsObj.name)) ? local.wsObj.name : "Please select a workspace";
@@ -150,17 +152,13 @@ component extends="Controller" {
 		variables.workspaces = getWorkspacesList();
 		variables.currentWs = activeWorkspaceId();
 
-		// Resolve canonical workspace object
+		// Resolve canonical workspace object and its assigned storage_path
 		local.wsObj = resolveUserActiveWorkspace(requestedWs=variables.currentWs, role=local.role);
 		local.vDir = "";
+		local.wsDisk = "";
 		if (Len(variables.currentWs)) {
-			if (StructKeyExists(local.wsObj, "virtual_directory") && Len(Trim(local.wsObj.virtual_directory))) {
-				local.vDir = Trim(local.wsObj.virtual_directory);
-			} else if (StructKeyExists(local.wsObj, "virtualdir") && Len(Trim(local.wsObj.virtualdir))) {
-				local.vDir = Trim(local.wsObj.virtualdir);
-			}
-
-			if (!Len(local.vDir)) {
+			local.vDir = resolveWorkspaceStorageFolder(wsObj=local.wsObj, fallbackWs=variables.currentWs);
+			if (!Len(local.vDir) || local.vDir eq "shared") {
 				local.targetFolders = getFoldersForWorkspace(variables.currentWs);
 				for (local.f in local.targetFolders) {
 					if (DirectoryExists("C:\inetpub\chelan-county\files\" & local.f)) {
@@ -173,11 +171,11 @@ component extends="Controller" {
 				}
 			}
 
-			// Ensure \files\[workspace.virtual_directory]\images|documents exists on disk
+			// Ensure C:\inetpub\chelan-county\files\[storageFolder]\images|documents exists on disk
 			local.rootDisk = "C:\inetpub\chelan-county\files\";
-			local.vDir = Replace(Replace(Trim(local.vDir), "\", "/", "all"), "/", "", "all");
+			local.vDir = extractWorkspaceStorageFolder(rawPath=local.vDir, fallback=variables.currentWs);
 			if (Len(local.vDir)) {
-				local.wsDisk = local.rootDisk & local.vDir;
+				local.wsDisk = local.rootDisk & Replace(local.vDir, "/", "\", "all");
 				try {
 					if (!DirectoryExists(local.wsDisk)) {
 						DirectoryCreate(local.wsDisk);
@@ -304,8 +302,16 @@ component extends="Controller" {
 		local.credit = StructKeyExists(params, "credit") ? Trim(params.credit) : "";
 		local.tags = StructKeyExists(params, "tags") ? Trim(params.tags) : "";
 
+		// Resolve the workspace's assigned storage_path folder on disk
+		local.wsObj = resolveUserActiveWorkspace(requestedWs=local.ws, role=local.role);
+		local.storageFolder = resolveWorkspaceStorageFolder(wsObj=local.wsObj, fallbackWs=local.ws);
+		if (!Len(local.storageFolder) || local.storageFolder eq "shared") {
+			local.storageFolder = extractWorkspaceStorageFolder(rawPath=local.ws, fallback=local.ws);
+		}
+		local.wsDisk = "C:\inetpub\chelan-county\files\" & Replace(local.storageFolder, "/", "\", "all");
+
 		// Ensure target directory exists on disk
-		local.targetDir = "C:\inetpub\chelan-county\files\" & local.ws & "\" & local.subfolder;
+		local.targetDir = local.wsDisk & "\" & Replace(local.subfolder, "/", "\", "all");
 		if (!DirectoryExists(local.targetDir)) {
 			DirectoryCreate(local.targetDir);
 		}
@@ -415,8 +421,10 @@ component extends="Controller" {
 
 				local.mime = StructKeyExists(local.uploaded, "contentType") && StructKeyExists(local.uploaded, "contentSubType")
 					? (local.uploaded.contentType & "/" & local.uploaded.contentSubType) : "";
-				local.relPath = "files/" & local.ws & "/" & local.subfolder & "/" & local.uploaded.serverFile;
-				local.webUrl = "/files/" & local.ws & "/" & local.subfolder & "/" & local.uploaded.serverFile;
+				local.relPath = "files/" & local.storageFolder & "/" & local.subfolder & "/" & local.uploaded.serverFile;
+				local.webUrl = "/files/" & local.storageFolder & "/" & local.subfolder & "/" & local.uploaded.serverFile;
+				local.assetsUrl = "assets.chelancounty.gov\" & Replace(local.storageFolder, "/", "\", "all") & "\" & Replace(local.subfolder, "/", "\", "all") & "\" & local.uploaded.serverFile;
+				local.diskFilePath = local.targetDir & "\" & local.uploaded.serverFile;
 				local.userEmail = StructKeyExists(session, "user") && StructKeyExists(session.user, "email")
 					? session.user.email : (StructKeyExists(session, "username") ? session.username : "admin");
 
@@ -459,12 +467,15 @@ component extends="Controller" {
 				}, { datasource: "ChelanCountyWebsite" });
 
 				local.result.success = true;
-				local.result.message = "File '" & local.uploaded.serverFile & "' successfully uploaded and registered in media database for " & local.ws & "/" & local.subfolder & "." & local.wcagNotice & local.dupWarning;
+				local.result.message = "File '" & local.uploaded.serverFile & "' successfully uploaded to " & local.targetDir & " (assets.chelancounty.gov\" & Replace(local.storageFolder, "/", "\", "all") & "\" & local.subfolder & ") and registered in media database." & local.wcagNotice & local.dupWarning;
 				local.result.file = {
 					"name": local.uploaded.serverFile,
 					"size": local.uploaded.fileSize,
 					"relativePath": local.relPath,
 					"webUrl": local.webUrl,
+					"assetsUrl": local.assetsUrl,
+					"diskPath": local.diskFilePath,
+					"storageFolder": local.storageFolder,
 					"extension": local.ext,
 					"fileHash": local.fileHash,
 					"title": local.title,
@@ -796,13 +807,20 @@ component extends="Controller" {
 
 		for (local.w in local.accessible) {
 			if (local.w.id == "global") continue;
+			local.sFolder = resolveWorkspaceStorageFolder(wsObj=local.w, fallbackWs=local.w.id);
+			local.sDisk = resolveWorkspaceStorageDiskPath(wsObj=local.w, fallbackWs=local.w.id);
+			local.sAssets = resolveWorkspaceAssetsPath(wsObj=local.w, fallbackWs=local.w.id);
 			local.entry = {
 				id: local.w.id,
 				name: local.w.name,
 				type: local.w.type,
 				badge: local.w.badge,
 				folderCount: 2,
-				defaultPath: StructKeyExists(local.w, "folderPath") ? local.w.folderPath : "files/" & local.w.id
+				storageFolder: local.sFolder,
+				storagePath: (StructKeyExists(local.w, "storage_path") && Len(Trim(local.w.storage_path))) ? Trim(local.w.storage_path) : local.sDisk,
+				diskPath: local.sDisk,
+				assetsPath: local.sAssets,
+				defaultPath: "files/" & local.sFolder
 			};
 			if (StructKeyExists(local.w, "alias")) local.entry.alias = local.w.alias;
 			ArrayAppend(local.list, local.entry);
@@ -822,9 +840,13 @@ component extends="Controller" {
 
 		local.folders = [ local.id ];
 
-		// Resolve canonical workspace object if possible
+		// Resolve canonical workspace object and its assigned storage_path first
 		try {
 			local.wsObj = resolveUserActiveWorkspace(requestedWs=local.id, role=getCurrentActiveRole());
+			local.sFolder = LCase(resolveWorkspaceStorageFolder(wsObj=local.wsObj, fallbackWs=local.id));
+			if (Len(local.sFolder) && local.sFolder neq "shared" && !ArrayFindNoCase(local.folders, local.sFolder)) {
+				ArrayPrepend(local.folders, local.sFolder);
+			}
 			if (StructKeyExists(local.wsObj, "virtual_directory") && Len(Trim(local.wsObj.virtual_directory))) {
 				local.vDir = LCase(Trim(local.wsObj.virtual_directory));
 				if (!ArrayFindNoCase(local.folders, local.vDir)) ArrayAppend(local.folders, local.vDir);

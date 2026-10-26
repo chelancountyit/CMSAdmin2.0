@@ -2,6 +2,9 @@
 <cfparam name="variables.activeWsFolder" default="community-development">
 <cfparam name="variables.activeWsVirtualDir" default="#variables.activeWsFolder#">
 <cfparam name="variables.activeWsName" default="#variables.activeWsFolder#">
+<cfparam name="variables.activeWsStoragePath" default="C:\inetpub\chelan-county\files\#variables.activeWsFolder#">
+<cfparam name="variables.activeWsDiskPath" default="C:\inetpub\chelan-county\files\#variables.activeWsFolder#">
+<cfparam name="variables.activeWsAssetsPath" default="assets.chelancounty.gov\#variables.activeWsFolder#">
 <cfparam name="variables.pickerMode" default="document">
 <cfparam name="variables.initialSubfolder" default="documents">
 <cfparam name="variables.callback" default="onMediaSelected">
@@ -54,6 +57,9 @@
      id="filexplorer-container"
      data-ws="#encodeForHTMLAttribute(variables.activeWsFolder)#"
      data-ws-virtual-dir="#encodeForHTMLAttribute(variables.activeWsVirtualDir)#"
+     data-ws-storage-path="#encodeForHTMLAttribute(variables.activeWsStoragePath)#"
+     data-ws-disk-path="#encodeForHTMLAttribute(variables.activeWsDiskPath)#"
+     data-ws-assets-path="#encodeForHTMLAttribute(variables.activeWsAssetsPath)#"
      data-ws-name="#encodeForHTMLAttribute(variables.activeWsName)#"
      data-initial-folder="#encodeForHTMLAttribute(variables.initialSubfolder)#"
      data-picker-mode="#encodeForHTMLAttribute(variables.pickerMode)#"
@@ -296,7 +302,7 @@
 	</div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=4.2"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=4.5"></script>
 </cfoutput>
 </body>
 </html>

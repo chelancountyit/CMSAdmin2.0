@@ -19,7 +19,7 @@
 	// State
 	// ------------------------------------------------------------------
 	var state = {
-		cfg: { filesRoot: 'C:\\inetpub\\cmsadmin2.0\\files\\', webBase: '/files/', systemDepth: 2, maxNameLen: 64, server: '' },
+		cfg: { filesRoot: 'C:\\inetpub\\chelan-county\\files\\', webBase: '/files/', systemDepth: 2, maxNameLen: 64, server: '' },
 		ws: '',                // active workspace directory (e.g. "community-development")
 		wsName: '',            // friendly display name
 		online: null,          // null = connecting, true, false
@@ -109,15 +109,27 @@
 		if (isDir && out.slice(-1) !== '\\') out += '\\';
 		return out;
 	}
+	function assetsPath(p, isDir) {
+		var s = segs(p);
+		if (s.length > 0 && s[0].toLowerCase() === 'shared images') {
+			var sub = s.slice(1);
+			var outShared = 'assets.chelancounty.gov\\shared images' + (sub.length ? '\\' + sub.join('\\') : '');
+			if (isDir && outShared.slice(-1) !== '\\') outShared += '\\';
+			return outShared;
+		}
+		var out = 'assets.chelancounty.gov\\' + s.join('\\');
+		if (isDir && out.slice(-1) !== '\\') out += '\\';
+		return out;
+	}
 	function webPath(p, isDir) {
 		var low = (p || '').toLowerCase();
 		if (low.indexOf('shared images/') === 0 || low === 'shared images') {
 			var rel = p.substring(13).replace(/^\//, '');
-			var out = '/images/picjumbo/' + (rel ? segs(rel).join('/') : '');
+			var out = 'https://assets.chelancounty.gov/shared images/' + (rel ? segs(rel).join('/') : '');
 			if (isDir && out.slice(-1) !== '/') out += '/';
 			return out;
 		}
-		var out = state.cfg.webBase + p;
+		var out = 'https://assets.chelancounty.gov/' + p;
 		if (isDir && out.slice(-1) !== '/') out += '/';
 		return out;
 	}
@@ -335,7 +347,7 @@
 			if (d.systemDepth != null) state.cfg.systemDepth = Number(d.systemDepth);
 			if (d.maxNameLen != null) state.cfg.maxNameLen = Number(d.maxNameLen);
 			if (el.webRoot) {
-				el.webRoot.textContent = state.cfg.webBase + (state.ws ? state.ws + '/' : '');
+				el.webRoot.textContent = 'https://assets.chelancounty.gov/' + (state.ws ? state.ws + '/' : '');
 			}
 			if (el.newName) el.newName.maxLength = state.cfg.maxNameLen;
 			setOnline(state.cfg.server, r.ms);
@@ -792,7 +804,7 @@
 					: '') +
 				'</div>' +
 				'<dl>' +
-				'<dt>Server path</dt><dd class="mono">' + esc(diskPath(p, true)) + '</dd>' +
+				'<dt>Storage path</dt><dd class="mono">' + esc(diskPath(p, true)) + '</dd>' +
 				'<dt>Web URL</dt><dd class="mono">' + esc(webPath(p, true)) + '</dd>' +
 				'<dt>Contents</dt><dd>' + esc(plural(nd, 'folder', 'folders') + ', ' + plural(nf, 'file', 'files')) + '</dd>' +
 				(it && it.modified ? '<dt>Modified</dt><dd>' + esc(it.modified) + '</dd>' : '') +
@@ -850,7 +862,7 @@
 				(it.caption ? '<dt>Caption</dt><dd>' + esc(it.caption) + '</dd>' : '') +
 				(it.credit ? '<dt>Attribution / Credit</dt><dd>' + esc(it.credit) + '</dd>' : '') +
 				(it.tags ? '<dt>Tags</dt><dd>' + esc(it.tags) + '</dd>' : '') +
-				'<dt>Server path</dt><dd class="mono">' + esc(diskPath(fp, false)) + '</dd>' +
+				'<dt>Storage path</dt><dd class="mono">' + esc(diskPath(fp, false)) + '</dd>' +
 				'<dt>Web URL</dt><dd class="mono">' + esc(webPath(fp, false)) + '</dd>' +
 				'<dt>Size</dt><dd>' + esc(fmtSize(it.size) + ' (' + it.size.toLocaleString() + ' bytes)') + '</dd>' +
 				(it.fileHash || it.hash ? '<dt>SHA-256 Hash</dt><dd class="mono" style="font-size:11px; word-break:break-all;" title="' + esc(it.fileHash || it.hash) + '">' + esc(it.fileHash || it.hash) + '</dd>' : '') +
@@ -1091,7 +1103,7 @@
 				else { state.pendingUpload = true; navigate(itemPath(it)); }
 			} else if (act === 'copy') {
 				if (it) {
-					var url = location.origin + webHref(itemPath(it));
+					var url = webPath(itemPath(it), false);
 					try {
 						await navigator.clipboard.writeText(url);
 						toast('Web link copied.');
@@ -1243,7 +1255,7 @@
 		if (el.uploadTargetUrl) {
 			var p = state.path || state.ws || '';
 			el.uploadTargetUrl.value = '';
-			el.uploadTargetUrl.placeholder = '/files/' + (p ? p + '/' : '') + 'photo.jpg';
+			el.uploadTargetUrl.placeholder = webPath(p, true) + 'photo.jpg';
 		}
 		showUploadError('');
 	}
@@ -1301,7 +1313,7 @@
 		if (el.selectedCard) el.selectedCard.hidden = false;
 		if (el.uploadTargetUrl) {
 			var p = state.path || state.ws || '';
-			el.uploadTargetUrl.value = '/files/' + (p ? p + '/' : '') + file.name;
+			el.uploadTargetUrl.value = webPath(p, true) + file.name;
 		}
 		showUploadError('');
 	}
@@ -1349,14 +1361,14 @@
 			return;
 		}
 		var p = state.path || state.ws || '';
-		el.uploadPreview.textContent = 'Uploading to: /files/' + (p ? p + '/' : '');
+		el.uploadPreview.textContent = 'Storage: ' + diskPath(p, true) + ' \u2022 Web URL: ' + webPath(p, true);
 		if (el.uploadTargetUrl) {
 			var fName = (el.uploadFile && el.uploadFile.files && el.uploadFile.files[0]) ? el.uploadFile.files[0].name : '';
 			if (fName) {
-				el.uploadTargetUrl.value = '/files/' + (p ? p + '/' : '') + fName;
+				el.uploadTargetUrl.value = webPath(p, true) + fName;
 			} else {
 				el.uploadTargetUrl.value = '';
-				el.uploadTargetUrl.placeholder = '/files/' + (p ? p + '/' : '') + 'photo.jpg';
+				el.uploadTargetUrl.placeholder = webPath(p, true) + 'photo.jpg';
 			}
 		}
 		if (el.btnDoUpload) el.btnDoUpload.disabled = state.online !== true;
@@ -1650,11 +1662,11 @@
 
 	// Handle workspace change event from CMSAdmin 2.0 navigation
 	window.addEventListener('cmsadmin:workspaceChanged', function (e) {
-		if (e.detail && (e.detail.virtualDir || e.detail.id)) {
-			var newWs = e.detail.virtualDir || e.detail.id;
+		if (e.detail && (e.detail.storageFolder || e.detail.virtualDir || e.detail.id)) {
+			var newWs = e.detail.storageFolder || e.detail.virtualDir || e.detail.id;
 			state.ws = newWs;
 			state.wsName = e.detail.name || friendly(newWs);
-			if (el.webRoot) el.webRoot.textContent = state.cfg.webBase + state.ws + '/';
+			if (el.webRoot) el.webRoot.textContent = 'https://assets.chelancounty.gov/' + state.ws + '/';
 			navigate(newWs);
 		}
 	});

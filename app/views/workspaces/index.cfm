@@ -88,6 +88,110 @@
 		text-align: right;
 		word-break: break-word;
 	}
+
+	/* Live Mega-Menu & Directory Preview Modal */
+	.ws-modal-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 9990;
+		background: rgba(15, 23, 42, 0.72);
+		backdrop-filter: blur(4px);
+		-webkit-backdrop-filter: blur(4px);
+		display: none;
+		align-items: center;
+		justify-content: center;
+		padding: 1.25rem;
+	}
+	.ws-modal-backdrop.is-open {
+		display: flex;
+	}
+	.ws-modal-dialog {
+		background: var(--admin-surface, #ffffff);
+		border: 1px solid var(--admin-border, #cbd5e1);
+		border-radius: var(--radius-lg, 0.75rem);
+		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+		width: 100%;
+		max-width: 1080px;
+		max-height: 90vh;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	.ws-modal-header {
+		padding: 1.1rem 1.4rem;
+		border-bottom: 1px solid var(--admin-border-subtle, #e2e8f0);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		background: var(--admin-bg, #f8fafc);
+	}
+	.ws-modal-title {
+		margin: 0;
+		font-size: 1.02rem;
+		font-weight: 800;
+		letter-spacing: 0.02em;
+		text-transform: uppercase;
+		color: var(--admin-text-main, #0f172a);
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+	}
+	.ws-modal-body {
+		padding: 1.35rem 1.4rem;
+		overflow-y: auto;
+		flex: 1;
+	}
+	.ws-modal-footer {
+		padding: 0.9rem 1.4rem;
+		border-top: 1px solid var(--admin-border-subtle, #e2e8f0);
+		background: var(--admin-bg, #f8fafc);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.65rem;
+		flex-wrap: wrap;
+	}
+	.ws-preview-mega-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+		gap: 1.25rem;
+		padding: 1.25rem;
+		background: #f8fafc;
+		border: 1px solid #cbd5e1;
+		border-radius: 0.5rem;
+	}
+	.ws-preview-mega-col h4 {
+		font-size: 0.92rem;
+		font-weight: 700;
+		color: #0f172a;
+		margin: 0 0 0.55rem 0;
+		padding-bottom: 0.35rem;
+		border-bottom: 2px solid #0073aa;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.4rem;
+	}
+	.ws-preview-mega-col ul {
+		list-style: disc;
+		margin: 0;
+		padding-left: 1.15rem;
+	}
+	.ws-preview-mega-col li {
+		margin-bottom: 0.38rem;
+		font-size: 0.84rem;
+		line-height: 1.4;
+	}
+	.ws-preview-mega-col a {
+		color: #0073aa;
+		text-decoration: none;
+		font-weight: 600;
+	}
+	.ws-preview-mega-col a:hover {
+		text-decoration: underline;
+	}
 </style>
 
 <cfoutput>
@@ -104,6 +208,10 @@
 			</p>
 		</div>
 		<div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+			<button type="button" class="btn btn-outline-secondary btn-sm" id="btnOpenWorkspaceMegaMenuPreview" style="display:inline-flex; align-items:center; gap:0.4rem;">
+				#svgIcon(name="eye", size=15)#
+				<span>Mega Menu Preview</span>
+			</button>
 			<a href="#urlFor(controller='workspaces', action='new')#" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:0.4rem;">
 				#svgIcon(name="plus", size=15)#
 				<span>Add New Workspace</span>
@@ -860,4 +968,392 @@ document.addEventListener("DOMContentLoaded", function() {
 	});
 });
 </script>
+
+<!--- Prepare JSON catalog of all active workspaces for Mega Menu Preview --->
+<cfscript>
+	local.sourceWsList = (StructKeyExists(variables, "allWorkspaces") && IsArray(variables.allWorkspaces)) ? variables.allWorkspaces : variables.workspaces;
+	local.previewItems = [];
+	local.previewCategoriesMap = {};
+	local.previewCategories = [];
+
+	// Standard category ordering matching Workspaces.cfc
+	local.standardCategoryOrder = [
+		"County Administration",
+		"Finance and Records",
+		"Community Services",
+		"Law Enforcement",
+		"Law and Judicial Services",
+		"Internal Services",
+		"Chelan-Douglas",
+		"Community Outreach"
+	];
+
+	for (local.pw in local.sourceWsList) {
+		if (local.pw.id eq "global" || (StructKeyExists(local.pw, "type") && local.pw.type eq "global")) {
+			continue;
+		}
+		local.pwCat = (StructKeyExists(local.pw, "department_category") && Len(Trim(local.pw.department_category)))
+			? Trim(local.pw.department_category)
+			: ((StructKeyExists(local.pw, "type") && local.pw.type eq "site") ? "Community Outreach" : "County Administration");
+		local.pwVirt = (StructKeyExists(local.pw, "virtual_directory") && Len(Trim(local.pw.virtual_directory))) ? Trim(local.pw.virtual_directory) : local.pw.id;
+		local.pwUrl = (StructKeyExists(local.pw, "redirect_url") && Len(Trim(local.pw.redirect_url)))
+			? Trim(local.pw.redirect_url)
+			: ("https://www.chelancounty.gov/" & local.pwVirt);
+		local.pwContactFirst = (StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "first_name")) ? local.pw.contact.first_name : "";
+		local.pwContactLast = (StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "last_name")) ? local.pw.contact.last_name : "";
+		local.pwContactName = Trim(local.pwContactFirst & " " & local.pwContactLast);
+		local.pwJobTitle = (StructKeyExists(local.pw, "job_title") && Len(local.pw.job_title))
+			? local.pw.job_title
+			: ((StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "job_title")) ? local.pw.contact.job_title : "");
+		local.pwPhone = (StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "phone")) ? local.pw.contact.phone : "";
+		local.pwEmail = (StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "email")) ? local.pw.contact.email : "";
+		local.pwAddress = (StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "address")) ? local.pw.contact.address : "";
+		local.pwCity = (StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "city") && Len(local.pw.contact.city)) ? local.pw.contact.city : "Wenatchee";
+		local.pwState = (StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "state") && Len(local.pw.contact.state)) ? local.pw.contact.state : "WA";
+		local.pwZip = (StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "zip") && Len(local.pw.contact.zip)) ? local.pw.contact.zip : "98801";
+		local.pwHours = (StructKeyExists(local.pw, "contact") && IsStruct(local.pw.contact) && StructKeyExists(local.pw.contact, "office_hours")) ? local.pw.contact.office_hours : "";
+
+		if (!StructKeyExists(local.previewCategoriesMap, local.pwCat)) {
+			local.previewCategoriesMap[local.pwCat] = true;
+		}
+
+		ArrayAppend(local.previewItems, {
+			"id": local.pw.id,
+			"name": local.pw.name,
+			"department": (StructKeyExists(local.pw, "department") && Len(local.pw.department)) ? local.pw.department : local.pw.name,
+			"category": local.pwCat,
+			"type": StructKeyExists(local.pw, "type") ? local.pw.type : "dept",
+			"virtualDirectory": local.pwVirt,
+			"destinationUrl": local.pwUrl,
+			"editUrl": urlFor(controller="workspaces", action="edit", params="id=" & local.pw.id),
+			"leadershipType": (StructKeyExists(local.pw, "leadership_type") && Len(local.pw.leadership_type)) ? local.pw.leadership_type : "dept_head",
+			"contactName": local.pwContactName,
+			"jobTitle": local.pwJobTitle,
+			"phone": local.pwPhone,
+			"email": local.pwEmail,
+			"address": Trim(local.pwAddress & (Len(local.pwAddress) ? ", " : "") & local.pwCity & ", " & local.pwState & " " & local.pwZip),
+			"officeHours": local.pwHours,
+			"color": (StructKeyExists(local.pw, "color") && Len(local.pw.color)) ? local.pw.color : "##0073aa"
+		});
+	}
+
+	for (local.stdCat in local.standardCategoryOrder) {
+		if (StructKeyExists(local.previewCategoriesMap, local.stdCat)) {
+			ArrayAppend(local.previewCategories, local.stdCat);
+			StructDelete(local.previewCategoriesMap, local.stdCat);
+		}
+	}
+	for (local.extraCat in StructKeyArray(local.previewCategoriesMap)) {
+		ArrayAppend(local.previewCategories, local.extraCat);
+	}
+
+	local.wsPreviewJson = Replace(SerializeJSON({
+		"categories": local.previewCategories,
+		"items": local.previewItems,
+		"autoOpen": (StructKeyExists(variables, "openMegaMenuPreview") && variables.openMegaMenuPreview)
+	}), "</", "<\/", "all");
+</cfscript>
+
+<!--- =====================================================================
+      MODAL: LIVE CHELANCOUNTY.GOV WORKSPACES & MEGA-MENU PREVIEW
+      ===================================================================== --->
+<div class="ws-modal-backdrop" id="wsMegaMenuPreviewModal" role="dialog" aria-modal="true" aria-labelledby="wsMegaMenuPreviewTitle">
+	<div class="ws-modal-dialog">
+		<div class="ws-modal-header">
+			<h2 class="ws-modal-title" id="wsMegaMenuPreviewTitle">
+				#svgIcon(name="eye", size=18)#
+				<span>LIVE CHELANCOUNTY.GOV "YOUR GOVERNMENT" PREVIEW</span>
+			</h2>
+			<div style="display:flex; align-items:center; gap:0.5rem;">
+				<div style="display:inline-flex; border:1px solid var(--admin-border); border-radius:var(--radius-sm); overflow:hidden;">
+					<button type="button" class="btn btn-xs btn-ghost" id="btnWsPreviewTabDir">
+						/departments Directory Page
+					</button>
+					<button type="button" class="btn btn-xs btn-primary" id="btnWsPreviewTabMega">
+						Top Navbar Mega-Menu
+					</button>
+				</div>
+				<button type="button" class="btn btn-ghost btn-xs" id="btnCloseWsPreviewModal" aria-label="Close preview">#svgIcon(name="x", size=18)#</button>
+			</div>
+		</div>
+
+		<div class="ws-modal-body">
+			<!--- Tab 1: Top Navbar Mega-Menu View (Default active when clicking Mega Menu Preview) --->
+			<div id="wsPreviewMegaPane">
+				<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; padding-bottom:0.65rem; border-bottom:2px solid ##0f172a;">
+					<h3 style="margin:0; font-size:1.4rem; font-weight:700; color:##0f172a;">Your Government &amp; Workspaces</h3>
+					<a href="https://www.chelancounty.gov" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-xs" style="border-radius:999px; padding:0.35rem 1rem; text-decoration:none;">See All...</a>
+				</div>
+				<div class="ws-preview-mega-grid" id="wsPreviewMegaGrid"></div>
+
+				<!--- Two-Tier Navbar Rollup (Departments vs Community Outreach Portals) --->
+				<div id="wsPreviewNavbarRollup" style="margin-top:1.25rem; padding:1.15rem 1.25rem; background:##ffffff; border:1px solid ##cbd5e1; border-radius:0.5rem;"></div>
+			</div>
+
+			<!--- Tab 2: /departments Directory Page View --->
+			<div id="wsPreviewDirectoryPane" style="display:none;">
+				<div style="margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:2px solid ##0f172a; display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap;">
+					<h3 style="margin:0; font-size:1.55rem; font-weight:700; color:##0f172a;">Departments &amp; Portals Directory</h3>
+					<span style="font-size:0.78rem; color:var(--admin-text-muted);">Public URL: <strong>https://www.chelancounty.gov/departments</strong></span>
+				</div>
+				<div style="display:grid; grid-template-columns:240px minmax(0, 1fr); gap:1.5rem; align-items:start;">
+					<ul id="wsPreviewSidebarList" style="list-style:none; margin:0; padding:0; border:1px solid ##cbd5e1; border-radius:0.375rem; overflow:hidden;"></ul>
+					<div id="wsPreviewCategoryContent" style="padding:0.25rem 0.5rem;"></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="ws-modal-footer">
+			<div style="font-size:0.78rem; color:var(--admin-text-muted);">
+				Showing <strong>#ArrayLen(local.previewItems)#</strong> active workspaces across <strong>#ArrayLen(local.previewCategories)#</strong> department categories
+			</div>
+			<button type="button" class="btn btn-outline btn-sm" id="btnDismissWsPreviewModal">Close Preview</button>
+		</div>
+	</div>
+</div>
+
+<script id="wsMegaMenuPreviewData" type="application/json"># local.wsPreviewJson #</script>
 </cfoutput>
+<script>
+(function() {
+	var dataEl = document.getElementById("wsMegaMenuPreviewData");
+	var cfg = { categories: [], items: [], autoOpen: false };
+	if (dataEl && dataEl.textContent) {
+		try { cfg = JSON.parse(dataEl.textContent); } catch (e) {}
+	}
+
+	var previewModal = document.getElementById("wsMegaMenuPreviewModal");
+	var megaGridEl = document.getElementById("wsPreviewMegaGrid");
+	var navbarRollupEl = document.getElementById("wsPreviewNavbarRollup");
+	var sidebarEl = document.getElementById("wsPreviewSidebarList");
+	var contentEl = document.getElementById("wsPreviewCategoryContent");
+	var selectedDirCategory = "ALL";
+
+	function escapeHtml(s) {
+		return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	}
+
+	function renderWorkspaceMegaPreview() {
+		var items = cfg.items || [];
+		var cats = cfg.categories || [];
+
+		// 1. Render Category Columns in Top Navbar Mega-Menu Grid
+		if (megaGridEl) {
+			megaGridEl.innerHTML = "";
+			if (items.length === 0) {
+				megaGridEl.innerHTML = "<div style='grid-column:1/-1; color:#64748b; font-size:0.9rem;'>No active workspaces configured yet.</div>";
+			} else {
+				cats.forEach(function(catName) {
+					var catItems = items.filter(function(w) { return w.category === catName; });
+					if (catItems.length === 0) return;
+
+					var col = document.createElement("div");
+					col.className = "ws-preview-mega-col";
+					var html = "<h4><span>" + escapeHtml(catName) + "</span><span style='font-size:0.72rem; font-weight:600; color:#64748b; background:#e2e8f0; padding:0.08rem 0.45rem; border-radius:999px;'>" + catItems.length + "</span></h4><ul>";
+					catItems.forEach(function(w) {
+						var typeBadge = (w.type === "site")
+							? "<span style='font-size:0.65rem; font-weight:700; color:#047857; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.28); padding:0.05rem 0.35rem; border-radius:4px; margin-left:0.35rem;'>Portal</span>"
+							: "";
+						html += "<li>" +
+							"<a href='" + escapeHtml(w.destinationUrl) + "' target='_blank' rel='noopener noreferrer' title='Open " + escapeHtml(w.destinationUrl) + "'>" + escapeHtml(w.name) + "</a>" +
+							typeBadge +
+							"<div style='font-size:0.72rem; color:#64748b; margin-top:0.08rem;'>/" + escapeHtml(w.virtualDirectory) + (w.contactName ? " &bull; " + escapeHtml(w.contactName) : "") + "</div>" +
+						"</li>";
+					});
+					html += "</ul>";
+					col.innerHTML = html;
+					megaGridEl.appendChild(col);
+				});
+			}
+		}
+
+		// 2. Render Two-Tier ChelanCounty.gov Navbar Rollup (Your Government + Community Outreach)
+		if (navbarRollupEl) {
+			var deptItems = items.filter(function(w) { return w.type !== "site"; });
+			var siteItems = items.filter(function(w) { return w.type === "site"; });
+
+			var rollupHtml = "<div style='font-size:0.85rem; font-weight:800; color:#500000; text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid #b45309; padding-bottom:0.4rem; margin-bottom:0.75rem;'>Your Government (Departments)</div>";
+			if (deptItems.length === 0) {
+				rollupHtml += "<p style='color:#64748b; font-size:0.82rem; margin:0 0 1rem 0;'>No department workspaces configured.</p>";
+			} else {
+				rollupHtml += "<div style='display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.45rem 1.25rem; margin-bottom:1rem;'>";
+				deptItems.forEach(function(w) {
+					rollupHtml += "<a href='" + escapeHtml(w.destinationUrl) + "' target='_blank' rel='noopener noreferrer' style='color:#0f172a; text-decoration:none; font-size:0.86rem; font-weight:500; padding:0.2rem 0; display:flex; align-items:center; justify-content:space-between; border-bottom:1px dashed #e2e8f0;'>" +
+						"<span>" + escapeHtml(w.department || w.name) + "</span>" +
+						"<code style='font-size:0.7rem; color:#64748b;'>/" + escapeHtml(w.virtualDirectory) + "</code>" +
+					"</a>";
+				});
+				rollupHtml += "</div>";
+			}
+
+			rollupHtml += "<hr style='border:0; border-top:1px solid #cbd5e1; margin:1rem 0 0.85rem 0;'>";
+			rollupHtml += "<div style='font-size:0.85rem; font-weight:800; color:#047857; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.65rem;'>Community Outreach (Sites &amp; Portals)</div>";
+			if (siteItems.length === 0) {
+				rollupHtml += "<p style='color:#64748b; font-size:0.82rem; margin:0;'>No external site or portal workspaces configured.</p>";
+			} else {
+				rollupHtml += "<div style='display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.45rem 1.25rem;'>";
+				siteItems.forEach(function(w) {
+					rollupHtml += "<a href='" + escapeHtml(w.destinationUrl) + "' target='_blank' rel='noopener noreferrer' style='color:#0f172a; text-decoration:none; font-size:0.86rem; font-weight:500; padding:0.2rem 0; display:flex; align-items:center; justify-content:space-between; border-bottom:1px dashed #e2e8f0;'>" +
+						"<span>" + escapeHtml(w.name) + "</span>" +
+						"<code style='font-size:0.7rem; color:#047857;'>/" + escapeHtml(w.virtualDirectory) + "</code>" +
+					"</a>";
+				});
+				rollupHtml += "</div>";
+			}
+			navbarRollupEl.innerHTML = rollupHtml;
+		}
+
+		// 3. Render /departments Directory Page View
+		if (sidebarEl && contentEl) {
+			sidebarEl.innerHTML = "";
+			var sidebarOptions = [{ key: "ALL", label: "All Workspaces", count: items.length }];
+			cats.forEach(function(c) {
+				var cnt = items.filter(function(w) { return w.category === c; }).length;
+				sidebarOptions.push({ key: c, label: c, count: cnt });
+			});
+
+			sidebarOptions.forEach(function(opt) {
+				var li = document.createElement("li");
+				li.style.borderBottom = "1px solid #e2e8f0";
+				var btn = document.createElement("button");
+				btn.type = "button";
+				var isSel = (selectedDirCategory === opt.key);
+				btn.style.cssText = "width:100%; text-align:left; padding:0.65rem 0.9rem; border:none; cursor:pointer; font-size:0.86rem; font-weight:" + (isSel ? "700" : "500") + "; background:" + (isSel ? "#0073aa" : "#ffffff") + "; color:" + (isSel ? "#ffffff" : "#0f172a") + "; display:flex; justify-content:space-between; align-items:center;";
+				btn.innerHTML = "<span>" + escapeHtml(opt.label) + "</span><span style='font-size:0.74rem; opacity:0.85;'>" + opt.count + "</span>";
+				btn.addEventListener("click", function() {
+					selectedDirCategory = opt.key;
+					renderWorkspaceMegaPreview();
+				});
+				li.appendChild(btn);
+				sidebarEl.appendChild(li);
+			});
+
+			var filteredDir = (selectedDirCategory === "ALL")
+				? items
+				: items.filter(function(w) { return w.category === selectedDirCategory; });
+			var headingLabel = (selectedDirCategory === "ALL") ? "All County Departments & Portals" : selectedDirCategory;
+			var dirHtml = "<h2 style='margin:0 0 1rem 0; font-size:1.35rem; font-weight:700; color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:0.5rem;'>" + escapeHtml(headingLabel) + "</h2>";
+
+			if (filteredDir.length === 0) {
+				dirHtml += "<p style='color:#64748b;'>No workspaces in this category.</p>";
+			} else {
+				dirHtml += "<div style='display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:0.9rem;'>";
+				filteredDir.forEach(function(w) {
+					var leaderLabel = (w.leadershipType === "elected") ? "Elected Official" : "Department Head";
+					dirHtml += "<div style='background:#f8fafc; border:1px solid #cbd5e1; border-left:4px solid " + escapeHtml(w.color || "#0073aa") + "; border-radius:0.5rem; padding:0.9rem 1rem;'>" +
+						"<div style='display:flex; align-items:flex-start; justify-content:space-between; gap:0.5rem; margin-bottom:0.35rem;'>" +
+							"<a href='" + escapeHtml(w.destinationUrl) + "' target='_blank' rel='noopener noreferrer' style='font-size:0.95rem; font-weight:700; color:#0073aa; text-decoration:none;'>" + escapeHtml(w.name) + "</a>" +
+							"<a href='" + escapeHtml(w.editUrl) + "' class='btn btn-outline-secondary btn-xs' style='font-size:0.68rem; padding:0.1rem 0.45rem; text-decoration:none;'>Edit</a>" +
+						"</div>" +
+						"<div style='font-size:0.75rem; color:#475569; margin-bottom:0.4rem;'><strong>" + escapeHtml(w.category) + "</strong> &bull; <code>/" + escapeHtml(w.virtualDirectory) + "</code></div>" +
+						(w.contactName ? "<div style='font-size:0.8rem; color:#0f172a;'><strong>" + escapeHtml(w.contactName) + "</strong>" + (w.jobTitle ? " &mdash; " + escapeHtml(w.jobTitle) : " (" + leaderLabel + ")") + "</div>" : "") +
+						(w.phone ? "<div style='font-size:0.76rem; color:#475569; margin-top:0.2rem;'>Phone: " + escapeHtml(w.phone) + (w.email ? " &bull; " + escapeHtml(w.email) : "") + "</div>" : "") +
+						(w.address ? "<div style='font-size:0.74rem; color:#64748b; margin-top:0.15rem;'>" + escapeHtml(w.address) + "</div>" : "") +
+					"</div>";
+				});
+				dirHtml += "</div>";
+			}
+			contentEl.innerHTML = dirHtml;
+		}
+	}
+
+	function dismissPageLoaderIfVisible() {
+		if (typeof window.hidePageLoader === "function") {
+			window.hidePageLoader();
+		}
+		var loaderOverlay = document.getElementById("adminPageLoadingOverlay");
+		if (loaderOverlay) {
+			loaderOverlay.classList.remove("is-visible");
+		}
+	}
+
+	function closeWorkspaceMegaMenuModal() {
+		if (!previewModal) return;
+		previewModal.classList.remove("is-open");
+		dismissPageLoaderIfVisible();
+		try {
+			var url = new URL(window.location.href);
+			if (url.searchParams.has("preview")) {
+				url.searchParams.delete("preview");
+				window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ""));
+			}
+		} catch (err) {}
+	}
+
+	function openWorkspaceMegaMenuModal(defaultTab) {
+		if (!previewModal) return;
+		dismissPageLoaderIfVisible();
+		renderWorkspaceMegaPreview();
+		var tabDir = document.getElementById("btnWsPreviewTabDir");
+		var tabMega = document.getElementById("btnWsPreviewTabMega");
+		var paneDir = document.getElementById("wsPreviewDirectoryPane");
+		var paneMega = document.getElementById("wsPreviewMegaPane");
+		if (defaultTab === "dir") {
+			tabDir.className = "btn btn-xs btn-primary";
+			tabMega.className = "btn btn-xs btn-ghost";
+			paneDir.style.display = "";
+			paneMega.style.display = "none";
+		} else {
+			tabMega.className = "btn btn-xs btn-primary";
+			tabDir.className = "btn btn-xs btn-ghost";
+			paneMega.style.display = "";
+			paneDir.style.display = "none";
+		}
+		previewModal.classList.add("is-open");
+		setTimeout(dismissPageLoaderIfVisible, 150);
+	}
+
+	if (previewModal) {
+		var btnOpen = document.getElementById("btnOpenWorkspaceMegaMenuPreview");
+		if (btnOpen) {
+			btnOpen.addEventListener("click", function(e) {
+				e.preventDefault();
+				openWorkspaceMegaMenuModal("mega");
+			});
+		}
+
+		var navSidebarLink = document.getElementById("navLinkWorkspaceMegaMenuPreview");
+		if (navSidebarLink) {
+			navSidebarLink.setAttribute("data-no-loader", "true");
+			navSidebarLink.addEventListener("click", function(e) {
+				e.preventDefault();
+				e.stopPropagation();
+				openWorkspaceMegaMenuModal("mega");
+			});
+		}
+
+		document.getElementById("btnCloseWsPreviewModal").addEventListener("click", closeWorkspaceMegaMenuModal);
+		document.getElementById("btnDismissWsPreviewModal").addEventListener("click", closeWorkspaceMegaMenuModal);
+		previewModal.addEventListener("click", function(e) {
+			if (e.target === previewModal) closeWorkspaceMegaMenuModal();
+		});
+		document.addEventListener("keydown", function(e) {
+			if (e.key === "Escape" && previewModal.classList.contains("is-open")) {
+				closeWorkspaceMegaMenuModal();
+			}
+		});
+
+		var tabDir = document.getElementById("btnWsPreviewTabDir");
+		var tabMega = document.getElementById("btnWsPreviewTabMega");
+		var paneDir = document.getElementById("wsPreviewDirectoryPane");
+		var paneMega = document.getElementById("wsPreviewMegaPane");
+
+		tabDir.addEventListener("click", function() {
+			tabDir.className = "btn btn-xs btn-primary";
+			tabMega.className = "btn btn-xs btn-ghost";
+			paneDir.style.display = "";
+			paneMega.style.display = "none";
+		});
+		tabMega.addEventListener("click", function() {
+			tabMega.className = "btn btn-xs btn-primary";
+			tabDir.className = "btn btn-xs btn-ghost";
+			paneMega.style.display = "";
+			paneDir.style.display = "none";
+		});
+
+		if (cfg.autoOpen) {
+			openWorkspaceMegaMenuModal("mega");
+		}
+	}
+})();
+</script>

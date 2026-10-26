@@ -159,9 +159,11 @@ component extends="Controller" {
 			}
 		}
 
+		variables.allWorkspaces = local.allWorkspaces;
 		variables.workspaces = local.filtered;
 		variables.activeFilterType = local.filterType;
 		variables.activeSearchQuery = local.searchQuery;
+		variables.openMegaMenuPreview = (StructKeyExists(params, "preview") && LCase(Trim(params.preview)) eq "megamenu");
 		variables.currentActiveWs = StructKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace)) ? LCase(Trim(cookie.cmsadmin_workspace)) : "global";
 	}
 

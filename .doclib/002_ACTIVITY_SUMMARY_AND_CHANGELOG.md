@@ -12,6 +12,30 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 25, 2026 — Workspaces Module: Live ChelanCounty.gov Mega Menu & Directory Preview Modal
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/views/layout.cfm`, `app/controllers/Workspaces.cfc`, `app/views/workspaces/index.cfm`, `ChelanCountyWebsite.dbo.cms_workspaces`).
+- **Key Deliverables:**
+  - Added **Mega Menu Preview** (`#navLinkWorkspaceMegaMenuPreview` -> `/workspaces?preview=megamenu`) to the **Workspaces** sidebar menu in [`app/views/layout.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/layout.cfm#L773-L780) and added a **Mega Menu Preview** action button (`#btnOpenWorkspaceMegaMenuPreview`) to the Workspaces header toolbar in [`app/views/workspaces/index.cfm`](file:///c:/inetpub/CMSAdmin2.0/app/views/workspaces/index.cfm).
+  - Built the **Live ChelanCounty.gov "Your Government" Preview** modal (`#wsMegaMenuPreviewModal`) featuring segmented view toggles (`Top Navbar Mega-Menu` and `/departments Directory Page`), category columns grouped by `department_category`, a two-tier `Your Government` + `Community Outreach` navbar rollup, and interactive department directory cards.
+
+### Session: October 25, 2026 — Database Seeding: RFP & Solicitations Module (`dbo.rfp_solicitations`, `dbo.rfp_addenda`, `dbo.rfp_planholders`, `dbo.rfp_bids`)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** `ChelanCountyWebsite` SQL Server Database (`dbo.rfp_solicitations`, `dbo.rfp_addenda`, `dbo.rfp_planholders`, `dbo.rfp_bids`), CMSAdmin 2.0 (`/rfps`, `/bids`).
+- **Key Deliverables:**
+  - Seeded **8 realistic Chelan County solicitations** across all active workspaces (`auditor`, `elections`, `assessor`, `ohme-gardens`, `wrcp`), spanning solicitation types (`RFP`, `ITB`, `RFQ`, `SWR`) and lifecycle statuses (`Open`, `Under Review`, `Awarded`, `Draft`) with `https://assets.chelancounty.gov/[workspace]/documents/...` packet URLs.
+  - Seeded **6 numbered addenda** (`dbo.rfp_addenda`), **14 registered contractors/planholders** (`dbo.rfp_planholders`), and **8 bid tabulation entries** (`dbo.rfp_bids`).
+### Session: October 25, 2026 — Media Library & File Explorer: Enforce Workspace Storage Path (`storage_path`) & Assets Mapping
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`app/global/functions.cfm`, `app/controllers/Media.cfc`, `api/Files.cfc`, `app/views/media/index.cfm`, `app/views/media/picker.cfm`, `app/views/media/upload.cfm`, `javascripts/filexplorer/explorer.js`, `app/views/layout.cfm`, `javascripts/admin.js`, `ChelanCountyWebsite.dbo.cms_workspaces`).
+- **Key Deliverables:**
+  1. **Workspace Storage Path Resolution (`app/global/functions.cfm`, `Media.cfc`, `api/Files.cfc`):**
+     - Added `extractWorkspaceStorageFolder()`, `resolveWorkspaceStorageFolder()`, `resolveWorkspaceStorageDiskPath()`, and `resolveWorkspaceAssetsPath()` in `app/global/functions.cfm` and `resolveWorkspaceStorageConfig()` in `api/Files.cfc`.
+     - Prioritizes the workspace's assigned `storage_path` (e.g. `C:\inetpub\chelan-county\files\[workspace]` ↔ `assets.chelancounty.gov\[workspace]`) over `virtual_directory` or `code` (for example, `wrcp` resolves to its assigned storage path `C:\inetpub\chelan-county\files\wenatcheeriverpark.org` / `assets.chelancounty.gov\wenatcheeriverpark.org`).
+  2. **Media Library, Picker, & Upload Studio Updates (`index.cfm`, `picker.cfm`, `upload.cfm`, `explorer.js`):**
+     - Updated `Media.cfc` (`index()`, `picker()`, `processUpload()`, `getWorkspacesList()`, `getFoldersForWorkspace()`) to resolve and write files to the workspace's assigned `storage_path`.
+     - Updated `explorer.js` (asset version `v=4.3`) and `upload.cfm` to display both the physical **Storage path** (`C:\inetpub\chelan-county\files\[workspace]\...`) and **Assets mapping** (`assets.chelancounty.gov\[workspace]\...`) in the Details inspector and upload destination previews.
+     - Updated `layout.cfm` and `admin.js` to include `data-ws-storage-folder` on workspace switcher items so switching workspaces dynamically scopes the File Explorer to the assigned storage path.
 ### Session: October 23, 2026 — Dashboard Cleanup: Remove Platform Environment Card
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 (`app/views/main/index.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).

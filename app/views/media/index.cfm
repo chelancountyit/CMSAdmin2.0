@@ -2,6 +2,9 @@
 <cfparam name="variables.activeWsFolder" default="community-development">
 <cfparam name="variables.activeWsVirtualDir" default="#variables.activeWsFolder#">
 <cfparam name="variables.activeWsName" default="#variables.activeWsFolder#">
+<cfparam name="variables.activeWsStoragePath" default="C:\inetpub\chelan-county\files\#variables.activeWsFolder#">
+<cfparam name="variables.activeWsDiskPath" default="C:\inetpub\chelan-county\files\#variables.activeWsFolder#">
+<cfparam name="variables.activeWsAssetsPath" default="assets.chelancounty.gov\#variables.activeWsFolder#">
 <cfoutput>
 <link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=4.1">
 
@@ -27,6 +30,9 @@
      id="filexplorer-container"
      data-ws="#encodeForHTMLAttribute(variables.activeWsFolder)#"
      data-ws-virtual-dir="#encodeForHTMLAttribute(variables.activeWsVirtualDir)#"
+     data-ws-storage-path="#encodeForHTMLAttribute(variables.activeWsStoragePath)#"
+     data-ws-disk-path="#encodeForHTMLAttribute(variables.activeWsDiskPath)#"
+     data-ws-assets-path="#encodeForHTMLAttribute(variables.activeWsAssetsPath)#"
      data-ws-name="#encodeForHTMLAttribute(variables.activeWsName)#">
 
 	<div id="offline-banner" class="offline-banner" role="alert" hidden>
@@ -265,5 +271,5 @@
 	</div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=4.2"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=4.5"></script>
 </cfoutput>

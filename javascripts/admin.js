@@ -420,11 +420,12 @@ document.addEventListener("click", function (e) {
 
 // Automatic navigation click interceptor for seamless loading feedback
 document.addEventListener("click", function (e) {
+  if (e.defaultPrevented) return;
   const link = e.target.closest("a");
   if (!link || !link.href) return;
 
-  // Skip external, target=_blank, download, or modifier key clicks
-  if (link.target === "_blank" || link.hasAttribute("download")) return;
+  // Skip external, target=_blank, download, data-no-loader, or modifier key clicks
+  if (link.target === "_blank" || link.hasAttribute("download") || link.hasAttribute("data-no-loader")) return;
   if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
 
   const rawHref = link.getAttribute("href") || "";
@@ -765,7 +766,8 @@ document.addEventListener("DOMContentLoaded", () => {
           badge: fallback.getAttribute("data-ws-badge"),
           badgeCls: fallback.getAttribute("data-ws-badge-cls"),
           icon: fallback.getAttribute("data-ws-icon"),
-          virtualDir: fallback.getAttribute("data-ws-virtual-dir") || fallback.getAttribute("data-ws-id")
+          virtualDir: fallback.getAttribute("data-ws-virtual-dir") || fallback.getAttribute("data-ws-id"),
+          storageFolder: fallback.getAttribute("data-ws-storage-folder") || fallback.getAttribute("data-ws-virtual-dir") || fallback.getAttribute("data-ws-id")
         };
       } else {
         return;
@@ -790,6 +792,7 @@ document.addEventListener("DOMContentLoaded", () => {
       wsContainer.setAttribute("data-active-ws-id", wsData.id);
       wsContainer.setAttribute("data-active-ws-color", wsData.color);
       wsContainer.setAttribute("data-active-ws-virtual-dir", wsData.virtualDir || wsData.id);
+      wsContainer.setAttribute("data-active-ws-storage-folder", wsData.storageFolder || wsData.virtualDir || wsData.id);
     }
 
     // Update active highlight & checkmark in dropdown list
@@ -862,7 +865,8 @@ document.addEventListener("DOMContentLoaded", () => {
         badge: targetItem.getAttribute("data-ws-badge"),
         badgeCls: targetItem.getAttribute("data-ws-badge-cls"),
         icon: targetItem.getAttribute("data-ws-icon"),
-        virtualDir: targetItem.getAttribute("data-ws-virtual-dir") || targetItem.getAttribute("data-ws-id")
+        virtualDir: targetItem.getAttribute("data-ws-virtual-dir") || targetItem.getAttribute("data-ws-id"),
+        storageFolder: targetItem.getAttribute("data-ws-storage-folder") || targetItem.getAttribute("data-ws-virtual-dir") || targetItem.getAttribute("data-ws-id")
       };
       // Keep UI in lockstep with the server-rendered page and update localStorage to match
       setActiveWorkspace(currentServerWs, true);
@@ -891,7 +895,8 @@ document.addEventListener("DOMContentLoaded", () => {
         badge: item.getAttribute("data-ws-badge") || "",
         badgeCls: item.getAttribute("data-ws-badge-cls") || "",
         icon: item.getAttribute("data-ws-icon") || "grid",
-        virtualDir: item.getAttribute("data-ws-virtual-dir") || newWsId
+        virtualDir: item.getAttribute("data-ws-virtual-dir") || newWsId,
+        storageFolder: item.getAttribute("data-ws-storage-folder") || item.getAttribute("data-ws-virtual-dir") || newWsId
       };
 
       // Set cookie and local storage immediately

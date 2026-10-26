@@ -1,11 +1,11 @@
-﻿{
+{
     "major":  2,
     "minor":  1,
-    "build":  2,
-    "version":  "2.1.2",
-    "versionTag":  "v2.1.2",
-    "releaseName":  "UTF-8 Mojibake Self-Healer, Page Features Quick-Guides \u0026 30-Day Remember Me",
-    "releaseDate":  "2026-10-23",
-    "builtAt":  "2026-10-23T13:54:26-07:00",
+    "build":  3,
+    "version":  "2.1.3",
+    "versionTag":  "v2.1.3",
+    "releaseName":  "Workspace Storage Path & Assets Mapping, RFP Seeding & Workspaces Mega Menu Preview",
+    "releaseDate":  "2026-10-25",
+    "builtAt":  "2026-10-25T23:28:00-07:00",
     "environment":  "development"
 }

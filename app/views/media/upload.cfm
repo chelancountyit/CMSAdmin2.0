@@ -130,10 +130,25 @@
 				<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
 					<div class="form-group">
 						<label for="selectWs" class="form-label" style="font-weight:600;">Destination Workspace <span style="color:var(--admin-danger);">*</span></label>
+						<cfset local.defaultStorageFolder = variables.defaultWs>
+						<cfset local.defaultDiskPath = "C:\inetpub\chelan-county\files\" & variables.defaultWs>
+						<cfset local.defaultAssetsPath = "assets.chelancounty.gov\" & variables.defaultWs>
 						<select id="selectWs" name="workspace" class="form-control" style="width:100%;" onchange="updatePathPreview()">
 							<cfloop array="#variables.workspaces#" index="local.ws">
-								<option value="#encodeForHTMLAttribute(local.ws.id)#" <cfif local.ws.id eq variables.defaultWs>selected</cfif>>
-									#encodeForHTML(local.ws.name)# (#encodeForHTML(local.ws.id)#)
+								<cfset local.wsFolder = structKeyExists(local.ws, "storageFolder") && len(local.ws.storageFolder) ? local.ws.storageFolder : local.ws.id>
+								<cfset local.wsDisk = structKeyExists(local.ws, "diskPath") && len(local.ws.diskPath) ? local.ws.diskPath : ("C:\inetpub\chelan-county\files\" & local.wsFolder)>
+								<cfset local.wsAssets = structKeyExists(local.ws, "assetsPath") && len(local.ws.assetsPath) ? local.ws.assetsPath : ("assets.chelancounty.gov\" & local.wsFolder)>
+								<cfif local.ws.id eq variables.defaultWs or local.wsFolder eq variables.defaultWs>
+									<cfset local.defaultStorageFolder = local.wsFolder>
+									<cfset local.defaultDiskPath = local.wsDisk>
+									<cfset local.defaultAssetsPath = local.wsAssets>
+								</cfif>
+								<option value="#encodeForHTMLAttribute(local.ws.id)#"
+								        data-storage-folder="#encodeForHTMLAttribute(local.wsFolder)#"
+								        data-disk-path="#encodeForHTMLAttribute(local.wsDisk)#"
+								        data-assets-path="#encodeForHTMLAttribute(local.wsAssets)#"
+								        <cfif local.ws.id eq variables.defaultWs or local.wsFolder eq variables.defaultWs>selected</cfif>>
+									#encodeForHTML(local.ws.name)# (#encodeForHTML(local.wsFolder)#)
 								</option>
 							</cfloop>
 						</select>
@@ -149,10 +164,12 @@
 					</div>
 				</div>
 
-				<div class="upload-path-preview">
+				<div class="upload-path-preview" style="flex-wrap:wrap;">
 					#svgIcon(name="hard-drive", size=16)#
-					<span>Target Destination:</span>
-					<strong id="destinationPathText">C:\inetpub\chelan-county\files\#encodeForHTML(variables.defaultWs)#\#encodeForHTML(variables.defaultFolder)#</strong>
+					<span>Storage Path:</span>
+					<strong id="destinationPathText">#encodeForHTML(local.defaultDiskPath)#\#encodeForHTML(variables.defaultFolder)#\</strong>
+					<span style="color:var(--admin-text-muted); margin-left:0.5rem;">&bull; Web URL:</span>
+					<strong id="destinationAssetsPathText" style="color:var(--admin-primary);">https://assets.chelancounty.gov/#encodeForHTML(local.defaultStorageFolder)#/#encodeForHTML(variables.defaultFolder)#/</strong>
 				</div>
 			</div>
 		</div>
@@ -199,7 +216,7 @@
 						Image URL
 					</label>
 					<div class="media-url-input-group" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-						<input type="text" id="destinationPathUrlInput" class="form-control media-url-field" placeholder="/files/#encodeForHTMLAttribute(variables.defaultWs)#/#encodeForHTMLAttribute(variables.defaultFolder)#/photo.jpg" readonly title="Prospective URL destination on server" style="flex: 1; min-width: 240px; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; padding: 0.6rem 0.85rem !important; font-size: 0.875rem !important; background: ##ffffff !important; color: ##0f172a !important;">
+						<input type="text" id="destinationPathUrlInput" class="form-control media-url-field" placeholder="https://assets.chelancounty.gov/#encodeForHTMLAttribute(local.defaultStorageFolder)#/#encodeForHTMLAttribute(variables.defaultFolder)#/photo.jpg" readonly title="Prospective URL destination on server" style="flex: 1; min-width: 240px; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; padding: 0.6rem 0.85rem !important; font-size: 0.875rem !important; background: ##ffffff !important; color: ##0f172a !important;">
 						<button type="button" id="btnBrowseFileStudio" class="btn media-btn-browse" title="Browse files on your computer" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border: 1.5px solid ##cbd5e1 !important; border-radius: 8px !important; background: ##f1f5f9 !important; font-weight: 600; font-size: 0.875rem; color: ##0f172a !important; cursor: pointer; white-space: nowrap;">
 							#svgIcon(name="folder", size=15)#
 							<span>Browse</span>
@@ -396,23 +413,35 @@
 </cfoutput>
 
 <script>
-	function getCurrentWebUrl(fileName) {
+	function getSelectedStorageFolder() {
 		const wsEl = document.getElementById('selectWs');
+		if (!wsEl) return 'assessors';
+		const opt = wsEl.options[wsEl.selectedIndex];
+		return (opt && opt.getAttribute('data-storage-folder')) || wsEl.value || 'assessors';
+	}
+
+	function getCurrentWebUrl(fileName) {
+		const storageFolder = getSelectedStorageFolder();
 		const folderEl = document.getElementById('selectSubfolder');
-		const ws = wsEl ? wsEl.value : 'assessors';
 		const folder = folderEl ? folderEl.value : 'images';
 		const file = fileName || '';
-		return file ? `/files/${ws}/${folder}/${file}` : `/files/${ws}/${folder}/photo.jpg`;
+		return file ? `https://assets.chelancounty.gov/${storageFolder}/${folder}/${file}` : `https://assets.chelancounty.gov/${storageFolder}/${folder}/photo.jpg`;
 	}
 
 	function updatePathPreview() {
 		const wsEl = document.getElementById('selectWs');
 		const folderEl = document.getElementById('selectSubfolder');
-		const ws = wsEl ? wsEl.value : 'assessors';
+		const opt = (wsEl && wsEl.options) ? wsEl.options[wsEl.selectedIndex] : null;
+		const storageFolder = getSelectedStorageFolder();
+		const diskBase = (opt && opt.getAttribute('data-disk-path')) || `C:\\inetpub\\chelan-county\\files\\${storageFolder}`;
 		const folder = folderEl ? folderEl.value : 'images';
 		const destText = document.getElementById('destinationPathText');
 		if (destText) {
-			destText.textContent = `C:\\inetpub\\chelan-county\\files\\${ws}\\${folder}`;
+			destText.textContent = `${diskBase}\\${folder}\\`;
+		}
+		const assetsText = document.getElementById('destinationAssetsPathText');
+		if (assetsText) {
+			assetsText.textContent = `https://assets.chelancounty.gov/${storageFolder}/${folder}/`;
 		}
 		const urlInput = document.getElementById('destinationPathUrlInput');
 		if (urlInput) {

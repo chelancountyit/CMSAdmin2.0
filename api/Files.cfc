@@ -25,13 +25,22 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 		noCache();
 		try {
 			local.cfg = getConfig();
-			local.cleanWs = trim(arguments.ws);
+			local.wsInfo = resolveWorkspaceStorageConfig(arguments.ws);
+			local.cleanWs = local.wsInfo.storageFolder;
 
-			// If ws is specified, restrict navigation strictly inside the workspace, or to shared images
-			local.reqPath = trim(arguments.path);
+			// If ws is specified, restrict navigation strictly inside the workspace's storage folder, or to shared images
+			local.reqPath = normalizeIncomingPath(arguments.path);
 			ensureSharedImagesJunction(local.cfg.filesRoot);
 
 			if (len(local.cleanWs)) {
+				// If path started with the workspace code/alias instead of its storageFolder (e.g. wrcp/images -> wenatcheeriverpark.org/images), rewrite it
+				if (len(local.wsInfo.code) && lCase(local.wsInfo.code) neq lCase(local.cleanWs)) {
+					if (compareNoCase(local.reqPath, local.wsInfo.code) == 0) {
+						local.reqPath = local.cleanWs;
+					} else if (compareNoCase(left(local.reqPath, len(local.wsInfo.code) + 1), local.wsInfo.code & "/") == 0) {
+						local.reqPath = local.cleanWs & mid(local.reqPath, len(local.wsInfo.code) + 1, len(local.reqPath));
+					}
+				}
 				// Ensure \files\[workspace.virtual_directory]\images and documents exist
 				local.wsDisk = local.cfg.filesRoot & local.cleanWs;
 				try {
@@ -101,10 +110,11 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 						SELECT id, filename, title, alt_text, caption, credit, file_hash, is_wcag_compliant, tags, width, height
 						FROM dbo.media_assets
 						WHERE deletedat IS NULL
-						  AND site_id = :site_id
+						  AND (site_id = :site_id OR (:ws_code <> '' AND site_id = :ws_code))
 						  AND (:folder = '' OR folder = :folder)
 					", {
 						site_id: { value: local.wsTarget, cfsqltype: "cf_sql_nvarchar" },
+						ws_code: { value: local.wsInfo.code ?: "", cfsqltype: "cf_sql_nvarchar" },
 						folder: { value: local.folderTarget, cfsqltype: "cf_sql_nvarchar" }
 					}, { datasource: "ChelanCountyWebsite" });
 
@@ -215,11 +225,13 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 				"canCreate"  : (local.target.depth >= local.cfg.systemDepth && !local.isSharedImages),
 				"canDelete"  : (local.target.depth > local.cfg.systemDepth && !local.isSharedImages),
 				"isReadOnly" : local.isSharedImages,
-				"diskPath"   : diskPathOf(local.target.segments, true),
-				"webPath"    : webPathOf(local.target.rel, true),
-				"webBase"    : local.cfg.webBase,
-				"filesRoot"  : local.cfg.filesRoot,
-				"ws"         : javaCast("string", local.cleanWs),
+				"diskPath"    : diskPathOf(local.target.segments, true),
+				"assetsPath"  : assetsPathOf(local.target.segments, true),
+				"storagePath" : javaCast("string", len(local.wsInfo.storagePath) ? local.wsInfo.storagePath : diskPathOf(local.target.segments, false)),
+				"webPath"     : webPathOf(local.target.rel, true),
+				"webBase"     : local.cfg.webBase,
+				"filesRoot"   : local.cfg.filesRoot,
+				"ws"          : javaCast("string", local.cleanWs),
 				"branches"   : local.branches,
 				"tree"       : local.tree,
 				"sharedTree" : local.sharedTree,
@@ -236,9 +248,11 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			requirePost();
 			local.cfg = getConfig();
 
-			local.cleanWs = trim(arguments.ws);
+			local.wsInfo = resolveWorkspaceStorageConfig(arguments.ws);
+			local.cleanWs = local.wsInfo.storageFolder;
+			local.normReqPath = normalizeIncomingPath(arguments.path);
 			if (len(local.cleanWs)) {
-				if (arguments.path neq local.cleanWs && left(arguments.path, len(local.cleanWs) + 1) neq local.cleanWs & "/") {
+				if (local.normReqPath neq local.cleanWs && left(local.normReqPath, len(local.cleanWs) + 1) neq local.cleanWs & "/") {
 					return fail("Folders can only be created inside your active workspace.");
 				}
 			}
@@ -296,9 +310,11 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 			requirePost();
 			local.cfg = getConfig();
 
-			local.cleanWs = trim(arguments.ws);
+			local.wsInfo = resolveWorkspaceStorageConfig(arguments.ws);
+			local.cleanWs = local.wsInfo.storageFolder;
+			local.normReqPath = normalizeIncomingPath(arguments.path);
 			if (len(local.cleanWs)) {
-				if (arguments.path neq local.cleanWs && left(arguments.path, len(local.cleanWs) + 1) neq local.cleanWs & "/") {
+				if (local.normReqPath neq local.cleanWs && left(local.normReqPath, len(local.cleanWs) + 1) neq local.cleanWs & "/") {
 					return fail("Folders can only be deleted inside your active workspace.");
 				}
 			}
@@ -336,12 +352,62 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 	 * Validates a relative path and returns
 	 * { abs, rel, segments, depth }. Throws FX.User on anything unsafe.
 	 */
-	private struct function resolvePath(string path = "") {
-		local.p = replace(trim(arguments.path), "\", "/", "all");
+	private string function normalizeIncomingPath(string rawPath = "") {
+		local.p = replace(trim(arguments.rawPath), "\", "/", "all");
+		local.p = reReplaceNoCase(local.p, "^https?://", "");
+		local.p = reReplaceNoCase(local.p, "^assets\.chelancounty\.gov/?", "");
+		local.p = reReplaceNoCase(local.p, "^[a-z]:/inetpub/chelan-county/files/?", "");
+		local.p = reReplaceNoCase(local.p, "^[a-z]:/inetpub/cmsadmin2\.0/files/?", "");
+		local.p = reReplaceNoCase(local.p, "^/inetpub/chelan-county/files/?", "");
+		local.p = reReplaceNoCase(local.p, "^/inetpub/cmsadmin2\.0/files/?", "");
+		local.p = reReplaceNoCase(local.p, "^/?files/?", "");
+		local.p = reReplace(local.p, "^/+|/+$", "", "all");
+		return local.p;
+	}
 
-		// Tolerate a single leading/trailing slash; anything else empty is rejected.
-		if (left(local.p, 1) == "/")  local.p = mid(local.p, 2, len(local.p));
-		if (right(local.p, 1) == "/") local.p = left(local.p, len(local.p) - 1);
+	private struct function resolveWorkspaceStorageConfig(string ws = "") {
+		local.raw = trim(arguments.ws);
+		local.res = {
+			"code"          : local.raw,
+			"storageFolder" : normalizeIncomingPath(local.raw),
+			"storagePath"   : ""
+		};
+		if (!len(local.raw) || lCase(local.raw) == "global" || lCase(local.raw) == "all") {
+			local.res.storageFolder = "";
+			return local.res;
+		}
+		try {
+			local.qWs = queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				SELECT TOP 1 code, alias, virtual_directory, folder_path, storage_path
+				FROM dbo.cms_workspaces
+				WHERE deletedat IS NULL
+				  AND (
+				        LOWER(code) = LOWER(:w)
+				     OR LOWER(ISNULL(alias, '')) = LOWER(:w)
+				     OR LOWER(ISNULL(virtual_directory, '')) = LOWER(:w)
+				     OR LOWER(ISNULL(storage_path, '')) = LOWER(:w)
+				     OR LOWER(ISNULL(storage_path, '')) = LOWER('files/' + :w)
+				     OR LOWER(ISNULL(storage_path, '')) = LOWER('C:\inetpub\chelan-county\files\' + :w)
+				  )
+			", { w: { value: local.raw, cfsqltype: "cf_sql_nvarchar" } }, { datasource: "ChelanCountyWebsite" });
+
+			if (local.qWs.recordCount > 0) {
+				local.res.code = local.qWs.code;
+				local.rawStorage = len(trim(local.qWs.storage_path ?: "")) ? trim(local.qWs.storage_path)
+					: (len(trim(local.qWs.folder_path ?: "")) ? trim(local.qWs.folder_path) : trim(local.qWs.virtual_directory ?: local.raw));
+				local.res.storagePath = local.rawStorage;
+				local.folder = normalizeIncomingPath(local.rawStorage);
+				if (len(local.folder)) {
+					local.res.storageFolder = local.folder;
+				}
+			}
+		} catch (any ignore) {}
+		return local.res;
+	}
+
+	private struct function resolvePath(string path = "") {
+		local.p = normalizeIncomingPath(arguments.path);
 
 		local.segments = [];
 		if (len(local.p)) {
@@ -519,17 +585,34 @@ component output="false" hint="Remote JSON API for the standalone File Explorer.
 		return local.p;
 	}
 
+	private string function assetsPathOf(required array segments, boolean trailing = true) {
+		if (arrayLen(arguments.segments) > 0 && lcase(arguments.segments[1]) == "shared images") {
+			local.p = "assets.chelancounty.gov\shared images";
+			if (arrayLen(arguments.segments) > 1) {
+				local.subSegs = [];
+				for (local.i = 2; local.i <= arrayLen(arguments.segments); local.i++) {
+					arrayAppend(local.subSegs, arguments.segments[local.i]);
+				}
+				local.p &= "\" & arrayToList(local.subSegs, "\");
+			}
+			if (arguments.trailing && right(local.p, 1) != "\") local.p &= "\";
+			return local.p;
+		}
+		local.p = "assets.chelancounty.gov\" & arrayToList(arguments.segments, "\");
+		if (arguments.trailing && right(local.p, 1) != "\") local.p &= "\";
+		return local.p;
+	}
+
 	private string function webPathOf(required string rel, boolean trailing = true) {
 		local.low = lcase(trim(arguments.rel));
 		if (local.low == "shared images" || left(local.low, 14) == "shared images/") {
 			local.remainder = trim(mid(arguments.rel, 14, len(arguments.rel)));
 			if (left(local.remainder, 1) == "/") local.remainder = mid(local.remainder, 2, len(local.remainder));
-			local.p = "/images/picjumbo/" & local.remainder;
+			local.p = "https://assets.chelancounty.gov/shared images/" & local.remainder;
 			if (arguments.trailing && right(local.p, 1) != "/") local.p &= "/";
 			return local.p;
 		}
-		local.cfg = getConfig();
-		local.p = local.cfg.webBase & arguments.rel;
+		local.p = "https://assets.chelancounty.gov/" & arguments.rel;
 		if (arguments.trailing && right(local.p, 1) != "/") local.p &= "/";
 		return local.p;
 	}
