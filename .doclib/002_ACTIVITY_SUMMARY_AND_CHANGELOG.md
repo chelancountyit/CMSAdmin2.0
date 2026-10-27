@@ -12,6 +12,23 @@ This log maintains a chronological, permanent record of engineering milestones, 
 
 ## 2. Chronological Milestones
 
+### Session: October 27, 2026 — Database Schema Sync, Permanent Duplicate Workspace Deletion & Test Data Cleanup
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** `ChelanCountyWebsite` SQL Server Database (`dbo.cms_workspaces`, `dbo.cms_user_workspaces`, `dbo.cms_users`, `dbo.pages`, `dbo.page_revisions`, `dbo.page_CtaCard`, `dbo.page_call_to_actions`, `dbo.one_page_sites`, `dbo.one_page_sections`, `dbo.calendar_events`, `dbo.emergency_alerts`, `dbo.articles`, `dbo.article_tags`, `dbo.press_releases`, `dbo.media_assets`, `dbo.how_do_i_items`), CMSAdmin 2.0 (`Pages.cfc`, `Events.cfc`, `Sessions.cfc`, `Media.cfc`).
+- **Key Deliverables:**
+  1. **Schema Synchronization (`ChelanCountyWebsite`):**
+     - Applied latest DDL updates from `config/sql/schema-workspaces.sql`, `config/sql/schema-media-assets.sql`, and `config/sql/schema-events.sql`, ensuring `assets_protocol`, `assets_domain`, `domain_protocol`, `ocr_text`, and `unpublish_at` columns are in place across all 37 tables.
+  2. **Permanent Deletion of Duplicate Workspaces (`dbo.cms_workspaces`):**
+     - Permanently deleted all 7 duplicate/legacy workspace rows (`id IN (14, 19, 20, 21, 22, 23, 24)` — `assessors`, `hrm`, `commdev`, `pw`, `admin`, `commissioners`, `site-main`), leaving the 16 canonical workspaces (`global`, `assessor`, `auditor`, `board-of-commissioners`, `clerk`, `community-development`, `county-administration`, `elections`, `human-resources`, `natural-resources`, `pio`, `public-works`, `sheriff`, `treasurer`, `chelancounty.gov`, `parks.chelancounty.gov`).
+     - Normalized legacy workspace codes (`assessors` -> `assessor`, `commissioners` -> `board-of-commissioners`, `Auditor` -> `auditor`) in `dbo.how_do_i_items`.
+  3. **Permanent Removal of All Test, Demo, and Seed Data (`ChelanCountyWebsite`):**
+     - Deleted test CTA cards (`Title IN ('test', 'test2', 'test3')` on `ContentID = 3`) from `dbo.page_CtaCard` and auto-seeded global sample rows from `dbo.page_call_to_actions`, preserving the 16 real migrated CTA cards across `assessor` (6), `auditor` (6), and `board-of-commissioners` (4).
+     - Deleted the 6 `wrcp` demo pages (`ContentID IN (40..45)`) from `dbo.pages` and `dbo.page_revisions`, as well as the demo `wenatchee-river-park` records from `dbo.one_page_sites` and `dbo.one_page_sections`, preserving the 65 real migrated department pages (`assessor`: 9, `auditor`: 29, `board-of-commissioners`: 27).
+     - Deleted all sample/test rows from `dbo.calendar_events` (28 rows), `dbo.emergency_alerts` (3 rows), `dbo.articles` (1 row), `dbo.article_tags` (6 rows), `dbo.press_releases` (1 row), and `Thumbs.db` / `users` test uploads from `dbo.media_assets`.
+     - Deleted the 3 fictional test persona accounts (`thomas.hayes@chelancounty.gov`, `elena.rostova@chelancounty.gov`, `jill.morrison@chelancounty.gov`) from `dbo.cms_users` and `dbo.cms_user_workspaces`, retaining only `jessie.laya@chelancounty.gov`.
+  4. **Disabled Controller Auto-Seeding of Dummy Data:**
+     - Removed automatic re-seeding of dummy records in `Pages.cfc` (`ensureCallToActionTable()` and `ensureOnePageStudioTables()`), `Events.cfc` (`ensureEventsTables()`), `Sessions.cfc` (`ensureDatabaseColumns()`), and `Media.cfc` (`getMediaAssets()`).
+
 ### Session: October 26, 2026 — Release Roll-Up `v2.1.325` (Build 325): Workspace `assets_domain` Routing, Media OCR Compliance Crawler & Full-Width Page Layout Parity
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Version:** `v2.1.325` (`Build 325` — [`config/version.json`](file:///c:/inetpub/CMSAdmin2.0/config/version.json), [`config/settings.cfm`](file:///c:/inetpub/CMSAdmin2.0/config/settings.cfm), [`config/sql/schema-workspaces.sql`](file:///c:/inetpub/CMSAdmin2.0/config/sql/schema-workspaces.sql), [`config/sql/schema-media-assets.sql`](file:///c:/inetpub/CMSAdmin2.0/config/sql/schema-media-assets.sql), [`config/sql/schema-complete.sql`](file:///c:/inetpub/CMSAdmin2.0/config/sql/schema-complete.sql))
@@ -85,6 +102,59 @@ This log maintains a chronological, permanent record of engineering milestones, 
      - Updated `Media.cfc` (`index()`, `picker()`, `processUpload()`, `getWorkspacesList()`, `getFoldersForWorkspace()`) to resolve and write files to the workspace's assigned `storage_path`.
      - Updated `explorer.js` (asset version `v=4.3`) and `upload.cfm` to display both the physical **Storage path** (`C:\inetpub\chelan-county\files\[workspace]\...`) and **Assets mapping** (`assets.chelancounty.gov\[workspace]\...`) in the Details inspector and upload destination previews.
      - Updated `layout.cfm` and `admin.js` to include `data-ws-storage-folder` on workspace switcher items so switching workspaces dynamically scopes the File Explorer to the assigned storage path.
+### Session: October 23, 2026 — Media Library: Collapsible Accordion Server Folders Tree (`explorer.js` / `explorer.css`)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 ([explorer.js](file:///c:/inetpub/CMSAdmin2.0/javascripts/filexplorer/explorer.js#L499-L635), [explorer.css](file:///c:/inetpub/CMSAdmin2.0/stylesheets/filexplorer/explorer.css#L154-L280), [app/views/media/index.cfm](file:///c:/inetpub/CMSAdmin2.0/app/views/media/index.cfm#L38-L49), [app/views/media/picker.cfm](file:///c:/inetpub/CMSAdmin2.0/app/views/media/picker.cfm#L69-L80)).
+- **Key Deliverables:**
+  1. **Folded-by-Default Accordion Hierarchy:**
+     - Converted the **SERVER FOLDERS** sidebar in both `/media` and `/media/picker` into an interactive accordion tree (`state.expandedPaths`).
+     - By default, only the active workspace root (and any ancestor folders along the currently active path) are unfolded; nested subfolder trees (such as `archives` with 19 year folders or `Shared Images` categories) start folded (`hidden`) so the sidebar stays compact and easy to scan.
+  2. **Interactive Chevron Toggles & Header Quick-Actions:**
+     - Added a rotating chevron toggle button (`.tree-toggle[data-toggle-path]` with `aria-expanded`) on every folder that contains subfolders, plus **Expand** (`#btn-tree-expand-all`) and **Fold** (`#btn-tree-collapse-all`) quick-action buttons in the `SERVER FOLDERS` header.
+     - Clicking a folder navigates to it and automatically unfolds its children; clicking the already-active folder row (or its chevron button) toggles its folded/unfolded state.
+
+### Session: October 23, 2026 — Page Editor List: WCAG 2.1 AA Compliance Column, Filter, Summary Card & Quick-Fix Deep Link
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 ([Pages.cfc](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Pages.cfc#L1758-L1999), [index.cfm](file:///c:/inetpub/CMSAdmin2.0/app/views/pages/index.cfm#L1-L650), [_pageEditorScripts.cfm](file:///c:/inetpub/CMSAdmin2.0/app/views/pages/_pageEditorScripts.cfm#L4411-L4430), [.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md](file:///c:/inetpub/CMSAdmin2.0/.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md)).
+- **Key Deliverables:**
+  1. **Server-Side WCAG 2.1 Level AA Page Audit ([Pages.cfc](file:///c:/inetpub/CMSAdmin2.0/app/controllers/Pages.cfc#L1802-L1999)):**
+     - Added `auditPageWcagCompliance(row)` in `Pages.cfc` and attached `wcag` metadata to every page row returned by `loadPagesList()`.
+     - Audits all 6 ADA & WCAG 2.1 Level AA rule groups (matching `.doclib/003_ACCESSIBILITY_WCAG21AA_LINTER.md`): Page Title (`2.4.2`), Featured Cover Image (`1.1.1`), Body Images (`1.1.1`), Heading Hierarchy & Empty Headings (`1.3.1 / 2.4.6`), Hyperlinks & New-Window Warnings (`2.4.4 / 3.2.5`), Data Tables (`1.3.1`), and Readability/SEO Metadata (`1.3.1 / 2.4.6`).
+  2. **WCAG 2.1 AA Column, Interactive Hover Tooltip & Filter Bar ([index.cfm](file:///c:/inetpub/CMSAdmin2.0/app/views/pages/index.cfm#L288-L410)):**
+     - Added a **WCAG 2.1 AA** summary stat card (`#cntWcagPass# / #cntTotal#`) at the top of `/pages` that filters pages needing attention on click.
+     - Added a **WCAG 2.1 AA** filter dropdown (`#pagesWcag`: `All pages`, `AA Passing (0 Errors)`, `AA Perfect (0 Issues)`, `Pass with Warnings`, `Needs Fix — Errors`).
+     - Added a **WCAG 2.1 AA** column in `#pagesTable` displaying a color-coded status badge (`AA Compliant`, `Pass · X Warn`, or `X Errors · Y Warn`) with a dark floating hover tooltip (`#pgListWcagTooltip`) listing the exact WCAG rule codes and findings for that page.
+  3. **One-Click Deep Link to Pre-Flight Accessibility Drawer ([_pageEditorScripts.cfm](file:///c:/inetpub/CMSAdmin2.0/app/views/pages/_pageEditorScripts.cfm#L4411-L4426)):**
+     - Clicking any page's WCAG badge navigates to `/pages/edit?id={id}&openA11y=1`, which automatically opens the Pre-Flight Accessibility & WCAG 2.1 AA Drawer so editors can apply one-click **Quick Fix** remediations immediately.
+
+### Session: October 23, 2026 — Department Workspace Migration: Board of County Commissioners (co.chelan.wa.us/board-of-commissioners)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin2.0 (config/sql/extract-board-of-commissioners.sql, pp/global/functions.cfm, pp/controllers/Pages.cfc, 	ests/test_edit_bocc_pages.cfm), ChelanCounty.gov (pp/controllers/BoardOfCommissioners.cfc, pp/views/boardofcommissioners/index.cfm, pp/views/boardofcommissioners/page.cfm, config/routes.cfm, pp/global/functions.cfm), ChelanCountyWebsite SQL Server Database.
+- **Key Deliverables:**
+  1. **Database Extraction & Migration ([extract-board-of-commissioners.sql](file:///c:/inetpub/CMSAdmin2.0/config/sql/extract-board-of-commissioners.sql)):**
+     - Migrated all **27 pages** (21 Active, 6 Inactive) from legacy cccmsdbv2 (SiteID = 1030) into dbo.pages (SiteID = 'board-of-commissioners'), rewriting legacy co.chelan.wa.us file and page links and running healUtf8Mojibake() across all page and subpage bodies.
+     - Migrated **14 subpages/sidebars** into dbo.page_SubPage and dynamically linked SidebarIDs (["subpage-X"]) onto dbo.pages.
+     - Migrated **5 Folder Explorer** definitions (dbo.page_FolderExplorer) for Meeting Minutes (2579), Lodging Tax Advisory Committee (5688), Board of Equalization (433), Board of Equalization Hearings (5787), and Housing (5698).
+     - Migrated **4 Call-to-Action cards** (dbo.page_CtaCard) onto the Home page (ContentID = 102, hasCtaCards = 1).
+     - Configured **16 navigation menu items** (dbo.navigation_menus / dbo.navigation_menu_items), including nested sub-items under Board of Equalization, and seeded **27 initial page revisions** (ersion_number = 1) in dbo.page_revisions.
+  2. **File & Asset Synchronization:**
+     - Synced **1,022 files** (rchives 2001–2019, documents, images) from C:\inetpub\Chelan-County\files\board-of-commissioners to both C:\inetpub\ChelanCounty.gov\files\board-of-commissioners and C:\inetpub\CMSAdmin2.0\files\board-of-commissioners.
+  3. **CFWheels Public Portal Scaffolding (chelancounty.gov/board-of-commissioners):**
+     - Created [BoardOfCommissioners.cfc](file:///c:/inetpub/ChelanCounty.gov/app/controllers/BoardOfCommissioners.cfc), [index.cfm](file:///c:/inetpub/ChelanCounty.gov/app/views/boardofcommissioners/index.cfm), and [page.cfm](file:///c:/inetpub/ChelanCounty.gov/app/views/boardofcommissioners/page.cfm), and registered routes in [routes.cfm](file:///c:/inetpub/ChelanCounty.gov/config/routes.cfm).
+  4. **Verification & Bugfix in Pages.cfc:**
+     - Fixed a CFScript elseif syntax error in Pages.cfc:loadPageFromDb() (else if) that had prevented SidebarIDs pages from loading in /pages/edit. Verified **27/27 PASS** in [test_edit_bocc_pages.cfm](file:///c:/inetpub/CMSAdmin2.0/tests/test_edit_bocc_pages.cfm) and HTTP 200 across all public chelancounty.gov/board-of-commissioners routes.
+
+### Session: October 23, 2026 — Version Bumper Auto-Reload Fix (`v2.1.3` Build 3) & Rename "Content Manager" to "Page Editor"
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** CMSAdmin 2.0 (`scripts/bump-version.ps1`, `config/version.json`, `config/settings.cfm`, `app/global/functions.cfm`, `app/controllers/Settings.cfc`, `app/controllers/Pages.cfc`, `app/controllers/Users.cfc`, `app/views/layout.cfm`, `app/views/main/index.cfm`, `app/views/pages/index.cfm`, `app/views/pages/edit.cfm`, `app/views/pages/editV2.cfm`, `app/views/pages/callToAction.cfm`, `app/views/pages/onePage.cfm`, `app/views/sessions/new.cfm`).
+- **Key Deliverables:**
+  1. **Fixed Version Not Updating in UI ([bump-version.ps1](file:///c:/inetpub/CMSAdmin2.0/scripts/bump-version.ps1#L102-L138), [functions.cfm](file:///c:/inetpub/CMSAdmin2.0/app/global/functions.cfm#L1145-L1200)):**
+     - Updated `scripts/bump-version.ps1` to write `config/version.json` and `config/settings.cfm` using UTF-8 without BOM (`UTF8Encoding($false)`) so ColdFusion's `deserializeJSON()` does not fail on a leading `\uFEFF` BOM character and silently fall back to `v2.1.1`.
+     - Enhanced `getAppVersion()` in `app/global/functions.cfm` to strip any leading UTF-8 BOM and track `config/version.json`'s `lastModified` timestamp + file size (`application.appVersionFileMtime`), automatically reloading version metadata on the very next page load whenever `config/version.json` changes on disk.
+     - Added `#appBuildDisplay()#` to the `/login` footer and an automatic cache reload call in `scripts/bump-version.ps1`.
+  2. **Renamed "Content Manager" to "Page Editor":**
+     - Replaced all UI navigation links, page titles, breadcrumbs, buttons, and action labels referencing **"Content Manager"** with **"Page Editor"** across `layout.cfm`, `main/index.cfm`, `pages/index.cfm`, `pages/edit.cfm`, `pages/editV2.cfm`, `pages/callToAction.cfm`, `pages/onePage.cfm`, `Pages.cfc`, and `Users.cfc`.
+
 ### Session: October 23, 2026 — Dashboard Cleanup: Remove Platform Environment Card
 - **Author/Agent:** Antigravity AI Pair Programmer
 - **Scope:** CMSAdmin 2.0 (`app/views/main/index.cfm`, `.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
@@ -1945,3 +2015,27 @@ ormalizeCtaLinkIcons() and xReadJsonBody() across all controllers.
   - **Navigation View CFML Hash Escaping Hotfix:** Resolved `Invalid CFML construct found on line 186 at column 162` in `app/views/navigation/index.cfm` caused by unescaped `#` in placeholder and description text (`#anchor`, `#amenities`, `#rates`) within a `<cfoutput>` context, escaping them to `##`.
   - **JSON Key Case Normalization Hotfix:** Resolved `Menu sync failed.` UI alert caused by Adobe ColdFusion `SerializeJSON` serializing unquoted CFML struct keys as uppercase (`SUCCESS`, `MESSAGE`). Added key lowercasing in `Pages.cfc::fxRenderJson()` and defensive case-insensitive checks in `app/views/pages/onePage.cfm`.
   - **Admin-Only Role Restriction:** Moved One Page Studio exclusively to the **Administration** navigation group in `app/views/layout.cfm` (alongside Workspaces, Users & Roles, and Navigation Menus with the `layers` SVG icon), removing it from the general Content Management pages submenu. Added server-side role security checks (`getCurrentActiveRole() == 'admin'`) to `Pages.cfc::onePage()` and all One Page Studio API endpoints (`saveOnePageSite`, `saveOnePageSection`, `syncOnePageToMenu`, etc.), restricting access strictly to System Administrators.
+
+
+---
+
+### Session: October 27, 2026 — Public Works Workspace Extraction & Migration (`co.chelan.wa.us/public-works` &rarr; `chelancounty.gov/public-works`)
+- **Author/Agent:** Antigravity AI Pair Programmer
+- **Scope:** SQL Server Extraction (`c:\inetpub\CMSAdmin2.0\config\sql\extract-public-works.sql`), File & Image Assets (`files/public-works`, `images/public-works`), Public Front-End Controller & Views (`c:\inetpub\ChelanCounty.gov\app\controllers\PublicWorks.cfc`, `c:\inetpub\ChelanCounty.gov\app\views\publicworks\*`), Routing (`c:\inetpub\ChelanCounty.gov\config\routes.cfm`), Documentation (`.doclib/002_ACTIVITY_SUMMARY_AND_CHANGELOG.md`).
+- **Key Deliverables:**
+  1. **File & Image Asset Synchronization:**
+     - Synced **926 files (`1.133 GB`)** from `c:\inetpub\chelan-county\files\public-works` to both `c:\inetpub\CMSAdmin2.0\files\public-works` and `c:\inetpub\ChelanCounty.gov\files\public-works`.
+     - Synced **169 image files (`12.53 MB`)** from `c:\inetpub\chelan-county\images\public-works` to both `c:\inetpub\CMSAdmin2.0\images\public-works` and `c:\inetpub\ChelanCounty.gov\images\public-works`.
+  2. **Relational Database Extraction (`config/sql/extract-public-works.sql` on `ChelanCountyWebsite`):**
+     - Executed with mandatory `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;`.
+     - **Workspace Metadata (`dbo.cms_workspaces`):** Configured `code = 'public-works'`, `name = 'Public Works'`, `alias = 'pw'`, `icon = 'truck'`, `color = '#0073aa'`, `leadership_type = 'dept_head'`, `job_title = 'Director / County Engineer'`, `contact_first_name = 'Eric'`, `contact_last_name = 'Pierson, PE'`, `contact_photo = '/images/logo/public-works.jpg'`, `contact_phone = '(509) 667-6415'`, `contact_fax = '(509) 667-6250'`, `contact_email = 'public.works@co.chelan.wa.us'`, `address = '316 Washington St, Suite 402'`, `office_hours = 'Monday - Friday 8:00 AM - 5:00 PM PST'`.
+     - **Pages (`dbo.pages`):** Extracted all **53 pages** from `cccmsdbv2.dbo.cContents` (`SiteID = 1022`) — **37 Published & Active** and **16 Draft/Inactive**. Resolved 3 `ContentID` collisions with `auditor` (`36 -> 6036`, `37 -> 6037`, `39 -> 6039`), normalized legacy URLs (`/public-works/pages/...` &rarr; `/public-works/page/...`), and converted all **11 FAQ sets** (`hasQnA = 1` from `cccmsdbv2.dbo.cFAQ`) into accessible Bootstrap 5 accordions.
+     - **Subpages & Sidebars (`dbo.page_SubPage`):** Extracted all **34 subpages** from `cccmsdbv2.dbo.cSubPages` (`SiteID = 1022`) and linked `SidebarIDs` (`["subpage-<ID>"]`) on `dbo.pages` via `cccmsdbv2.dbo.cSidebars`.
+     - **Call to Action Cards (`dbo.page_CtaCard`):** Extracted all **4 Call to Action cards** (`Report A Problem`, `Online Services`, `Like Us On Facebook`, `Road Alert`) linked to Home page (`ContentID = 107`).
+     - **Navigation Hierarchy (`dbo.navigation_menus`, `dbo.navigation_menu_items`):** Seeded `Public Works Side Navigation` with **25 hierarchical menu items** (`Traffic Alerts`, `Business`, `Departments`, `Projects`, `Safety & Transportation Planning`, `Historical Bridges`, `Frequently Asked Questions`, `Blog`, `How Do I`, `Contact Us`).
+     - **Revision History (`dbo.page_revisions`):** Seeded **53 initial Version 1 snapshots** for RCW 42.56 compliance.
+  3. **CFWheels Routes, Controller & Views (`ChelanCounty.gov`):**
+     - Added routes in `c:\inetpub\ChelanCounty.gov\config\routes.cfm`: `publicWorks`, `publicWorksPage`, `publicWorksPagesLegacy`, `publicWorksFile`, `publicWorksContacts`, `publicWorksHowDoI`, `publicWorksBlog`, `publicWorksBlogPost`, and `publicWorksForm`.
+     - Created `c:\inetpub\ChelanCounty.gov\app\controllers\PublicWorks.cfc` implementing `index`, `page`, `contacts`, `howdoi`, `blog`, `forms`, and `file`.
+     - Created views in `c:\inetpub\ChelanCounty.gov\app\views\publicworks\`: `index.cfm`, `page.cfm`, `contacts.cfm`, `howdoi.cfm`, `blog.cfm`, and `forms.cfm`.
+- **Verification:** Reloaded `chelancounty.gov` (`?reload=true&password=chelancms`) and verified `HTTP 200 OK` across `/public-works` and all 20 navigation, subpage, contact, howdoi, blog, and form routes.

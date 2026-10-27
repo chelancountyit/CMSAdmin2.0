@@ -6,10 +6,10 @@ component extends="Controller" {
 	}
 
 	/**
-	 * Content Manager listing (reads from database with fallback to sample pages)
+	 * Page Editor listing (reads from database with fallback to sample pages)
 	 */
 	function index() {
-		variables.pageTitle = "Content Manager";
+		variables.pageTitle = "Page Editor";
 		local.reqWs = (StructKeyExists(params, "ws") && Len(Trim(params.ws))) ? Trim(params.ws)
 			: ((StructKeyExists(cookie, "cmsadmin_workspace") && Len(Trim(cookie.cmsadmin_workspace))) ? Trim(cookie.cmsadmin_workspace) : "");
 		variables.activeWorkspace = resolveUserActiveWorkspace(
@@ -66,7 +66,8 @@ component extends="Controller" {
 				local.currentActiveWs = local.rawCk;
 			}
 		}
-		local.editSiteId = Len(local.currentActiveWs) ? local.currentActiveWs : ((StructKeyExists(variables.page, "siteId") && Len(Trim(variables.page.siteId)) && variables.page.siteId != "global" && variables.page.siteId != "all") ? Trim(variables.page.siteId) : "");
+		local.pageSiteId = (StructKeyExists(variables.page, "siteId") && Len(Trim(variables.page.siteId)) && variables.page.siteId != "global" && variables.page.siteId != "all") ? Trim(variables.page.siteId) : "";
+		local.editSiteId = (!variables.isNew && Len(local.pageSiteId)) ? local.pageSiteId : (Len(local.currentActiveWs) ? local.currentActiveWs : local.pageSiteId);
 		variables.editSiteId = local.editSiteId;
 		local.role = getCurrentActiveRole();
 		variables.activeRole = local.role;
@@ -318,7 +319,7 @@ component extends="Controller" {
 					:siteId, 0, '', :layout, 0,
 					'Active', :slug, :title, :title, '', '',
 					'', '', 0, 0, 0, 0,
-					0, 'Draft', 0, SYSUTCDATETIME(), :actor, SYSUTCDATETIME(), :actor
+					1, 'Published', 0, SYSUTCDATETIME(), :actor, SYSUTCDATETIME(), :actor
 				);
 				SELECT newId FROM @InsertedPages;
 			", {
@@ -732,7 +733,7 @@ component extends="Controller" {
 					summary: { value: "Page marked Inactive and soft-deleted", cfsqltype: "cf_sql_nvarchar" },
 					layout_type: { value: "Full", cfsqltype: "cf_sql_nvarchar" },
 					meta_json: { value: SerializeJSON({ "deleted": true, "deleted_at": Now(), "deleted_by": local.actor }), cfsqltype: "cf_sql_nvarchar" },
-					change_summary: { value: "Soft-deleted from Content Manager pages directory", cfsqltype: "cf_sql_nvarchar" },
+					change_summary: { value: "Soft-deleted from Page Editor pages directory", cfsqltype: "cf_sql_nvarchar" },
 					created_by: { value: local.actor, cfsqltype: "cf_sql_nvarchar" }
 				}, { datasource: "ChelanCountyWebsite" });
 			} catch (any eRev) {
@@ -1671,7 +1672,7 @@ component extends="Controller" {
 						if (!ArrayFindNoCase(local.normalizedSidebarList, local.normToken)) {
 							ArrayAppend(local.normalizedSidebarList, local.normToken);
 						}
-					} elseif (Len(local.sbStr) && !ArrayFindNoCase(local.normalizedSidebarList, local.sbStr)) {
+					} else if (Len(local.sbStr) && !ArrayFindNoCase(local.normalizedSidebarList, local.sbStr)) {
 						ArrayAppend(local.normalizedSidebarList, local.sbStr);
 					}
 				}
@@ -1757,8 +1758,10 @@ component extends="Controller" {
 
 			local.sql = "
 				SELECT ContentID, SiteID, PageType, MenuSelected, LayoutType, ParentID,
-				       StatusCode, Permalink, Title, Summary, isLocked, ShowInMenu,
-				       isPublished, Visibility, Created, CreatedBy, Modified, ModifiedBy
+				       StatusCode, Permalink, Title, Summary, Body, MetaDesc,
+				       imageAttachment, imageAlt, ISNULL(imageDecorative, 0) AS imageDecorative,
+				       isLocked, ShowInMenu, isPublished, Visibility,
+				       Created, CreatedBy, Modified, ModifiedBy
 				FROM pages
 				WHERE DeletedAt IS NULL AND SiteID IN (" & local.inClause & ")
 				ORDER BY Modified DESC, ContentID DESC
@@ -1772,6 +1775,7 @@ component extends="Controller" {
 				} else if (IsDate(local.row.Created)) {
 					local.updatedStr = DateFormat(local.row.Created, "mm/dd/yyyy") & " " & TimeFormat(local.row.Created, "hh:mm:ss");
 				}
+				local.wcagAudit = auditPageWcagCompliance(local.row);
 				ArrayAppend(local.pages, {
 					id: local.row.ContentID,
 					title: local.row.Title ?: "",
@@ -1786,13 +1790,211 @@ component extends="Controller" {
 					updated: local.updatedStr,
 					author: Len(local.row.ModifiedBy) ? local.row.ModifiedBy : (local.row.CreatedBy ?: "Admin"),
 					locked: (local.row.isLocked == 1),
-					summary: local.row.Summary ?: ""
+					summary: local.row.Summary ?: "",
+					wcag: local.wcagAudit
 				});
 			}
 		} catch (any e) {
 			writeLog(type="error", file="pages", text="loadPagesList failed: #e.message# #e.detail#");
 		}
 		return local.pages;
+	}
+
+	private struct function auditPageWcagCompliance(required any row) {
+		local.errors = 0;
+		local.warnings = 0;
+		local.issues = [];
+
+		local.title = Trim(arguments.row.Title ?: "");
+		local.body = arguments.row.Body ?: "";
+		local.metaDesc = Trim(arguments.row.MetaDesc ?: "");
+		local.featImg = Trim(arguments.row.imageAttachment ?: "");
+		local.featAlt = Trim(arguments.row.imageAlt ?: "");
+		local.featDec = (Val(arguments.row.imageDecorative ?: 0) == 1);
+
+		// 1. Page Title (WCAG 2.4.2)
+		if (Len(local.title) < 3) {
+			local.errors++;
+			ArrayAppend(local.issues, { severity: "error", code: "2.4.2", msg: "Page title missing or shorter than 3 chars" });
+		}
+
+		// 2. Featured Cover Image (WCAG 1.1.1)
+		if (Len(local.featImg) && !local.featDec) {
+			if (!Len(local.featAlt)) {
+				local.errors++;
+				ArrayAppend(local.issues, { severity: "error", code: "1.1.1", msg: "Featured cover image missing Alt Text" });
+			} else if (REFindNoCase("^(image|photo|picture|graphic|banner|logo|icon|img|untitled|dsc_?\d+|img_?\d+|screenshot.*|\S+\.(jpg|jpeg|png|gif|webp|svg))$", local.featAlt)) {
+				local.warnings++;
+				ArrayAppend(local.issues, { severity: "warning", code: "1.1.1", msg: "Featured image uses filename/placeholder alt text" });
+			} else if (Len(local.featAlt) > 150) {
+				local.warnings++;
+				ArrayAppend(local.issues, { severity: "warning", code: "1.1.1", msg: "Featured image alt text exceeds 150 chars" });
+			}
+		}
+
+		// 3. Body Images (WCAG 1.1.1)
+		local.imgMatches = REMatchNoCase("<img\b[^>]*>", local.body);
+		local.missingAltCount = 0;
+		local.badAltCount = 0;
+		for (local.imgTag in local.imgMatches) {
+			if (!REFindNoCase("\balt\s*=", local.imgTag)) {
+				local.missingAltCount++;
+			} else {
+				local.altExtract = REFindNoCase('\balt\s*=\s*(["''])(.*?)\1', local.imgTag, 1, true);
+				if (ArrayLen(local.altExtract.pos) >= 3 && local.altExtract.pos[3] > 0) {
+					local.altVal = Trim(Mid(local.imgTag, local.altExtract.pos[3], local.altExtract.len[3]));
+					if (Len(local.altVal) && (REFindNoCase("^(image|photo|picture|graphic|banner|logo|icon|img|untitled|dsc_?\d+|img_?\d+|screenshot.*|\S+\.(jpg|jpeg|png|gif|webp|svg))$", local.altVal) || Len(local.altVal) > 150)) {
+						local.badAltCount++;
+					}
+				}
+			}
+		}
+		if (local.missingAltCount > 0) {
+			local.errors += local.missingAltCount;
+			ArrayAppend(local.issues, { severity: "error", code: "1.1.1", msg: local.missingAltCount & " image(s) missing alt attribute" });
+		}
+		if (local.badAltCount > 0) {
+			local.warnings += local.badAltCount;
+			ArrayAppend(local.issues, { severity: "warning", code: "1.1.1", msg: local.badAltCount & " image(s) with generic or overly long alt text" });
+		}
+
+		// 4. Headings (WCAG 1.3.1 / 2.4.6)
+		local.hMatches = REMatchNoCase("<h([1-6])\b[^>]*>[\s\S]*?</h\1>", local.body);
+		local.h1Count = 0;
+		local.emptyHCount = 0;
+		local.skipHCount = 0;
+		local.lastLevel = 0;
+		local.isFirstHeading = true;
+		for (local.hBlock in local.hMatches) {
+			local.lvlChar = Mid(local.hBlock, 3, 1);
+			local.lvl = Val(local.lvlChar);
+			local.innerText = Trim(REReplaceNoCase(REReplaceNoCase(local.hBlock, "<[^>]+>", "", "all"), "(&nbsp;|\s)+", " ", "all"));
+			if (!Len(local.innerText)) {
+				local.emptyHCount++;
+				continue;
+			}
+			if (local.lvl == 1) {
+				local.h1Count++;
+			}
+			if (local.isFirstHeading && local.lvl > 2) {
+				local.skipHCount++;
+			} else if (local.lastLevel > 0 && local.lvl > local.lastLevel + 1) {
+				local.skipHCount++;
+			}
+			local.lastLevel = local.lvl;
+			local.isFirstHeading = false;
+		}
+		if (local.emptyHCount > 0) {
+			local.errors += local.emptyHCount;
+			ArrayAppend(local.issues, { severity: "error", code: "2.4.6", msg: local.emptyHCount & " empty heading tag(s)" });
+		}
+		if (local.h1Count > 0) {
+			local.warnings += local.h1Count;
+			ArrayAppend(local.issues, { severity: "warning", code: "1.3.1", msg: local.h1Count & " in-body <h1> tag(s) (use H2-H4)" });
+		}
+		if (local.skipHCount > 0) {
+			local.warnings += local.skipHCount;
+			ArrayAppend(local.issues, { severity: "warning", code: "1.3.1", msg: local.skipHCount & " skipped heading hierarchy level(s)" });
+		}
+
+		// 5. Hyperlinks (WCAG 2.4.4 / 3.2.5)
+		local.aMatches = REMatchNoCase("<a\b[^>]*>[\s\S]*?</a>", local.body);
+		local.emptyLinkCount = 0;
+		local.vagueLinkCount = 0;
+		local.newWinLinkCount = 0;
+		for (local.aBlock in local.aMatches) {
+			if (!REFindNoCase("\bhref\s*=", local.aBlock)) continue;
+			local.aOpenMatch = REMatchNoCase("^<a\b[^>]*>", local.aBlock);
+			local.aOpenTag = ArrayLen(local.aOpenMatch) ? local.aOpenMatch[1] : "";
+			local.aText = Trim(REReplaceNoCase(REReplaceNoCase(local.aBlock, "<[^>]+>", "", "all"), "(&nbsp;|\s)+", " ", "all"));
+			local.hasAria = REFindNoCase('\b(aria-label|title)\s*=\s*["''][^"'']+["'']', local.aOpenTag) > 0;
+			local.hasImgAlt = REFindNoCase('<img\b[^>]*\balt\s*=\s*["''][^"'']+["'']', local.aBlock) > 0;
+
+			if (!Len(local.aText) && !local.hasAria && !local.hasImgAlt) {
+				local.emptyLinkCount++;
+				continue;
+			}
+			local.normLinkText = LCase(REReplace(local.aText, "[\.\!\?\:\,\;\-\»\›\>\→]+$", "", "all"));
+			if (!local.hasAria && ListFindNoCase("click here|here|click|more|read more|learn more|link|this link|download|view|details|info|page|website|url", local.normLinkText, "|")) {
+				local.vagueLinkCount++;
+			} else if (!local.hasAria && REFindNoCase("^https?://\S+$", local.aText) && Len(local.aText) > 25) {
+				local.vagueLinkCount++;
+			}
+			if (REFindNoCase('\btarget\s*=\s*["'']?_blank["'']?', local.aOpenTag)) {
+				if (!REFindNoCase("(new\s+tab|new\s+window|external)", local.aBlock) || !REFindNoCase("\brel\s*=\s*[""'][^""']*noopener", local.aOpenTag)) {
+					local.newWinLinkCount++;
+				}
+			}
+		}
+		if (local.emptyLinkCount > 0) {
+			local.errors += local.emptyLinkCount;
+			ArrayAppend(local.issues, { severity: "error", code: "2.4.4", msg: local.emptyLinkCount & " empty link(s) with no accessible label" });
+		}
+		if (local.vagueLinkCount > 0) {
+			local.warnings += local.vagueLinkCount;
+			ArrayAppend(local.issues, { severity: "warning", code: "2.4.4", msg: local.vagueLinkCount & " non-descriptive or raw URL link(s)" });
+		}
+		if (local.newWinLinkCount > 0) {
+			local.warnings += local.newWinLinkCount;
+			ArrayAppend(local.issues, { severity: "warning", code: "3.2.5", msg: local.newWinLinkCount & " new-tab link(s) missing warning or rel=noopener" });
+		}
+
+		// 6. Data Tables (WCAG 1.3.1)
+		local.tblMatches = REMatchNoCase("<table\b[^>]*>[\s\S]*?</table>", local.body);
+		local.tblNoThCount = 0;
+		local.tblWarnCount = 0;
+		for (local.tblBlock in local.tblMatches) {
+			if (REFindNoCase('\brole\s*=\s*["'']?(presentation|none)["'']?', local.tblBlock)) continue;
+			if (!REFindNoCase("<th\b", local.tblBlock)) {
+				local.tblNoThCount++;
+			} else {
+				if (!REFindNoCase("<caption\b", local.tblBlock) && !REFindNoCase("\baria-label(ledby)?\s*=", local.tblBlock)) {
+					local.tblWarnCount++;
+				}
+			}
+		}
+		if (local.tblNoThCount > 0) {
+			local.errors += local.tblNoThCount;
+			ArrayAppend(local.issues, { severity: "error", code: "1.3.1", msg: local.tblNoThCount & " data table(s) missing <th> header cells" });
+		}
+		if (local.tblWarnCount > 0) {
+			local.warnings += local.tblWarnCount;
+			ArrayAppend(local.issues, { severity: "warning", code: "1.3.1", msg: local.tblWarnCount & " table(s) missing <caption> or aria-label" });
+		}
+
+		// 7. Readability & Metadata (WCAG 1.4.3 / 1.3.1)
+		local.spacerMatches = REMatchNoCase("<p[^>]*>(\s|&nbsp;|<br\s*/?>)*</p>", local.body);
+		if (ArrayLen(local.spacerMatches) >= 3) {
+			local.warnings++;
+			ArrayAppend(local.issues, { severity: "warning", code: "1.3.1", msg: ArrayLen(local.spacerMatches) & " empty paragraph spacer blocks" });
+		}
+		if (Len(local.metaDesc) > 160) {
+			local.warnings++;
+			ArrayAppend(local.issues, { severity: "warning", code: "2.4.6", msg: "SEO Meta Description exceeds 160 chars" });
+		}
+
+		local.status = "compliant";
+		local.label = "AA Compliant";
+		local.badgeClass = "badge-success";
+		if (local.errors > 0) {
+			local.status = "errors";
+			local.label = local.errors & " " & (local.errors == 1 ? "Error" : "Errors");
+			local.badgeClass = "badge-danger";
+		} else if (local.warnings > 0) {
+			local.status = "warnings";
+			local.label = "Pass · " & local.warnings & " Warn";
+			local.badgeClass = "badge-warning";
+		}
+
+		return {
+			compliant: (local.errors == 0),
+			status: local.status,
+			label: local.label,
+			badgeClass: local.badgeClass,
+			errors: local.errors,
+			warnings: local.warnings,
+			issues: local.issues
+		};
 	}
 
 	/**
@@ -3241,6 +3443,7 @@ component extends="Controller" {
 				local.res.id = Val(local.insertQ.new_id);
 				local.res.message = 'Call to Action "' & local.title & '" created successfully.';
 			}
+			syncWorkspaceCtaCards(local.siteId);
 		} catch (any e) {
 			local.res.message = "Failed to save Call to Action: " & e.message;
 			writeLog(type="error", file="pages", text="saveCallToAction failed: #e.message# #e.detail#");
@@ -3266,12 +3469,20 @@ component extends="Controller" {
 				return;
 			}
 
+			local.siteQ = queryExecute("
+				SELECT siteid FROM page_call_to_actions WHERE id = :id
+			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+
 			queryExecute("
 				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
 				UPDATE page_call_to_actions
 				SET deletedat = SYSUTCDATETIME()
 				WHERE id = :id AND deletedat IS NULL;
 			", { id: { value: local.id, cfsqltype: "cf_sql_integer" } }, { datasource: "ChelanCountyWebsite" });
+
+			if (local.siteQ.recordCount && Len(Trim(local.siteQ.siteid))) {
+				syncWorkspaceCtaCards(Trim(local.siteQ.siteid));
+			}
 
 			local.res.success = true;
 			local.res.message = "Call to Action removed successfully.";
@@ -3299,6 +3510,7 @@ component extends="Controller" {
 			}
 
 			local.seq = 1;
+			local.syncedSites = {};
 			for (local.itemId in local.orderList) {
 				if (IsNumeric(local.itemId) && Val(local.itemId) > 0) {
 					queryExecute("
@@ -3310,8 +3522,18 @@ component extends="Controller" {
 						seq: { value: local.seq, cfsqltype: "cf_sql_integer" },
 						id: { value: Val(local.itemId), cfsqltype: "cf_sql_integer" }
 					}, { datasource: "ChelanCountyWebsite" });
+
+					local.sq = queryExecute("SELECT siteid FROM page_call_to_actions WHERE id = :id", {
+						id: { value: Val(local.itemId), cfsqltype: "cf_sql_integer" }
+					}, { datasource: "ChelanCountyWebsite" });
+					if (local.sq.recordCount && Len(Trim(local.sq.siteid))) {
+						local.syncedSites[LCase(Trim(local.sq.siteid))] = Trim(local.sq.siteid);
+					}
 					local.seq++;
 				}
+			}
+			for (local.siteKey in local.syncedSites) {
+				syncWorkspaceCtaCards(local.syncedSites[local.siteKey]);
 			}
 			local.res.success = true;
 		} catch (any e) {
@@ -3319,6 +3541,102 @@ component extends="Controller" {
 		}
 
 		renderText(text = SerializeJSON(local.res), contentType = "application/json", layout = false);
+	}
+
+	/**
+	 * Syncs active Call to Action cards from page_call_to_actions into dbo.page_CtaCard
+	 * for the workspace's home landing page so ChelanCounty.gov stays in sync.
+	 */
+	private void function syncWorkspaceCtaCards(string siteId = "") {
+		local.ws = Trim(arguments.siteId);
+		if (!Len(local.ws) || local.ws == "global" || local.ws == "all") return;
+		try {
+			local.homePageQ = queryExecute("
+				SELECT TOP 1 ContentID, SiteID
+				FROM dbo.pages
+				WHERE LOWER(LTRIM(RTRIM(SiteID))) = LOWER(:siteId)
+				  AND LOWER(LTRIM(RTRIM(Permalink))) = 'home'
+				  AND DeletedAt IS NULL
+				ORDER BY isPublished DESC, ContentID ASC
+			", {
+				siteId: { value: local.ws, cfsqltype: "cf_sql_nvarchar" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			if (!local.homePageQ.recordCount) return;
+			local.homeContentId = Val(local.homePageQ.ContentID);
+			local.canonicalSiteId = Trim(local.homePageQ.SiteID);
+
+			local.ctas = queryExecute("
+				SELECT id, title, description, link_url, image_url, image_alt,
+				       link_text, link_icon, target_blank, sort_order, is_published
+				FROM dbo.page_call_to_actions
+				WHERE LOWER(LTRIM(RTRIM(siteid))) = LOWER(:siteId)
+				  AND deletedat IS NULL
+				ORDER BY sort_order ASC, id ASC
+			", {
+				siteId: { value: local.ws, cfsqltype: "cf_sql_nvarchar" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				DELETE FROM dbo.page_CtaCard WHERE ContentID = :contentId;
+			", {
+				contentId: { value: local.homeContentId, cfsqltype: "cf_sql_integer" }
+			}, { datasource: "ChelanCountyWebsite" });
+
+			for (local.r in local.ctas) {
+				local.iconVal = Trim(local.r.link_icon ?: "arrow");
+				if (local.iconVal == "external") {
+					local.btnIcon = "fa-arrow-up-right-from-square";
+				} else if (local.iconVal == "pdf") {
+					local.btnIcon = "fa-file-pdf text-danger";
+				} else if (local.iconVal == "none") {
+					local.btnIcon = "";
+				} else if (FindNoCase("fa-", local.iconVal)) {
+					local.btnIcon = local.iconVal;
+				} else {
+					local.btnIcon = (local.r.target_blank == 1) ? "fa-arrow-up-right-from-square" : "fa-arrow-right";
+				}
+
+				queryExecute("
+					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+					INSERT INTO dbo.page_CtaCard (
+						ContentID, SiteID, Title, ShortDescription, DestinationUrl,
+						ImagePath, ImageAlt, ButtonText, ButtonIcon, OpenInNewTab,
+						SortOrder, IsActive, CreatedAt, UpdatedAt
+					) VALUES (
+						:contentId, :siteId, :title, :desc, :url,
+						:imgPath, :imgAlt, :btnText, :btnIcon, :newTab,
+						:sortOrder, :isActive, SYSUTCDATETIME(), SYSUTCDATETIME()
+					);
+				", {
+					contentId: { value: local.homeContentId, cfsqltype: "cf_sql_integer" },
+					siteId: { value: local.canonicalSiteId, cfsqltype: "cf_sql_varchar" },
+					title: { value: local.r.title ?: "", cfsqltype: "cf_sql_nvarchar" },
+					desc: { value: local.r.description ?: "", cfsqltype: "cf_sql_nvarchar" },
+					url: { value: local.r.link_url ?: "", cfsqltype: "cf_sql_nvarchar" },
+					imgPath: { value: local.r.image_url ?: "", cfsqltype: "cf_sql_nvarchar", null: !Len(Trim(local.r.image_url ?: "")) },
+					imgAlt: { value: local.r.image_alt ?: "", cfsqltype: "cf_sql_nvarchar", null: !Len(Trim(local.r.image_alt ?: "")) },
+					btnText: { value: Len(Trim(local.r.link_text ?: "")) ? Trim(local.r.link_text) : "Learn More", cfsqltype: "cf_sql_nvarchar" },
+					btnIcon: { value: local.btnIcon, cfsqltype: "cf_sql_varchar" },
+					newTab: { value: (local.r.target_blank == 1 ? 1 : 0), cfsqltype: "cf_sql_bit" },
+					sortOrder: { value: Val(local.r.sort_order), cfsqltype: "cf_sql_integer" },
+					isActive: { value: (local.r.is_published == 1 ? 1 : 0), cfsqltype: "cf_sql_bit" }
+				}, { datasource: "ChelanCountyWebsite" });
+			}
+
+			queryExecute("
+				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
+				UPDATE dbo.pages
+				SET hasCtaCards = :hasCards
+				WHERE ContentID = :contentId;
+			", {
+				hasCards: { value: (local.ctas.recordCount > 0 ? 1 : 0), cfsqltype: "cf_sql_bit" },
+				contentId: { value: local.homeContentId, cfsqltype: "cf_sql_integer" }
+			}, { datasource: "ChelanCountyWebsite" });
+		} catch (any e) {
+			writeLog(type="error", file="pages", text="syncWorkspaceCtaCards failed for #local.ws#: #e.message# #e.detail#");
+		}
 	}
 
 	/**
@@ -3361,68 +3679,58 @@ component extends="Controller" {
 					ON [dbo].[page_call_to_actions] ([siteid], [slug])
 					WHERE [deletedat] IS NULL;
 				END;
-			", {}, { datasource: "ChelanCountyWebsite" });
 
-			// Check if seed data is needed
-			local.cntQ = queryExecute("
-				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-				SELECT COUNT(*) AS cnt FROM page_call_to_actions WHERE deletedat IS NULL;
+				IF OBJECT_ID(N'[dbo].[page_CtaCard]', N'U') IS NOT NULL
+				BEGIN
+					INSERT INTO [dbo].[page_call_to_actions] (
+						[siteid], [title], [slug], [description], [image_url], [image_alt],
+						[badge_text], [badge_color], [layout_type], [link_text], [link_url],
+						[link_icon], [link_style], [target_blank], [category], [sort_order],
+						[is_published], [created_by], [modified_by], [createdat], [updatedat]
+					)
+					SELECT
+						LOWER(LTRIM(RTRIM(c.SiteID))),
+						c.Title,
+						LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LTRIM(RTRIM(c.Title)), ' & ', '-'), '&', ''), ' ', '-'), '/', '-'), '''', '')),
+						c.ShortDescription,
+						c.ImagePath,
+						ISNULL(c.ImageAlt, c.Title),
+						N'',
+						N'blue',
+						N'card',
+						ISNULL(NULLIF(LTRIM(RTRIM(c.ButtonText)), ''), N'Learn More'),
+						c.DestinationUrl,
+						CASE
+							WHEN c.ButtonIcon LIKE '%file-pdf%' THEN N'pdf'
+							WHEN c.ButtonIcon LIKE '%up-right%' OR c.OpenInNewTab = 1 THEN N'external'
+							ELSE N'arrow'
+						END,
+						N'link',
+						ISNULL(c.OpenInNewTab, 0),
+						CASE LOWER(LTRIM(RTRIM(c.SiteID)))
+							WHEN 'public-works' THEN N'Public Works Services'
+							WHEN 'assessor' THEN N'Assessor Services'
+							WHEN 'auditor' THEN N'Auditor Services'
+							WHEN 'board-of-commissioners' THEN N'Commissioner Services'
+							ELSE N'General'
+						END,
+						ISNULL(c.SortOrder, 1),
+						ISNULL(c.IsActive, 1),
+						N'System Seed',
+						N'System Seed',
+						ISNULL(c.CreatedAt, SYSUTCDATETIME()),
+						ISNULL(c.UpdatedAt, SYSUTCDATETIME())
+					FROM [dbo].[page_CtaCard] c
+					WHERE c.SiteID IS NOT NULL
+					  AND LEN(LTRIM(RTRIM(c.SiteID))) > 0
+					  AND NOT EXISTS (
+						SELECT 1
+						FROM [dbo].[page_call_to_actions] existing
+						WHERE LOWER(LTRIM(RTRIM(existing.siteid))) = LOWER(LTRIM(RTRIM(c.SiteID)))
+						  AND existing.deletedat IS NULL
+					  );
+				END;
 			", {}, { datasource: "ChelanCountyWebsite" });
-
-			if (Val(local.cntQ.cnt) == 0) {
-				// Seed the 6 reference items from the Chelan County Assessor's portal
-				queryExecute("
-					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-					INSERT INTO page_call_to_actions (
-						siteid, title, slug, description, image_url, image_alt,
-						badge_text, badge_color, layout_type, link_text, link_url,
-						link_icon, link_style, target_blank, category, sort_order,
-						is_published, created_by, createdat, updatedat
-					) VALUES
-					(
-						'global', 'Parcel & Sale Search', 'parcel-sale-search',
-						'Look up property details, assessed valuations, tax history, and verified market sales.',
-						'/images/cta/parcel-search.jpg', 'Chelan County property parcel search',
-						'PROPERTY SEARCH', 'blue', 'card', 'Search Parcels', 'https://www.chelancounty.gov/assessor/parcels',
-						'arrow', 'link', 0, 'Assessor Services', 1, 1, 'System', SYSUTCDATETIME(), SYSUTCDATETIME()
-					),
-					(
-						'global', 'Interactive GIS Map', 'interactive-gis-map',
-						'Explore county parcel boundaries, aerial photography, tax code areas, and zoning layers.',
-						'/images/cta/gis-map.jpg', 'Interactive county GIS mapping and property boundary search',
-						'MAPPING', 'teal', 'card', 'Open Map', 'https://gis.chelancounty.gov',
-						'external', 'link', 1, 'Assessor Services', 2, 1, 'System', SYSUTCDATETIME(), SYSUTCDATETIME()
-					),
-					(
-						'global', 'Property Owner''s Guide', 'property-owners-guide',
-						'Comprehensive reference covering assessments, market valuation cycles, and rights.',
-						'/images/cta/property-guide.jpg', 'Property assessment calculations and documentation',
-						'CITIZEN GUIDE', 'amber', 'card', 'Download PDF', 'https://assets.chelancounty.com/assessor/documents/property-owners-guide.pdf',
-						'pdf', 'link', 1, 'Assessor Services', 3, 1, 'System', SYSUTCDATETIME(), SYSUTCDATETIME()
-					),
-					(
-						'global', 'Destroyed Property', 'destroyed-property',
-						'File for property valuation adjustment and tax relief due to disaster, calamity, or fire damage.',
-						'/images/cta/destroyed-property.jpg', 'Fire damage calamity tax relief and valuation adjustment',
-						'TAX RELIEF', 'red', 'card', 'View Relief Forms', 'https://www.chelancounty.gov/assessor/destroyed-property',
-						'arrow', 'link', 0, 'Assessor Services', 4, 1, 'System', SYSUTCDATETIME(), SYSUTCDATETIME()
-					),
-					(
-						'global', 'Assessment Appeals', 'assessment-appeals',
-						'Learn how to file a petition with the Chelan County Board of Equalization if you dispute your valuation.',
-						'/images/cta/assessment-appeals.jpg', 'Petition paperwork for Board of Equalization valuation appeals',
-						'APPEALS', 'blue', 'card', 'Appeal Instructions', 'https://www.chelancounty.gov/assessor/appeals',
-						'arrow', 'link', 0, 'Assessor Services', 5, 1, 'System', SYSUTCDATETIME(), SYSUTCDATETIME()
-					),
-					(
-						'global', 'Document Search', 'document-search',
-						'Access official recorded deeds, land surveys, plats, and legal public records via AcclaimWeb.',
-						'/images/cta/document-search.jpg', 'Searching recorded deeds and official public land records',
-						'PUBLIC RECORDS', 'emerald', 'card', 'Search Records', 'https://recording.chelancounty.gov',
-						'external', 'link', 1, 'Assessor Services', 6, 1, 'System', SYSUTCDATETIME(), SYSUTCDATETIME()
-					);
-				", {}, { datasource: "ChelanCountyWebsite" });
-			}
 		} catch (any e) {
 			writeLog(type="error", file="pages", text="ensureCallToActionTable failed: #e.message# #e.detail#");
 		}
@@ -3439,8 +3747,21 @@ component extends="Controller" {
 			local.params = {};
 
 			if (!arguments.includeAllWorkspaces && Len(arguments.requestedWs) && arguments.requestedWs != "global" && arguments.requestedWs != "all") {
-				local.whereClause &= " AND cta.siteid = :ws";
-				local.params.ws = { value: arguments.requestedWs, cfsqltype: "cf_sql_nvarchar" };
+				local.candidateSites = getCandidateSiteIds(arguments.requestedWs);
+				if (ArrayLen(local.candidateSites) > 1) {
+					local.inList = [];
+					local.idx = 1;
+					for (local.cid in local.candidateSites) {
+						local.paramName = "ws_" & local.idx;
+						ArrayAppend(local.inList, ":" & local.paramName);
+						local.params[local.paramName] = { value: LCase(Trim(local.cid)), cfsqltype: "cf_sql_nvarchar" };
+						local.idx++;
+					}
+					local.whereClause &= " AND LOWER(LTRIM(RTRIM(cta.siteid))) IN (" & ArrayToList(local.inList, ",") & ")";
+				} else {
+					local.whereClause &= " AND LOWER(LTRIM(RTRIM(cta.siteid))) = LOWER(:ws)";
+					local.params.ws = { value: Trim(arguments.requestedWs), cfsqltype: "cf_sql_nvarchar" };
+				}
 			}
 
 			local.q = queryExecute("
@@ -3515,13 +3836,26 @@ component extends="Controller" {
 	 * Loads distinct Call to Action categories
 	 */
 	private array function loadCallToActionCategories(string requestedWs = "") {
-		local.cats = ["General", "Assessor Services", "Online Portals", "Public Records", "Citizen Services"];
+		local.cats = ["General", "Public Works Services", "Assessor Services", "Online Portals", "Public Records", "Citizen Services"];
 		try {
 			local.whereClause = "WHERE deletedat IS NULL";
 			local.params = {};
 			if (Len(arguments.requestedWs) && arguments.requestedWs != "global" && arguments.requestedWs != "all") {
-				local.whereClause &= " AND siteid = :ws";
-				local.params.ws = { value: arguments.requestedWs, cfsqltype: "cf_sql_nvarchar" };
+				local.candidateSites = getCandidateSiteIds(arguments.requestedWs);
+				if (ArrayLen(local.candidateSites) > 1) {
+					local.inList = [];
+					local.idx = 1;
+					for (local.cid in local.candidateSites) {
+						local.paramName = "ws_" & local.idx;
+						ArrayAppend(local.inList, ":" & local.paramName);
+						local.params[local.paramName] = { value: LCase(Trim(local.cid)), cfsqltype: "cf_sql_nvarchar" };
+						local.idx++;
+					}
+					local.whereClause &= " AND LOWER(LTRIM(RTRIM(siteid))) IN (" & ArrayToList(local.inList, ",") & ")";
+				} else {
+					local.whereClause &= " AND LOWER(LTRIM(RTRIM(siteid))) = LOWER(:ws)";
+					local.params.ws = { value: Trim(arguments.requestedWs), cfsqltype: "cf_sql_nvarchar" };
+				}
 			}
 			local.q = queryExecute("
 				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
@@ -4370,8 +4704,8 @@ component extends="Controller" {
 				cssPath: local.separateAssets ? local.cssRelPath : "",
 				jsPath: local.separateAssets ? local.jsRelPath : "",
 				message: local.separateAssets
-					? "One-Page website compiled successfully with separated assets (" & local.cssRelPath & " and " & local.jsRelPath & ") into Content Manager (Page ID ##" & local.targetPageId & ")!"
-					: "One-Page website compiled successfully into Content Manager (Page ID ##" & local.targetPageId & ")!"
+					? "One-Page website compiled successfully with separated assets (" & local.cssRelPath & " and " & local.jsRelPath & ") into Page Editor (Page ID ##" & local.targetPageId & ")!"
+					: "One-Page website compiled successfully into Page Editor (Page ID ##" & local.targetPageId & ")!"
 			});
 		} catch (any err) {
 			fxRenderJson({ success: false, message: "Compilation error: " & err.message }, 500);
@@ -5330,157 +5664,7 @@ component extends="Controller" {
 				END;
 			", {}, { datasource: "ChelanCountyWebsite" });
 
-			// Check if seed data is needed
-			local.cntQ = queryExecute("
-				SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-				SELECT COUNT(*) AS cnt FROM one_page_sites WHERE deletedat IS NULL;
-			", {}, { datasource: "ChelanCountyWebsite" });
-
-			if (Val(local.cntQ.cnt) == 0) {
-				// Seed Wenatchee River Park portal
-				local.insSite = queryExecute("
-					SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-					DECLARE @InsertedIds TABLE (id INT);
-					INSERT INTO one_page_sites (
-						siteid, title, slug, subtitle, theme,
-						hero_headline, hero_tagline, hero_image_url,
-						hero_cta_primary_text, hero_cta_primary_anchor,
-						hero_cta_secondary_text, hero_cta_secondary_anchor,
-						enable_sticky_nav, nav_brand_title, nav_cta_text, nav_cta_anchor,
-						enable_scrollspy, enable_back_to_top, is_published,
-						meta_title, meta_description, created_by, createdat, updatedat
-					)
-					OUTPUT INSERTED.id INTO @InsertedIds(id)
-					VALUES (
-						'wrcp', 'Wenatchee River Park', 'wenatchee-river-park',
-						'Premier Riverfront RV Resort & Retreat along the scenic Wenatchee River in Chelan County',
-						'river-park',
-						'Where the River Meets the Cascade Foothills',
-						'Spacious full-hookup RV sites, tranquil tent camping, river access, and breathtaking mountain vistas in the heart of Chelan County.',
-						'https://assets.chelancounty.com/shared/media/lake-chelan-scenic-panorama.jpg',
-						'Explore Amenities', '##amenities',
-						'View Rates & Hours', '##rates',
-						1, 'Wenatchee River Park', 'Reserve Online', '##rates',
-						1, 1, 1,
-						'Wenatchee River Park | Official Portal & RV Resort',
-						'Official website for Wenatchee River Park featuring RV campsites, rates, amenities, maps, and recreation.',
-						'System', SYSUTCDATETIME(), SYSUTCDATETIME()
-					);
-					SELECT id FROM @InsertedIds;
-				", {}, { datasource: "ChelanCountyWebsite" });
-
-				local.siteId = Val(local.insSite.id);
-
-				// Seed 6 reference pages for wrcp in dbo.pages if not already present
-				local.seedPages = [
-					{
-						title: "Park Overview & Heritage",
-						slug: "park-overview",
-						summary: "Nestled along the pristine Wenatchee River, the park offers premier recreation, shaded campgrounds, and mountain trails.",
-						body: "<p>Welcome to Wenatchee River Park, Chelan County's flagship riverfront park and RV resort. Situated beneath the dramatic Cascade foothills and bordered by the cool waters of the Wenatchee River, our park provides a peaceful natural sanctuary with modern recreational amenities.</p><p>Featuring 49 spacious full-hookup RV sites, lush tenting lawns, modern ADA restrooms with hot showers, picnic shelters, horseshoe pits, and direct river access for kayaking and paddleboarding.</p>",
-						anchor: "overview",
-						layout: "split-image-right",
-						bg: "default"
-					},
-					{
-						title: "Park Amenities & Facilities",
-						slug: "amenities",
-						summary: "Full RV hookups, high-speed Wi-Fi, picnic pavilions, river launches, clean showers, and horseshoe courts.",
-						body: "<p>Wenatchee River Park provides first-class amenities designed for comfort, accessibility, and outdoor enjoyment:</p><ul><li><strong>Full Hookup RV Sites:</strong> 30 and 50 amp electric service, municipal water, and dedicated sewer connections.</li><li><strong>Waterfront Launch:</strong> Easy non-motorized river access for kayaks, canoes, and stand-up paddleboards.</li><li><strong>Clean Shower Facilities:</strong> Fully ADA compliant restrooms and coin-free hot shower stalls.</li><li><strong>Group Covered Shelters:</strong> Reserveable picnic pavilions equipped with BBQ grills and banquet tables.</li><li><strong>Recreation Fields:</strong> Sand volleyball, regulation horseshoe pits, and open lawn game areas.</li></ul>",
-						anchor: "amenities",
-						layout: "full",
-						bg: "muted"
-					},
-					{
-						title: "Camping & RV Rates",
-						slug: "rates-and-fees",
-						summary: "Transparent seasonal pricing for full-hookup RV spaces, standard tent camping, and day-use pavilion rentals.",
-						body: "<p>Chelan County Parks maintains competitive, transparent fees to support park operations and preservation:</p><table><thead><tr><th>Accommodation Type</th><th>Peak Season (May-Oct)</th><th>Off-Peak (Nov-Apr)</th></tr></thead><tbody><tr><td>Full Hookup RV (30/50A)</td><td>$48.00 / night</td><td>$38.00 / night</td></tr><tr><td>Standard Tent Camping</td><td>$30.00 / night</td><td>$24.00 / night</td></tr><tr><td>Day Use Picnic Shelter</td><td>$85.00 / day</td><td>$65.00 / day</td></tr><tr><td>Dump Station (Non-Campers)</td><td>$10.00 / use</td><td>$10.00 / use</td></tr></tbody></table><p><em>Discounts available for Washington State seniors (62+) and active military personnel.</em></p>",
-						anchor: "rates",
-						layout: "full",
-						bg: "surface-elevated"
-					},
-					{
-						title: "Park Maps & Trail Network",
-						slug: "park-maps",
-						summary: "Interactive layout map of all 49 campsites, river access ramps, trailheads, and restroom stations.",
-						body: "<p>Navigate Wenatchee River Park easily with our comprehensive trail and campsite guides. All major sites and facilities are connected by paved, ADA accessible multi-use pathways.</p><p>Download our official high-resolution park guide map for offline access while traveling across Chelan County.</p>",
-						anchor: "park-maps",
-						layout: "split-image-left",
-						bg: "default"
-					},
-					{
-						title: "Points of Interest & Nearby Recreation",
-						slug: "points-of-interest",
-						summary: "Explore nearby Bavarian Leavenworth, Lake Chelan wineries, Peshastin Pinnacles, and Cashmere rafting.",
-						body: "<p>Wenatchee River Park serves as the ultimate basecamp for experiencing the breathtaking wonders of North Central Washington:</p><ul><li><strong>Bavarian Village of Leavenworth:</strong> Just 14 miles west featuring alpine dining, festivals, and artisan shopping.</li><li><strong>Cashmere Museum & Pioneer Village:</strong> Historic frontier cabins and indigenous artifacts 4 miles away.</li><li><strong>Whitewater Rafting:</strong> Class III rapids on the lower Wenatchee River during spring runoff.</li><li><strong>Apple Capital Loop Trail:</strong> 10 miles of paved riverfront trail along the Columbia River in Wenatchee.</li></ul>",
-						anchor: "points-of-interest",
-						layout: "card-grid",
-						bg: "muted"
-					},
-					{
-						title: "Reservations & Contact Us",
-						slug: "reservations-contact",
-						summary: "Contact the on-site park host, check site availability, or submit group facility reservations.",
-						body: "<p>Our friendly on-site rangers and camp hosts are available daily to assist you during your stay in Chelan County.</p><p><strong>Physical Address:</strong> 2924 State Highway 2, Monitor, WA 98836<br><strong>Park Office Phone:</strong> (509) 667-6490<br><strong>Email:</strong> parks@co.chelan.wa.us<br><strong>Gate Hours:</strong> 7:00 AM &ndash; 10:00 PM Daily</p>",
-						anchor: "contact",
-						layout: "full",
-						bg: "dark"
-					}
-				];
-
-				for (local.idx = 1; local.idx <= ArrayLen(local.seedPages); local.idx++) {
-					local.sp = local.seedPages[local.idx];
-
-					local.insP = queryExecute("
-						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-						DECLARE @InsertedPages TABLE (id INT);
-						INSERT INTO pages (
-							SiteID, PageType, MenuSelected, LayoutType, ParentID,
-							StatusCode, Permalink, Title, MetaTitle, MetaDesc,
-							Summary, Body, isPublished, Visibility, Created, CreatedBy, Modified, ModifiedBy
-						)
-						OUTPUT INSERTED.ContentID INTO @InsertedPages(id)
-						VALUES (
-							'wrcp', 0, 'Top Level - Called from URL', 'Full', 0,
-							'Active', :permalink, :title, :title, :summary,
-							:summary, :body, 1, 'Published', SYSUTCDATETIME(), 'System', SYSUTCDATETIME(), 'System'
-						);
-						SELECT id FROM @InsertedPages;
-					", {
-						permalink: { value: local.sp.slug, cfsqltype: "cf_sql_nvarchar" },
-						title: { value: local.sp.title, cfsqltype: "cf_sql_nvarchar" },
-						summary: { value: local.sp.summary, cfsqltype: "cf_sql_nvarchar" },
-						body: { value: local.sp.body, cfsqltype: "cf_sql_nvarchar" }
-					}, { datasource: "ChelanCountyWebsite" });
-
-					local.newPageId = Val(local.insP.id);
-
-					// Insert section in dbo.one_page_sections
-					queryExecute("
-						SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;
-						INSERT INTO one_page_sections (
-							one_page_site_id, page_id, anchor_id, section_title, section_subtitle,
-							section_layout, section_bg, show_header, show_divider, sort_order, is_active,
-							createdat, updatedat
-						) VALUES (
-							:siteId, :pageId, :anchorId, :title, :subtitle,
-							:layout, :bg, 1, 1, :sortOrder, 1,
-							SYSUTCDATETIME(), SYSUTCDATETIME()
-						)
-					", {
-						siteId: { value: local.siteId, cfsqltype: "cf_sql_integer" },
-						pageId: { value: local.newPageId, cfsqltype: "cf_sql_integer" },
-						anchorId: { value: local.sp.anchor, cfsqltype: "cf_sql_nvarchar" },
-						title: { value: local.sp.title, cfsqltype: "cf_sql_nvarchar" },
-						subtitle: { value: local.sp.summary, cfsqltype: "cf_sql_nvarchar" },
-						layout: { value: local.sp.layout, cfsqltype: "cf_sql_nvarchar" },
-						bg: { value: local.sp.bg, cfsqltype: "cf_sql_nvarchar" },
-						sortOrder: { value: local.idx, cfsqltype: "cf_sql_integer" }
-					}, { datasource: "ChelanCountyWebsite" });
-				}
-			}
-		} catch (any err) {
+			} catch (any err) {
 			writeLog(type="error", file="pages", text="ensureOnePageStudioTables error: #err.message#");
 		}
 	}

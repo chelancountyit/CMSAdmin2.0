@@ -1336,28 +1336,56 @@ public string function renderCallToActionShortcodes(required string content) {
 
 /**
  * Returns application versioning data struct loaded from config/version.json or defaults.
+ * Automatically reloads whenever config/version.json's lastModified timestamp changes on disk,
+ * and strips any UTF-8 BOM (\uFEFF) before JSON parsing.
  */
 public struct function getAppVersion() {
-	if (!structKeyExists(application, "appVersionData") || (application.appVersionData.version ?: "") != "2.1.325" || (structKeyExists(url, "reload") && (url.reload == "true" || url.reload == "1"))) {
-		var verFile = expandPath("/config/version.json");
-		if (fileExists(verFile)) {
+	var verFile = expandPath("/config/version.json");
+	var currentMtime = "";
+	var hasFile = fileExists(verFile);
+	if (hasFile) {
+		try {
+			var fi = getFileInfo(verFile);
+			currentMtime = ToString(fi.lastModified) & "_" & ToString(fi.size);
+		} catch (any eMtime) {
+			currentMtime = "";
+		}
+	}
+
+	var forceReload = (structKeyExists(url, "reload") && (url.reload == "true" || url.reload == "1"));
+	var mtimeChanged = (Len(currentMtime) && (!structKeyExists(application, "appVersionFileMtime") || application.appVersionFileMtime != currentMtime));
+
+	if (!structKeyExists(application, "appVersionData") || !isStruct(application.appVersionData) || forceReload || mtimeChanged) {
+		if (hasFile) {
 			try {
 				var jsonStr = fileRead(verFile, "utf-8");
-				application.appVersionData = deserializeJSON(jsonStr);
+				// Strip UTF-8 BOM (chr(65279) / \uFEFF) if present so deserializeJSON never fails
+				while (Len(jsonStr) && (Asc(Left(jsonStr, 1)) == 65279 || Asc(Left(jsonStr, 1)) == 239)) {
+					jsonStr = RemoveChars(jsonStr, 1, 1);
+				}
+				var firstBrace = Find("{", jsonStr);
+				if (firstBrace > 1) {
+					jsonStr = Mid(jsonStr, firstBrace, Len(jsonStr));
+				}
+				var parsedVer = deserializeJSON(Trim(jsonStr));
+				if (isStruct(parsedVer) && structKeyExists(parsedVer, "version")) {
+					application.appVersionData = parsedVer;
+					application.appVersionFileMtime = currentMtime;
+				}
 			} catch (any e) {
-				// Fallback to defaults
+				// Fallback to defaults if JSON is malformed
 			}
 		}
 		if (!structKeyExists(application, "appVersionData") || !isStruct(application.appVersionData)) {
 			application.appVersionData = {
 				"major": 2,
 				"minor": 1,
-				"build": 1,
-				"version": "2.1.1",
-				"versionTag": "v2.1.1",
-				"releaseName": "Page Studio Parity & Visual Layout Controls",
-				"releaseDate": "2026-10-19",
-				"builtAt": "2026-10-19T00:15:00-07:00",
+				"build": 325,
+				"version": "2.1.325",
+				"versionTag": "v2.1.325",
+				"releaseName": "UTF-8 Mojibake Self-Healer, Page Features Quick-Guides & 30-Day Remember Me",
+				"releaseDate": "2026-10-23",
+				"builtAt": "2026-10-23T15:58:54-07:00",
 				"environment": "development"
 			};
 		}

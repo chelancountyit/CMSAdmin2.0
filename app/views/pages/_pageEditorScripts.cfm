@@ -1,4 +1,4 @@
-<script>
+﻿<script>
 (function () {
 	var menuSelect = document.getElementById("pgMenuItemSelect");
 	if (!menuSelect) return;
@@ -1559,14 +1559,15 @@ window.closeEmbedFormModal = function() {
 		window._chelanEditorFormResizeAttached = true;
 		window.addEventListener("message", function(e) {
 			if (e.data && e.data.type === "chelan-form-resize" && e.data.height) {
-				var targetHeight = Math.max(400, Math.min(parseInt(e.data.height, 10), 3500));
+				var targetHeight = Math.max(220, Math.min(parseInt(e.data.height, 10), 3500));
 				var iframes = document.querySelectorAll("iframe");
 				iframes.forEach(function(f) {
 					try {
 						if (f.contentWindow === e.source || (f.src && (f.src.indexOf("/forms/preview") !== -1 || f.src.indexOf("forms/preview") !== -1))) {
 							f.style.height = targetHeight + "px";
-							f.style.minHeight = targetHeight + "px";
+							f.style.minHeight = "0px";
 							f.setAttribute("height", targetHeight);
+							f.setAttribute("scrolling", "no");
 						}
 					} catch(err) {}
 				});
@@ -1582,7 +1583,7 @@ window.closeEmbedFormModal = function() {
 			var formTitle = btnIframe.getAttribute("data-title") || "Online Form";
 			var formSrc = formSlug ? ('http://cmsadmin.chelancounty.gov/forms/preview?slug=' + encodeURIComponent(formSlug)) : ('http://cmsadmin.chelancounty.gov/forms/preview?id=' + formId);
 			var snippet = '<div class="cms-form-embed" data-form-slug="' + formSlug + '" data-form-id="' + formId + '">\n' +
-				'  <iframe src="' + formSrc + '" width="100%" height="920" frameborder="0" scrolling="auto" style="border:none; width:100%; min-height:650px; border-radius:8px; transition:height 0.2s ease;" title="' + formTitle.replace(/"/g, '&quot;') + '"></iframe>\n' +
+				'  <iframe src="' + formSrc + '" width="100%" height="520" frameborder="0" scrolling="no" style="border:none; width:100%; min-height:0; overflow:hidden; display:block; border-radius:8px;" title="' + formTitle.replace(/"/g, '&quot;') + '"></iframe>\n' +
 				'</div>\n';
 			closeEmbedFormModal();
 			insertSnippetAtCursor("pgContent", snippet);
@@ -1654,6 +1655,60 @@ window.closeEmbedFormModal = function() {
 		});
 	}
 
+	function refreshEmbedCtas(wsId) {
+		var container = document.getElementById("embedCtaListContainer");
+		if (!container) return;
+		var targetWs = wsId || "";
+		if (!targetWs) {
+			var wsField = document.getElementById("pgWorkspace") || document.getElementById("pageSiteId");
+			if (wsField && wsField.value) targetWs = wsField.value;
+		}
+		var url = "/pages/call-to-action/list" + (targetWs ? ("?ws=" + encodeURIComponent(targetWs)) : "");
+		fetch(url, { headers: { "Accept": "application/json" } })
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				if (!data || !Array.isArray(data.items)) return;
+				var html = "";
+				data.items.forEach(function(cta) {
+					var id = cta.id || cta.ID || 0;
+					var slug = cta.slug || cta.SLUG || "";
+					var title = cta.title || cta.TITLE || "";
+					var cat = cta.category || cta.CATEGORY || "General";
+					var linkUrl = cta.linkUrl || cta.LINKURL || "";
+					var linkIcon = cta.linkIcon || cta.LINKICON || "arrow";
+					var targetBlank = (cta.targetBlank || cta.TARGETBLANK) ? "1" : "0";
+					var imgUrl = cta.imageUrl || cta.IMAGEURL || "";
+					var imgAlt = cta.imageAlt || cta.IMAGEALT || title;
+					var badgeText = cta.badgeText || cta.BADGETEXT || "";
+					var desc = cta.description || cta.DESCRIPTION || "";
+					var linkText = cta.linkText || cta.LINKTEXT || "Learn More";
+
+					html += '<div class="embed-cta-card-item" data-id="' + escapeHtml(String(id)) + '" data-slug="' + escapeHtml(slug) + '" data-title="' + escapeHtml(title) + '" data-category="' + escapeHtml(cat) + '" data-link-url="' + escapeHtml(linkUrl) + '" data-link-icon="' + escapeHtml(linkIcon) + '" data-target-blank="' + targetBlank + '" style="border:1.5px solid var(--admin-border); border-radius:8px; background:var(--admin-surface); display:flex; flex-direction:column; overflow:hidden; position:relative; cursor:pointer; transition:border-color 0.15s ease, box-shadow 0.15s ease;">';
+					html += '<div style="position:absolute; top:0.5rem; left:0.5rem; z-index:3; background:rgba(255,255,255,0.92); border-radius:4px; padding:0.2rem 0.35rem; display:flex; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.15);">';
+					html += '<input type="checkbox" class="embed-cta-checkbox" value="' + escapeHtml(slug) + '" style="accent-color:var(--admin-primary); width:15px; height:15px; cursor:pointer;" title="Select for Multi-Card Grid">';
+					html += '</div>';
+					if (imgUrl) {
+						html += '<div style="width:100%; height:130px; overflow:hidden; background:#f1f5f9; position:relative;">';
+						html += '<img src="' + escapeHtml(imgUrl) + '" alt="' + escapeHtml(imgAlt) + '" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">';
+						html += '</div>';
+					}
+					html += '<div style="padding:0.85rem; display:flex; flex-direction:column; flex:1;">';
+					if (badgeText) {
+						html += '<span class="jbd-cta-badge" style="font-size:0.65rem; padding:0.1rem 0.4rem; align-self:flex-start; margin-bottom:0.35rem;">' + escapeHtml(badgeText) + '</span>';
+					}
+					html += '<strong style="font-size:0.95rem; color:var(--admin-text-main); margin-bottom:0.25rem; line-height:1.3;">' + escapeHtml(title) + '</strong>';
+					html += '<p style="font-size:0.78rem; color:var(--admin-text-muted); line-height:1.45; margin:0 0 0.75rem; flex:1; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">' + escapeHtml(desc) + '</p>';
+					html += '<div class="embed-cta-link-preview" style="font-size:0.75rem; color:var(--admin-primary); font-weight:700; display:flex; align-items:center; gap:0.35rem;">';
+					html += '<span>' + escapeHtml(linkText) + '</span>' + getCtaLinkIconSvg(linkIcon);
+					html += '</div></div></div>';
+				});
+				container.innerHTML = html;
+				filterEmbedCtaCards();
+				syncCtaCardSelectionState();
+			})
+			.catch(function() {});
+	}
+
 	window.openEmbedCtaModal = function() {
 		var modal = document.getElementById("embedCtaModal");
 		var backdrop = document.getElementById("embedCtaModalBackdrop");
@@ -1671,6 +1726,10 @@ window.closeEmbedFormModal = function() {
 			backdrop.classList.add("open");
 		}
 		document.body.style.overflow = "hidden";
+
+		if (document.querySelectorAll(".embed-cta-card-item").length === 0) {
+			refreshEmbedCtas("");
+		}
 
 		var searchInput = document.getElementById("embedCtaSearchInput");
 		if (searchInput) {
@@ -1883,6 +1942,7 @@ window.closeEmbedFormModal = function() {
 			var wsId = e.detail.id || "";
 			var wsName = e.detail.name || "";
 			refreshEmbedForms(wsId, wsName);
+			refreshEmbedCtas(wsId);
 		}
 	});
 })();
@@ -4410,11 +4470,16 @@ window.PageA11yLinter = (function() {
 
 		// Poll for JBDEditor async readiness
 		var pollCount = 0;
+		var openedFromQuery = false;
 		var pollTimer = setInterval(function() {
 			pollCount++;
 			if (bindEditorEvents() || pollCount > 15) {
 				clearInterval(pollTimer);
 				scan();
+				if (!openedFromQuery && window.location.search.indexOf("openA11y=1") !== -1) {
+					openedFromQuery = true;
+					setTimeout(openDrawer, 180);
+				}
 			}
 		}, 120);
 

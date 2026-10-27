@@ -1,4 +1,4 @@
-<cfscript>
+﻿<cfscript>
 // Place helper functions here that should be available for use in all view pages of your application.
 
 /**
@@ -94,6 +94,9 @@ public string function svgIcon(required string name, string class = "", numeric 
 		case "form-builder":
 		case "clipboard-list":
 			return '<svg #baseAttrs#><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>';
+		case "inbox":
+		case "submissions":
+			return '<svg #baseAttrs#><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>';
 		case "type":
 		case "text":
 			return '<svg #baseAttrs#><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>';
@@ -179,6 +182,9 @@ public string function svgIcon(required string name, string class = "", numeric 
 			return '<svg #baseAttrs#><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
 		case "more-vertical":
 			return '<svg #baseAttrs#><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>';
+		case "more-horizontal":
+		case "dots":
+			return '<svg #baseAttrs#><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>';
 		case "shield":
 		case "security":
 			return '<svg #baseAttrs#><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';

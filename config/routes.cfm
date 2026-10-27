@@ -1,4 +1,4 @@
-<cfscript>
+﻿<cfscript>
 
 	// Use this file to add routes to your application and point the root route to a controller action.
 	// Don't forget to issue a reload request (e.g. reload=true) after making changes.
@@ -15,6 +15,9 @@
 		.post(name="formSaveEmailSettings", pattern="forms/save-email-settings", to="forms##saveEmailSettings")
 		.post(name="formSave", pattern="forms/save", to="forms##save")
 		.post(name="formSoftDelete", pattern="forms/delete", to="forms##softDelete")
+		.get(name="formSubmissions", pattern="forms/submissions", to="forms##submissions")
+		.post(name="formDeleteSubmission", pattern="forms/submissions/delete", to="forms##deleteSubmission")
+		.get(name="formExportCsv", pattern="forms/export-csv", to="forms##exportCsv")
 		.post(name="formSubmit", pattern="forms/submit", to="forms##submit")
 		.get(name="formSubmitGet", pattern="forms/submit", to="forms##submit")
 

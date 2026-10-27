@@ -18,7 +18,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Select Media Asset - Chelan County CMS</title>
 	<link rel="stylesheet" href="/stylesheets/admin-theme.css?v=4.1">
-	<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=4.1">
+	<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=4.3">
 	<style>
 		body {
 			background: #f8fafc;
@@ -76,9 +76,15 @@
 	</div>
 
 	<div class="layout">
-		<!-- Left column: Server Folders tree -->
+		<!-- Left column: Server Folders tree (Accordion) -->
 		<nav class="panel tree-panel" aria-label="Server folders">
-			<div class="panel-title">SERVER FOLDERS</div>
+			<div class="panel-title-row">
+				<div class="panel-title">SERVER FOLDERS</div>
+				<div class="tree-panel-actions">
+					<button type="button" id="btn-tree-expand-all" class="tree-action-btn" title="Unfold all folders">Expand</button>
+					<button type="button" id="btn-tree-collapse-all" class="tree-action-btn" title="Fold all subfolders">Fold</button>
+				</div>
+			</div>
 			<ul id="tree" class="tree" role="list"></ul>
 		</nav>
 
@@ -306,7 +312,7 @@
 	</div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=5.2"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=5.3"></script>
 </cfoutput>
 </body>
 </html>

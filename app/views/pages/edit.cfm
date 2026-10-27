@@ -775,7 +775,7 @@
 		<nav aria-label="Breadcrumb">
 			<ol class="breadcrumb" style="margin-top:0.35rem;">
 				<li class="breadcrumb-item"><a href="#urlFor(controller='main', action='index')#">#svgIcon(name="dashboard", size=14)# Home</a></li>
-				<li class="breadcrumb-item"><a href="#urlFor(controller='pages', action='index')#">Content Manager</a></li>
+				<li class="breadcrumb-item"><a href="#urlFor(controller='pages', action='index')#">Page Editor</a></li>
 				<li class="breadcrumb-item active" aria-current="page" id="pgBreadcrumbTitle">#isNew ? "Add Page" : EncodeForHTML(page.title)#</li>
 			</ol>
 		</nav>
@@ -783,7 +783,7 @@
 	<div class="page-actions">
 		<a href="#urlFor(controller='pages', action='index')#" class="btn btn-outline btn-sm">
 			#svgIcon(name="list", size=14)#
-			<span>Content Manager</span>
+			<span>Page Editor</span>
 		</a>
 		<cfif not isNew>
 			<a href="#EncodeForHTMLAttribute(livePageUrl)#" id="btnViewLivePageTop" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" title="View live page on #EncodeForHTMLAttribute(editDomain)#">

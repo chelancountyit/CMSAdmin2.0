@@ -1,4 +1,4 @@
-component extends="Controller" {
+﻿component extends="Controller" {
 
 	function config() {
 		super.config();
@@ -615,23 +615,26 @@ component extends="Controller" {
 		local.json = readJsonBody();
 		if (IsStruct(local.json)) StructAppend(local.postData, local.json, true);
 
-		local.formKey = Trim(local.postData._form_key ?: "");
-		local.formId = Val(local.postData._form_id ?: 0);
+		local.formKey = Trim(local.postData._form_key ?: (local.postData.formKey ?: ""));
+		local.formId = Val(REReplace(Trim(local.postData._form_id ?: (local.postData.formId ?: "")), "^form_", "", "one"));
+		local.formSlug = Trim(local.postData._form_slug ?: (local.postData.slug ?: ""));
 
 		// Template / unsaved draft previews have no database record - validate only.
-		if (!Len(local.formKey) && local.formId == 0) {
+		if (!Len(local.formKey) && local.formId == 0 && !Len(local.formSlug)) {
 			legacySubmit(local.postData);
 			return;
 		}
 
+		local.whereClause = Len(local.formKey) ? "f.form_key = :k" : (local.formId > 0 ? "f.id = :id" : "f.slug = :s");
 		local.qForm = fbQuery("
-			SELECT f.*, d.alert_email AS dept_alert_email
+			SELECT f.*, d.alert_email AS dept_alert_email, d.name AS dept_name
 			FROM forms f
 			LEFT JOIN form_departments d ON d.id = f.department_id
-			WHERE f.deletedat IS NULL AND #(Len(local.formKey) ? 'f.form_key = :k' : 'f.id = :id')#
+			WHERE f.deletedat IS NULL AND #local.whereClause#
 		", {
 			k: qp(local.formKey),
-			id: { value: local.formId, cfsqltype: "cf_sql_integer" }
+			id: { value: local.formId, cfsqltype: "cf_sql_integer" },
+			s: qp(local.formSlug)
 		});
 
 		if (!local.qForm.recordCount || (LCase(local.qForm.status) != "published" && !isStaffSession())) {
@@ -701,6 +704,7 @@ component extends="Controller" {
 		local.values = [];
 		local.pendingFiles = [];
 		local.missing = [];
+		local.hasAnySubmittedValue = false;
 		for (local.fld in local.qFields) {
 			if (ListFindNoCase(variables.FB_DISPLAY_TYPES, local.fld.field_type)) continue;
 			local.key = local.fld.field_key;
@@ -708,6 +712,7 @@ component extends="Controller" {
 			if (local.fld.field_type == "file") {
 				if (StructKeyExists(form, local.key) && Len(form[local.key])) {
 					ArrayAppend(local.pendingFiles, local.fld);
+					local.hasAnySubmittedValue = true;
 				} else if (local.fld.is_required) {
 					ArrayAppend(local.missing, local.fld.label);
 				}
@@ -715,7 +720,25 @@ component extends="Controller" {
 			}
 
 			local.raw = StructKeyExists(local.payload, local.key) ? local.payload[local.key] : (StructKeyExists(local.postData, local.key) ? local.postData[local.key] : "");
+			if (local.fld.field_type == "address" && !IsStruct(local.raw) && !Len(Trim(IsSimpleValue(local.raw) ? local.raw : ""))) {
+				if (StructKeyExists(local.postData, local.key & "_street") || StructKeyExists(local.postData, local.key & "_city")) {
+					local.raw = {
+						street: Trim(local.postData[local.key & "_street"] ?: ""),
+						street2: Trim(local.postData[local.key & "_street2"] ?: ""),
+						city: Trim(local.postData[local.key & "_city"] ?: ""),
+						state: Trim(local.postData[local.key & "_state"] ?: ""),
+						zip: Trim(local.postData[local.key & "_zip"] ?: "")
+					};
+				}
+			} else if (local.fld.field_type == "checkbox" && !IsArray(local.raw) && !Len(Trim(IsSimpleValue(local.raw) ? local.raw : ""))) {
+				if (StructKeyExists(local.postData, local.key & "[]")) {
+					local.raw = local.postData[local.key & "[]"];
+				}
+			}
 			local.display = formatSubmittedValue(local.fld.field_type, local.raw);
+			if (Len(Trim(local.display)) && !(local.fld.field_type == "switch" && local.display == "No")) {
+				local.hasAnySubmittedValue = true;
+			}
 			if (local.fld.is_required && (!Len(Trim(local.display)) || (local.fld.field_type == "switch" && local.display == "No"))) {
 				ArrayAppend(local.missing, local.fld.label);
 			}
@@ -731,6 +754,15 @@ component extends="Controller" {
 				"message": "Please complete the following required fields: " & ArrayToList(local.missing, ", "),
 				"errorCode": "VALIDATION_FAILED",
 				"missing": local.missing
+			}, 422);
+			return;
+		}
+
+		if (!local.hasAnySubmittedValue) {
+			renderJson({
+				"success": false,
+				"message": "Empty form submissions are not allowed. Please fill in the form fields before submitting.",
+				"errorCode": "EMPTY_SUBMISSION"
 			}, 422);
 			return;
 		}
@@ -877,11 +909,33 @@ component extends="Controller" {
 		for (local.s in local.qSubs) {
 			local.vals = StructKeyExists(local.valueMap, local.s.id) ? local.valueMap[local.s.id] : [];
 			local.respondent = "";
-			local.contact = "";
+			local.firstName = "";
+			local.lastName = "";
+			local.contactEmail = "";
+			local.contactPhone = "";
 			for (local.v in local.vals) {
-				if (!Len(local.respondent) && local.v.type == "text" && FindNoCase("name", local.v.label)) local.respondent = local.v.value;
-				if (!Len(local.contact) && (local.v.type == "email" || local.v.type == "phone")) local.contact = local.v.value;
+				local.lblLower = LCase(local.v.label ?: "");
+				local.valTrim = Trim(local.v.value ?: "");
+				if (!Len(local.valTrim)) continue;
+				if (!Len(local.firstName) && FindNoCase("first", local.lblLower) && FindNoCase("name", local.lblLower)) {
+					local.firstName = local.valTrim;
+				} else if (!Len(local.lastName) && FindNoCase("last", local.lblLower) && FindNoCase("name", local.lblLower)) {
+					local.lastName = local.valTrim;
+				} else if (!Len(local.respondent) && local.v.type == "text" && FindNoCase("name", local.lblLower)) {
+					local.respondent = local.valTrim;
+				}
+				if (!Len(local.contactEmail) && (local.v.type == "email" || FindNoCase("email", local.lblLower))) {
+					local.contactEmail = local.valTrim;
+				} else if (!Len(local.contactPhone) && (local.v.type == "phone" || local.v.type == "tel" || FindNoCase("phone", local.lblLower))) {
+					local.contactPhone = local.valTrim;
+				}
 			}
+			if (Len(local.firstName) || Len(local.lastName)) {
+				local.respondent = Trim(local.firstName & " " & local.lastName);
+			}
+			local.contact = Len(local.contactEmail) && Len(local.contactPhone)
+				? (local.contactEmail & " | " & local.contactPhone)
+				: (Len(local.contactEmail) ? local.contactEmail : (Len(local.contactPhone) ? local.contactPhone : "Not Provided"));
 			ArrayAppend(local.rows, {
 				"id": local.s.id,
 				"referenceId": local.s.reference_id,
@@ -889,13 +943,45 @@ component extends="Controller" {
 				"submittedAt": IsDate(local.s.submitted_local) ? DateTimeFormat(local.s.submitted_local, "mmm d, yyyy h:nn tt") : "",
 				"elapsedSeconds": local.s.elapsed_seconds,
 				"verified": (local.s.honeypot_passed && local.s.speed_trap_passed && !local.s.is_flagged_as_spam),
-				"respondent": local.respondent,
+				"respondent": Len(local.respondent) ? local.respondent : "Anonymous Respondent",
 				"contact": local.contact,
 				"values": local.vals
 			});
 		}
 
 		renderJson({ "success": true, "form": { "id": local.frm.id, "title": local.frm.title }, "total": local.frm.submissions_count, "submissions": local.rows });
+	}
+
+	/**
+	 * Soft-deletes a single form submission and updates the form's submissions_count
+	 */
+	function deleteSubmission() {
+		local.body = readJsonBody();
+		local.subId = Val(IsStruct(local.body) && StructKeyExists(local.body, "submissionId") ? local.body.submissionId : (params.submissionId ?: 0));
+		if (local.subId <= 0) {
+			renderJson({ "success": false, "message": "Invalid submission ID." }, 400);
+			return;
+		}
+		local.qSub = fbQuery("SELECT id, form_id, reference_id FROM form_submissions WHERE id = :sid AND deletedat IS NULL", {
+			sid: { value: local.subId, cfsqltype: "cf_sql_integer" }
+		});
+		if (!local.qSub.recordCount) {
+			renderJson({ "success": false, "message": "Submission not found." }, 404);
+			return;
+		}
+		local.frm = getManagedFormRow(local.qSub.form_id);
+		if (StructIsEmpty(local.frm)) {
+			renderJson({ "success": false, "message": "You do not have permission to manage this form." }, 403);
+			return;
+		}
+		fbQuery("UPDATE form_submissions SET deletedat = SYSUTCDATETIME() WHERE id = :sid", {
+			sid: { value: local.subId, cfsqltype: "cf_sql_integer" }
+		});
+		fbQuery("UPDATE forms SET submissions_count = (SELECT COUNT(*) FROM form_submissions WHERE form_id = :fid AND deletedat IS NULL) WHERE id = :fid", {
+			fid: { value: local.frm.id, cfsqltype: "cf_sql_integer" }
+		});
+		writeAudit(formId=local.frm.id, submissionId=local.subId, action="SUBMISSION_DELETED", details={ "referenceId": local.qSub.reference_id });
+		renderJson({ "success": true, "message": "Submission " & local.qSub.reference_id & " deleted." });
 	}
 
 	/**
@@ -1436,7 +1522,7 @@ component extends="Controller" {
 				if (IsArray(arguments.raw)) return ArrayToList(arguments.raw, "; ");
 				return IsSimpleValue(arguments.raw) ? Trim(arguments.raw) : "";
 			case "switch":
-				return (IsSimpleValue(arguments.raw) && IsBoolean(arguments.raw) && arguments.raw) || (IsSimpleValue(arguments.raw) && LCase(arguments.raw) == "on") ? "Yes" : "No";
+				return (IsSimpleValue(arguments.raw) && IsBoolean(arguments.raw) && arguments.raw) || (IsSimpleValue(arguments.raw) && ListFindNoCase("on,yes,true,1", Trim(arguments.raw))) ? "Yes" : "No";
 			case "address":
 				if (IsStruct(arguments.raw)) {
 					local.line1 = Trim((arguments.raw.street ?: "") & " " & (arguments.raw.street2 ?: ""));

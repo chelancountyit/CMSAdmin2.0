@@ -184,7 +184,7 @@
 						Showing #ArrayLen(variables.recentPages)# of #NumberFormat(variables.stats.totalPages, ",")# pages in this workspace
 					</span>
 					<a href="#urlFor(controller='pages', action='index', params=variables.hasWorkspace ? ('ws=' & variables.activeWorkspaceId) : '')#" class="btn btn-outline btn-sm">
-						<span>Manage in Content Manager</span>
+						<span>Manage in Page Editor</span>
 						#svgIcon(name="arrow-right", size=12)#
 					</a>
 				</div>
@@ -365,7 +365,7 @@
 
 					<a href="#urlFor(controller='pages', action='index', params=variables.hasWorkspace ? ('ws=' & variables.activeWorkspaceId) : '')#" class="btn btn-outline btn-sm" style="display:flex; align-items:center; justify-content:center; padding:0.75rem 0.5rem; height:auto; text-align:center; gap:0.5rem; text-decoration:none; grid-column: span 2;">
 						<span style="color:var(--admin-primary);">#svgIcon(name="file-text", size=18)#</span>
-						<span style="font-size:0.85rem; font-weight:600; color:var(--admin-text-main);">Content Manager</span>
+						<span style="font-size:0.85rem; font-weight:600; color:var(--admin-text-main);">Page Editor</span>
 					</a>
 				</div>
 			</div>

@@ -19,3 +19,6 @@ check_snippet*.ps1
 !/files/.gitkeep
 /images/picjumbo/
 /scratch/
+
+/public/images/picjumbo/
+/CMSAdmin2.0/

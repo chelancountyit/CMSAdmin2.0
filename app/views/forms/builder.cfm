@@ -1,4 +1,4 @@
-<cfset pageTitle = "Online Form Builder">
+﻿<cfset pageTitle = "Online Form Builder">
 <!--- CMS Admin 2.0 - Online Form Builder View --->
 <div class="page-header" style="margin-bottom: 1rem;">
 	<div>
@@ -20,6 +20,12 @@
 			<cfoutput>#svgIcon(name="list", size=14)#</cfoutput>
 			<span>All Forms</span>
 		</a>
+		<cfif StructKeyExists(fbConfig, "form") AND IsStruct(fbConfig.form) AND StructKeyExists(fbConfig.form, "dbId") AND Val(fbConfig.form.dbId) GT 0>
+			<a href="<cfoutput>#urlFor(controller='forms', action='index', params='viewSubmissions=' & fbConfig.form.dbId)#</cfoutput>" class="btn btn-outline btn-sm" title="View Submitted Responses">
+				<cfoutput>#svgIcon(name="inbox", size=14)#</cfoutput>
+				<span>View Submissions (<cfoutput>#Val(fbConfig.form.submissionsCount ?: 0)#</cfoutput>)</span>
+			</a>
+		</cfif>
 		<button type="button" class="btn btn-secondary btn-sm" id="btnOpenTemplates">
 			<cfoutput>#svgIcon(name="sparkles", size=14)#</cfoutput>
 			<span>Templates</span>

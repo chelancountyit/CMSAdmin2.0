@@ -99,8 +99,9 @@ $newObj = [PSCustomObject]@{
     environment = $vData.environment
 }
 
-$updatedJson = $newObj | ConvertTo-Json -Depth 4
-[System.IO.File]::WriteAllText($versionJsonPath, $updatedJson + "`n", [System.Text.Encoding]::UTF8)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$updatedJson = ($newObj | ConvertTo-Json -Depth 4).Replace('\u0026', '&')
+[System.IO.File]::WriteAllText($versionJsonPath, $updatedJson + "`n", $utf8NoBom)
 Write-Host ('[OK] Updated: ' + $versionJsonPath) -ForegroundColor Green
 
 # 4. Synchronize config/settings.cfm
@@ -124,10 +125,15 @@ if (Test-Path $settingsCfmPath) {
             $newLines += $line
         }
     }
-    [System.IO.File]::WriteAllLines($settingsCfmPath, $newLines, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllLines($settingsCfmPath, $newLines, $utf8NoBom)
     Write-Host ('[OK] Synchronized: ' + $settingsCfmPath) -ForegroundColor Green
 }
 
 Write-Host ('Version tracking successfully updated to ' + $newVersionTag + ' (Build ' + $newBuild + ').') -ForegroundColor Green
-Write-Host 'Remember to reload the framework (e.g. /login?reload=true&password=chelancms) to clear in-memory cache.' -ForegroundColor Yellow
+try {
+    $null = Invoke-WebRequest -Uri "http://127.0.0.1/login?reload=true&password=chelancms" -Headers @{ Host = "cmsadmin.chelancounty.gov" } -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+    Write-Host '[OK] Reloaded CMSAdmin in-memory version cache automatically.' -ForegroundColor Green
+} catch {
+    Write-Host 'CMSAdmin will automatically detect config/version.json updates on the next page load.' -ForegroundColor Cyan
+}
 

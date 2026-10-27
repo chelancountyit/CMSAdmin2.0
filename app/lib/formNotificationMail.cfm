@@ -1,4 +1,4 @@
-<cfscript>
+﻿<cfscript>
 	// -------------------------------------------------------------------------
 	// Chelan County Official Form Builder Submission Notification & Auto-Responder
 	// Included by Forms.cfc :: sendSubmissionNotification()
@@ -28,6 +28,8 @@
 	// Detect Submitter Information from submitted values
 	local.submitterEmail = "";
 	local.submitterName  = "";
+	local.firstNamePart  = "";
+	local.lastNamePart   = "";
 	local.submitterPhone = "";
 
 	for (local.v in local.values) {
@@ -41,8 +43,12 @@
 				local.submitterEmail = local.val;
 			}
 		}
-		if (!Len(local.submitterName) && (Find("name", local.l) || Find("name", local.k)) && !Find("file", local.k)) {
-			if (Len(local.val) && local.val != "Yes" && local.val != "No") {
+		if (Len(local.val) && local.val != "Yes" && local.val != "No" && !Find("file", local.k)) {
+			if (!Len(local.firstNamePart) && Find("first", local.l) && Find("name", local.l)) {
+				local.firstNamePart = local.val;
+			} else if (!Len(local.lastNamePart) && Find("last", local.l) && Find("name", local.l)) {
+				local.lastNamePart = local.val;
+			} else if (!Len(local.submitterName) && (Find("name", local.l) || Find("name", local.k))) {
 				local.submitterName = local.val;
 			}
 		}
@@ -53,6 +59,9 @@
 		}
 	}
 
+	if (Len(local.firstNamePart) || Len(local.lastNamePart)) {
+		local.submitterName = Trim(local.firstNamePart & " " & local.lastNamePart);
+	}
 	if (!Len(local.submitterName)) {
 		local.submitterName = "Valued Resident";
 	}

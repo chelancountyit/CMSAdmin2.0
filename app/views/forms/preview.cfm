@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
@@ -40,21 +40,21 @@
 			/* When embedded in an iframe on public pages, eliminate outer page margin and avoid clipping */
 			html.is-embedded, body.is-embedded {
 				margin: 0 !important;
-				padding: 0.25rem 0 1.5rem 0 !important;
+				padding: 0.25rem 0 0.25rem 0 !important;
 				background: transparent !important;
 				overflow-x: hidden !important;
-				overflow-y: auto !important;
+				overflow-y: hidden !important;
 				height: auto !important;
-				min-height: 100% !important;
+				min-height: 0 !important;
 			}
 			body.is-embedded .form-wrapper {
 				max-width: 100% !important;
 				margin: 0 !important;
-				padding: 0 0 1.25rem 0 !important;
+				padding: 0 !important;
 			}
 			body.is-embedded .form-card {
 				box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-				margin-bottom: 2rem !important;
+				margin-bottom: 0 !important;
 			}
 			#wheels-debugbar {
 				display: none !important;
@@ -503,8 +503,11 @@
 						<input type="text" id="_chelan_gov_verify" name="_chelan_gov_verify" tabindex="-1" autocomplete="off" value="">
 					</div>
 
-					<!-- Anti-Spam Speed Trap Form Load Token -->
+					<!-- Anti-Spam Speed Trap Form Load Token & Form Identity Metadata -->
 					<input type="hidden" id="_cf_form_load_time" name="_cf_form_load_time" value="">
+					<input type="hidden" id="_form_id" name="_form_id" value="">
+					<input type="hidden" id="_form_key" name="_form_key" value="">
+					<input type="hidden" id="_form_slug" name="_form_slug" value="">
 
 					<!-- Dynamic Accessible Form Fields -->
 					<div id="dynamicFields" class="fields-list"></div>
@@ -548,22 +551,18 @@
 					document.body.classList.add("is-embedded");
 				}
 
-				// Post actual form content height to parent window with +50px container buffer without infinite loop feedback
+				// Post actual form content height to parent window without reading documentElement.scrollHeight (which causes feedback loops)
 				let lastSentHeight = 0;
 				function sendHeightToParent(force) {
 					if (window.parent && window.parent !== window) {
-						var wrapper = document.querySelector(".form-wrapper") || document.querySelector(".form-card") || document.body;
+						var wrapper = document.querySelector(".form-wrapper") || document.querySelector(".form-card");
 						if (!wrapper) return;
 						var rectHeight = Math.ceil(wrapper.getBoundingClientRect().height);
-						var scrollHeight = Math.max(
-							document.body ? document.body.scrollHeight : 0,
-							document.documentElement ? document.documentElement.scrollHeight : 0,
-							wrapper ? wrapper.scrollHeight : 0
-						);
-						var h = Math.max(rectHeight, scrollHeight);
+						var offsetHeight = wrapper.offsetHeight || 0;
+						var h = Math.max(rectHeight, offsetHeight);
 						if (!h || h <= 0) return;
-						var hWithBuffer = h + 80;
-						if (!force && Math.abs(hWithBuffer - lastSentHeight) < 4) return;
+						var hWithBuffer = h + 12;
+						if (!force && Math.abs(hWithBuffer - lastSentHeight) < 3) return;
 						lastSentHeight = hWithBuffer;
 						window.parent.postMessage({
 							type: "chelan-form-resize",
@@ -796,6 +795,15 @@
 				document.getElementById("formDesc").innerText = activeForm.description || "";
 				document.getElementById("btnSubmit").innerText = activeForm.submitText || "Submit Form";
 
+				// Populate form identity hidden inputs so /forms/submit persists to DB & dispatches emails
+				const pageUrlParams = new URLSearchParams(window.location.search);
+				const resolvedFormId = activeForm.dbId || (typeof activeForm.id === "number" ? activeForm.id : (String(activeForm.id || "").replace(/^form_/, ""))) || pageUrlParams.get("id") || "";
+				const resolvedFormKey = activeForm.formKey || activeForm.key || pageUrlParams.get("key") || "";
+				const resolvedFormSlug = activeForm.slug || pageUrlParams.get("slug") || "";
+				if (document.getElementById("_form_id")) document.getElementById("_form_id").value = resolvedFormId;
+				if (document.getElementById("_form_key")) document.getElementById("_form_key").value = resolvedFormKey;
+				if (document.getElementById("_form_slug")) document.getElementById("_form_slug").value = resolvedFormSlug;
+
 				if (activeForm.themeColor) {
 					document.documentElement.style.setProperty("--primary", activeForm.themeColor);
 				}
@@ -975,6 +983,64 @@
 						return;
 					}
 
+					// 0b. Block empty form submissions (ensure at least one field has meaningful user input)
+					let hasMeaningfulInput = false;
+					let firstFocusableInput = null;
+					(activeForm.fields || []).forEach(f => {
+						if (!f || !f.id || ["paragraph", "heading", "divider", "section", "html"].includes(f.type)) return;
+						if (f.type === "address") {
+							const stEl = document.getElementById(`field_${f.id}_street`);
+							const st2El = document.getElementById(`field_${f.id}_street2`);
+							const cityEl = document.getElementById(`field_${f.id}_city`);
+							const zipEl = document.getElementById(`field_${f.id}_zip`);
+							if (!firstFocusableInput && stEl) firstFocusableInput = stEl;
+							if ((stEl && stEl.value.trim() !== "") || (st2El && st2El.value.trim() !== "") || (cityEl && cityEl.value.trim() !== "") || (zipEl && zipEl.value.trim() !== "")) {
+								hasMeaningfulInput = true;
+							}
+						} else if (f.type === "checkbox") {
+							const firstChk = form.querySelector(`input[name="${f.id}[]"]`);
+							if (!firstFocusableInput && firstChk) firstFocusableInput = firstChk;
+							if (form.querySelectorAll(`input[name="${f.id}[]"]:checked`).length > 0) {
+								hasMeaningfulInput = true;
+							}
+						} else if (f.type === "radio") {
+							const firstRad = form.querySelector(`input[name="${f.id}"]`);
+							if (!firstFocusableInput && firstRad) firstFocusableInput = firstRad;
+							if (form.querySelector(`input[name="${f.id}"]:checked`)) {
+								hasMeaningfulInput = true;
+							}
+						} else if (f.type === "switch") {
+							const sw = document.getElementById(`field_${f.id}`);
+							if (sw && sw.checked) {
+								hasMeaningfulInput = true;
+							}
+						} else if (f.type === "file") {
+							const fileEl = document.getElementById(`field_${f.id}`);
+							if (!firstFocusableInput && fileEl) firstFocusableInput = fileEl;
+							if (fileEl && fileEl.files && fileEl.files.length > 0) {
+								hasMeaningfulInput = true;
+							}
+						} else {
+							const el = document.getElementById(`field_${f.id}`) || form.querySelector(`[name="${f.id}"]`);
+							if (!firstFocusableInput && el) firstFocusableInput = el;
+							if (el && el.value.trim() !== "") {
+								hasMeaningfulInput = true;
+							}
+						}
+					});
+
+					if (!hasMeaningfulInput) {
+						alertEl.className = "alert-banner error";
+						alertEl.innerHTML = "<strong>Empty Form Cannot Be Submitted:</strong> Please fill in the form fields before submitting.";
+						alertEl.style.display = "flex";
+						alertEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+						if (firstFocusableInput && typeof firstFocusableInput.focus === "function") {
+							firstFocusableInput.focus();
+						}
+						sendHeightToParent();
+						return;
+					}
+
 					// 1. Anti-Spam Check: Honeypot trap
 					const hpVal = document.getElementById("_chelan_gov_verify").value.trim();
 					if (hpVal !== "") {
@@ -1011,6 +1077,44 @@
 
 					// Submit to server endpoint /forms/submit
 					const formData = new FormData(form);
+					if (resolvedFormId) formData.set("_form_id", String(resolvedFormId));
+					if (resolvedFormKey) formData.set("_form_key", String(resolvedFormKey));
+					if (resolvedFormSlug) formData.set("_form_slug", String(resolvedFormSlug));
+
+					// Build structured field payload (normalizing multi-part address blocks, checkbox groups, and switches)
+					const payloadObj = {};
+					(activeForm.fields || []).forEach(f => {
+						if (!f || !f.id || ["paragraph", "heading", "divider", "section", "html", "file"].includes(f.type)) return;
+						if (f.type === "address") {
+							const stEl = document.getElementById(`field_${f.id}_street`);
+							const st2El = document.getElementById(`field_${f.id}_street2`);
+							const cityEl = document.getElementById(`field_${f.id}_city`);
+							const stateEl = document.getElementById(`field_${f.id}_state`);
+							const zipEl = document.getElementById(`field_${f.id}_zip`);
+							payloadObj[f.id] = {
+								street: stEl ? stEl.value.trim() : "",
+								street2: st2El ? st2El.value.trim() : "",
+								city: cityEl ? cityEl.value.trim() : "",
+								state: stateEl ? stateEl.value.trim() : "",
+								zip: zipEl ? zipEl.value.trim() : ""
+							};
+						} else if (f.type === "checkbox") {
+							const checked = [];
+							form.querySelectorAll(`input[name="${f.id}[]"]:checked`).forEach(chk => checked.push(chk.value));
+							payloadObj[f.id] = checked;
+						} else if (f.type === "radio") {
+							const r = form.querySelector(`input[name="${f.id}"]:checked`);
+							payloadObj[f.id] = r ? r.value : "";
+						} else if (f.type === "switch") {
+							const sw = document.getElementById(`field_${f.id}`);
+							payloadObj[f.id] = sw && sw.checked ? "Yes" : "No";
+						} else {
+							const el = document.getElementById(`field_${f.id}`) || form.querySelector(`[name="${f.id}"]`);
+							payloadObj[f.id] = el ? el.value.trim() : "";
+						}
+					});
+					formData.set("_payload", JSON.stringify(payloadObj));
+
 					fetch("/forms/submit", {
 						method: "POST",
 						body: formData
@@ -1018,6 +1122,10 @@
 					.then(res => res.json())
 					.then(data => {
 						if (data.success) {
+							if (data.redirectUrl && String(data.redirectUrl).trim().length > 0) {
+								window.top.location.href = String(data.redirectUrl).trim();
+								return;
+							}
 							showSuccess(data.referenceId || ("SUB-" + Math.floor(100000 + Math.random() * 900000)));
 						} else {
 							alertEl.className = "alert-banner error";
@@ -1028,8 +1136,17 @@
 							btn.innerText = activeForm.submitText || "Submit Form";
 						}
 					})
-					.catch(() => {
-						// Simulated fallback if offline or CORS
+					.catch((err) => {
+						if (resolvedFormId || resolvedFormKey || resolvedFormSlug) {
+							alertEl.className = "alert-banner error";
+							alertEl.innerHTML = "<strong>Submission Error:</strong> Unable to reach the server to record your submission. Please try again.";
+							alertEl.style.display = "flex";
+							btn.disabled = false;
+							btn.classList.remove("btn-submitting");
+							btn.innerText = activeForm.submitText || "Submit Form";
+							return;
+						}
+						// Simulated fallback only for unsaved template demos
 						setTimeout(() => {
 							showSuccess("SUB-" + Math.floor(100000 + Math.random() * 900000));
 						}, 1200);
@@ -1091,7 +1208,8 @@
 					var ro = new ResizeObserver(function() {
 						sendHeightToParent();
 					});
-					ro.observe(document.body);
+					var wrapEl = document.querySelector(".form-wrapper");
+					if (wrapEl) ro.observe(wrapEl);
 					var cardEl = document.getElementById("formCard");
 					if (cardEl) ro.observe(cardEl);
 				}

@@ -1219,14 +1219,6 @@ component extends="Controller" {
 			}
 		}
 
-		// Only include virtual demonstration assets when viewing All Workspaces ("all" or "global") AND if total files < 8
-		if ((arguments.ws eq "all" || arguments.ws eq "global") && ArrayLen(local.items) < 8) {
-			local.extraDemos = getDemoAssets();
-			for (local.d in local.extraDemos) {
-				ArrayAppend(local.items, local.d);
-			}
-		}
-
 		return local.items;
 	}
 

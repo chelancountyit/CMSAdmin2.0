@@ -556,46 +556,7 @@ component extends="Controller" {
 					ALTER TABLE cms_users ADD totp_connected_at DATETIME2 NULL;
 				END
 
-				-- Ensure standard default personas exist in database
-				IF NOT EXISTS (SELECT 1 FROM cms_users WHERE LOWER(LTRIM(RTRIM(email))) = 'thomas.hayes@chelancounty.gov' AND deletedat IS NULL)
-				BEGIN
-					INSERT INTO cms_users (
-						role_id, role_code, username, email, first_name, last_name,
-						job_title, phone, department_code, department_name, assigned_workspaces,
-						password_hash, force_password_change, status, two_factor_enabled, totp_connected, createdat, updatedat
-					) VALUES (
-						4, 'author', 'thomash', 'thomas.hayes@chelancounty.gov', 'Thomas', 'Hayes',
-						'Web Content Author', '(509) 667-6216', 'commdev', 'Community Development', '[""commdev"",""site-main""]',
-						'$2a$12$N9qo8uLOICKgx2ZMRZoMye.I5tTj2pD6SgZqf9XJmFzR6eYqH9xK2', 0, 'active', 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
-					);
-				END
-
-				IF NOT EXISTS (SELECT 1 FROM cms_users WHERE LOWER(LTRIM(RTRIM(email))) = 'elena.rostova@chelancounty.gov' AND deletedat IS NULL)
-				BEGIN
-					INSERT INTO cms_users (
-						role_id, role_code, username, email, first_name, last_name,
-						job_title, phone, department_code, department_name, assigned_workspaces,
-						password_hash, force_password_change, status, two_factor_enabled, totp_connected, createdat, updatedat
-					) VALUES (
-						3, 'hr', 'elenar', 'elena.rostova@chelancounty.gov', 'Elena', 'Rostova',
-						'HR Specialist', '(509) 667-6217', 'hrm', 'Human Resources', '[""hrm"",""admin"",""site-main""]',
-						'$2a$12$N9qo8uLOICKgx2ZMRZoMye.I5tTj2pD6SgZqf9XJmFzR6eYqH9xK2', 0, 'active', 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
-					);
-				END
-
-				IF NOT EXISTS (SELECT 1 FROM cms_users WHERE LOWER(LTRIM(RTRIM(email))) = 'jill.morrison@chelancounty.gov' AND deletedat IS NULL)
-				BEGIN
-					INSERT INTO cms_users (
-						role_id, role_code, username, email, first_name, last_name,
-						job_title, phone, department_code, department_name, assigned_workspaces,
-						password_hash, force_password_change, status, two_factor_enabled, totp_connected, createdat, updatedat
-					) VALUES (
-						2, 'pio', 'jillm', 'jill.morrison@chelancounty.gov', 'Jill', 'Morrison',
-						'Public Information Officer', '(509) 667-6218', 'pio', 'Public Information Office', '[""pio"",""site-main""]',
-						'$2a$12$N9qo8uLOICKgx2ZMRZoMye.I5tTj2pD6SgZqf9XJmFzR6eYqH9xK2', 0, 'active', 1, 0, SYSUTCDATETIME(), SYSUTCDATETIME()
-					);
-				END
-			", {}, { datasource: getDb() });
+				", {}, { datasource: getDb() });
 		} catch (any e) {
 			// Column or rows already exist
 		}

@@ -1,4 +1,4 @@
-﻿<cfscript>
+<cfscript>
 	/*
 		Use this file to configure your application.
 		You can also use the environment specific files (e.g. /config/production/settings.cfm) to override settings set here.
@@ -68,10 +68,10 @@
 	// Application Versioning (v2.1.[build])
 	set(appMajorVersion=2);
 	set(appMinorVersion=1);
-	set(appBuildNumber=325);
-	set(appVersion="2.1.325");
-	set(appVersionTag="v2.1.325");
-	set(appBuildDisplay="v2.1.325 (Build 325)");
+	set(appBuildNumber=326);
+	set(appVersion="2.1.326");
+	set(appVersionTag="v2.1.326");
+	set(appBuildDisplay="v2.1.326 (Build 326)");
 
 	// CLI-Appends-Here
 </cfscript>

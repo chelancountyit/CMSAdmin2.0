@@ -41,7 +41,8 @@
 		initialFolder: '',     // optional initial subfolder ("documents" or "images")
 		pickerMode: '',        // optional picker mode ("document" or "image")
 		pickerCallback: '',    // optional parent window callback name
-		targetInput: ''        // optional opener input ID
+		targetInput: '',       // optional opener input ID
+		expandedPaths: {}      // map of lowercased path -> boolean (true=expanded, false=folded)
 	};
 
 	// ------------------------------------------------------------------
@@ -544,6 +545,40 @@
 		updateWriteControls();
 	}
 
+	function isBranchExpanded(pathStr, depth) {
+		var key = String(pathStr || '').toLowerCase();
+		if (Object.prototype.hasOwnProperty.call(state.expandedPaths, key)) {
+			return Boolean(state.expandedPaths[key]);
+		}
+		var cur = String(state.path || '').toLowerCase();
+		// Auto-expand ancestor folders of the active path (and the active workspace root at depth 0)
+		if (cur === key || cur.indexOf(key + '/') === 0) {
+			return true;
+		}
+		if (depth === 0 && state.ws && key === state.ws.toLowerCase()) {
+			return true;
+		}
+		// Fold subfolders and Shared Images by default to keep the tree compact
+		return false;
+	}
+
+	function setAllTreeBranches(expanded) {
+		var d = state.data;
+		if (!d) return;
+		function walk(n, depth) {
+			if (!n || !n.path) return;
+			var ch = n.children || [];
+			if (ch.length > 0) {
+				var k = String(n.path).toLowerCase();
+				state.expandedPaths[k] = expanded ? true : (depth === 0 && state.ws && k === state.ws.toLowerCase());
+				ch.forEach(function (c) { walk(c, depth + 1); });
+			}
+		}
+		if (d.tree) walk(d.tree, 0);
+		if (d.sharedTree) walk(d.sharedTree, 0);
+		renderTree();
+	}
+
 	function renderTree() {
 		var d = state.data;
 		if (!d) return;
@@ -555,26 +590,41 @@
 			if (!node || !node.name) return '';
 			var p = node.path;
 			var isCur = isCurrent(p);
-			var indent = depth * 18;
+			var indent = depth * 14;
 			var children = node.children || [];
-			var childrenHtml = children.map(function (c) {
+			var hasChildren = children.length > 0;
+			var isExpanded = hasChildren ? isBranchExpanded(p, depth) : false;
+			var childrenHtml = hasChildren ? children.map(function (c) {
 				return renderNode(c, depth + 1);
-			}).join('');
+			}).join('') : '';
 
 			var isShared = (node.name.toLowerCase() === 'shared images' || Boolean(node.isShared));
 			var displayName = isShared ? 'Shared Images' : node.name;
 			var countText = (node.count != null && !isNaN(node.count) && node.count !== '') ? String(node.count) : '';
 
-			return '<li>' +
+			var toggleHtml = hasChildren
+				? '<button type="button" class="tree-toggle' + (isExpanded ? ' is-open' : '') + '"' +
+				  ' data-toggle-path="' + esc(p) + '"' +
+				  ' aria-expanded="' + (isExpanded ? 'true' : 'false') + '"' +
+				  ' aria-label="' + esc((isExpanded ? 'Collapse ' : 'Expand ') + displayName) + '"' +
+				  ' title="' + esc((isExpanded ? 'Fold ' : 'Unfold ') + displayName) + '">' +
+				  svg('chevron', 'chevron-icon') +
+				  '</button>'
+				: '<span class="tree-toggle-spacer" aria-hidden="true"></span>';
+
+			return '<li class="tree-item' + (hasChildren ? ' has-children' : '') + (isExpanded ? ' is-expanded' : ' is-folded') + '">' +
+				'<div class="tree-row-wrap' + (isCur ? ' is-active' : '') + '" style="padding-left: ' + (4 + indent) + 'px;">' +
+				toggleHtml +
 				'<button type="button" class="tree-row' + (isCur ? ' is-active' : '') + (depth === 0 ? ' is-root' : '') + (isShared ? ' is-shared' : '') + '"' +
-				' data-path="' + esc(p) + '" style="padding-left: ' + (10 + indent) + 'px;"' +
+				' data-path="' + esc(p) + '" data-has-children="' + (hasChildren ? '1' : '0') + '"' +
 				(isCur ? ' aria-current="page"' : '') + ' title="' + esc(displayName + (isShared ? ' (Read-Only Stock Photography)' : '')) + '">' +
 				svg(isShared ? 'image' : 'folder', isShared ? 'ficon ficon-shared' : 'ficon') +
 				'<span class="label">' + esc(displayName) + '</span>' +
 				(isShared ? '<span style="font-size:10px; padding:1px 5px; border-radius:4px; background:#e2e8f0; color:#475569; font-weight:700; margin-left:auto; margin-right:4px;">RO</span>' : '') +
 				(countText !== '' ? '<span class="count">' + esc(countText) + '</span>' : '') +
 				'</button>' +
-				(childrenHtml ? '<ul role="list">' + childrenHtml + '</ul>' : '') +
+				'</div>' +
+				(hasChildren ? '<ul role="list" class="tree-children"' + (isExpanded ? '' : ' hidden') + '>' + childrenHtml + '</ul>' : '') +
 				'</li>';
 		}
 
@@ -1798,9 +1848,50 @@
 	});
 
 	el.tree.addEventListener('click', function (e) {
+		var tBtn = e.target.closest('[data-toggle-path]');
+		if (tBtn) {
+			e.stopPropagation();
+			var tp = tBtn.getAttribute('data-toggle-path') || '';
+			var key = tp.toLowerCase();
+			var curOpen = tBtn.classList.contains('is-open');
+			state.expandedPaths[key] = !curOpen;
+			renderTree();
+			return;
+		}
 		var b = e.target.closest('[data-path]');
-		if (b) navigate(b.getAttribute('data-path'));
+		if (b) {
+			var targetPath = b.getAttribute('data-path') || '';
+			var tKey = targetPath.toLowerCase();
+			var hasCh = b.getAttribute('data-has-children') === '1';
+			if (hasCh) {
+				// If clicking the already-selected folder row, toggle its accordion state; otherwise unfold it and navigate
+				if (state.path.toLowerCase() === tKey) {
+					var wrapLi = b.closest('.tree-item');
+					var wasExp = wrapLi ? wrapLi.classList.contains('is-expanded') : true;
+					state.expandedPaths[tKey] = !wasExp;
+					renderTree();
+					return;
+				}
+				// Auto-expand ancestor chain for the clicked folder
+				var parts = segs(targetPath);
+				var acc = '';
+				for (var i = 0; i < parts.length; i++) {
+					acc = joinPath(acc, parts[i]);
+					state.expandedPaths[acc.toLowerCase()] = true;
+				}
+			}
+			navigate(targetPath);
+		}
 	});
+
+	var btnTreeExpandAll = $('btn-tree-expand-all');
+	var btnTreeCollapseAll = $('btn-tree-collapse-all');
+	if (btnTreeExpandAll) {
+		btnTreeExpandAll.addEventListener('click', function () { setAllTreeBranches(true); });
+	}
+	if (btnTreeCollapseAll) {
+		btnTreeCollapseAll.addEventListener('click', function () { setAllTreeBranches(false); });
+	}
 
 	el.crumbs.addEventListener('click', function (e) {
 		var b = e.target.closest('button[data-path]');

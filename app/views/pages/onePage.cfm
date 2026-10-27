@@ -537,7 +537,7 @@
 						</div>
 
 						<button type="button" class="btn btn-primary" id="btnOpsCompileSave" style="width:100%; justify-content:center; padding:0.75rem;">
-							#svgIcon(name="check", size=16)# <span>Compile &amp; Save to Content Manager</span>
+							#svgIcon(name="check", size=16)# <span>Compile &amp; Save to Page Editor</span>
 						</button>
 						<button type="button" class="btn btn-outline" id="btnOpsOpenPreviewTab" style="width:100%; justify-content:center;">
 							#svgIcon(name="monitor", size=15)# <span>Open Live Standalone Preview &rarr;</span>
@@ -1758,7 +1758,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 		});
 	}
 
-	// Compile & Save to Content Manager
+	// Compile & Save to Page Editor
 	var btnCompile = document.getElementById("btnOpsCompileSave");
 	var chkSeparate = document.getElementById("chkOpsSeparateAssets");
 	if (btnCompile) {
@@ -1777,7 +1777,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 				return r.json();
 			}).then(function (res) {
 				btnCompile.disabled = false;
-				btnCompile.innerHTML = '<span>Compile &amp; Save to Content Manager</span>';
+				btnCompile.innerHTML = '<span>Compile &amp; Save to Page Editor</span>';
 				var isSuccess = (res && (res.success === true || res.SUCCESS === true));
 				var msg = (res && (res.message || res.MESSAGE)) || "";
 				if (isSuccess) {
@@ -1788,7 +1788,7 @@ window.opsConfig = <cfoutput>#opsJsonData#</cfoutput>;
 				}
 			}).catch(function (err) {
 				btnCompile.disabled = false;
-				btnCompile.innerHTML = '<span>Compile &amp; Save to Content Manager</span>';
+				btnCompile.innerHTML = '<span>Compile &amp; Save to Page Editor</span>';
 				if (window.adminAlert) window.adminAlert("Compile error: " + err.message);
 			});
 		});

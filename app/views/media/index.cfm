@@ -8,7 +8,7 @@
 <cfparam name="variables.activeWsAssetsDomain" default="">
 <cfparam name="variables.activeWsAssetsPath" default="#variables.activeWsAssetsDomain#\#variables.activeWsFolder#">
 <cfoutput>
-<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=4.1">
+<link rel="stylesheet" href="/stylesheets/filexplorer/explorer.css?v=4.3">
 
 <div class="page-header">
 	<div>
@@ -49,9 +49,15 @@
 	</div>
 
 	<div class="layout">
-		<!-- Left column: Server Folders tree -->
+		<!-- Left column: Server Folders tree (Accordion) -->
 		<nav class="panel tree-panel" aria-label="Server folders">
-			<div class="panel-title">SERVER FOLDERS</div>
+			<div class="panel-title-row">
+				<div class="panel-title">SERVER FOLDERS</div>
+				<div class="tree-panel-actions">
+					<button type="button" id="btn-tree-expand-all" class="tree-action-btn" title="Unfold all folders">Expand</button>
+					<button type="button" id="btn-tree-collapse-all" class="tree-action-btn" title="Fold all subfolders">Fold</button>
+				</div>
+			</div>
 			<ul id="tree" class="tree" role="list"></ul>
 		</nav>
 
@@ -377,5 +383,5 @@
 	</div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=5.2"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=5.3"></script>
 </cfoutput>

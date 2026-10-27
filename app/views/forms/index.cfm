@@ -325,7 +325,6 @@
 										<div style="font-size:0.75rem; color:var(--admin-text-subtle); display:flex; align-items:center; gap:0.35rem; margin-top:2px;">
 											<code>#EncodeForHTML(formItem.previewUrl)#</code>
 										</div>
-										<div style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:2px;">#EncodeForHTML(formItem.description)#</div>
 									</div>
 								</div>
 							</td>
@@ -335,17 +334,46 @@
 								<div style="font-size:0.75rem; color:var(--admin-text-muted);">#EncodeForHTML(ArrayToList(formItem.fieldTypeLabels, ", "))#</div>
 							</td>
 							<td data-label="Submissions">
-								<strong style="color:var(--admin-text-main); font-size:0.95rem;">#formItem.submissionsCount#</strong>
-								<div style="font-size:0.75rem; color:var(--admin-text-muted);">#formItem.pendingCount# pending</div>
+								<a href="javascript:void(0);" class="btn-view-subs" data-id="#formItem.id#" data-title="#EncodeForHTMLAttribute(formItem.title)#" title="View submissions for #EncodeForHTMLAttribute(formItem.title)#" style="color:var(--admin-primary); text-decoration:underline; text-underline-offset:2px; display:inline-block;">
+									<strong style="font-size:0.95rem;">#formItem.submissionsCount#</strong>
+									<div style="font-size:0.75rem; color:var(--admin-text-muted); text-decoration:none;">#formItem.pendingCount# pending</div>
+								</a>
 							</td>
 							<td data-label="Status"><span class="badge #(formItem.status eq 'published' ? 'badge-success' : (formItem.status eq 'draft' ? 'badge-neutral' : 'badge-danger'))#">#EncodeForHTML(UCase(Left(formItem.status, 1)) & Mid(formItem.status, 2, Len(formItem.status)))#</span></td>
 							<td data-label="Last Updated" style="color:var(--admin-text-muted); font-size:0.775rem;">#(IsDate(formItem.updatedAt) ? EncodeForHTML(DateTimeFormat(formItem.updatedAt, "mmm d, yyyy h:nn tt")) : "—")#</td>
 							<td data-label="Actions" style="text-align:right; white-space:nowrap;">
-								<a href="#EncodeForHTMLAttribute(formItem.editUrl)#" class="btn btn-outline btn-sm btn-icon-only" title="Edit in Form Builder">#svgIcon(name="edit", size=14)#</a>
-								<a href="#EncodeForHTMLAttribute(formItem.previewUrl)#" target="_blank" rel="noopener" class="btn btn-outline btn-sm btn-icon-only" title="Preview Public Form">#svgIcon(name="eye", size=14)#</a>
-								<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-email-settings" data-id="#formItem.id#" data-title="#EncodeForHTMLAttribute(formItem.title)#" title="Email Notifications &amp; Citizen Templates">#svgIcon(name="mail", size=14)#</button>
-								<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-share-modal" data-title="#EncodeForHTMLAttribute(formItem.title)#" data-url="#EncodeForHTMLAttribute(formItem.publicUrl)#" data-slug="#EncodeForHTMLAttribute(formItem.slug)#" title="Share &amp; Embed Form">#svgIcon(name="share-2", size=14)#</button>
-							<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-delete-form" title="Delete form" aria-label="Delete #EncodeForHTMLAttribute(formItem.title)#" style="color:var(--admin-danger);">#svgIcon(name="trash", size=14)#</button>
+								<div class="form-actions-dropdown" style="position:relative; display:inline-block;">
+									<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-form-actions-toggle" aria-haspopup="menu" aria-expanded="false" title="Form Actions" aria-label="Actions for #EncodeForHTMLAttribute(formItem.title)#">
+										#svgIcon(name="more-horizontal", size=16)#
+									</button>
+									<div class="form-actions-menu" role="menu">
+										<button type="button" role="menuitem" class="form-action-item btn-view-subs" data-id="#formItem.id#" data-title="#EncodeForHTMLAttribute(formItem.title)#">
+											#svgIcon(name="inbox", size=14)#
+											<span>View Submissions (#formItem.submissionsCount#)</span>
+										</button>
+										<a href="#EncodeForHTMLAttribute(formItem.editUrl)#" role="menuitem" class="form-action-item">
+											#svgIcon(name="edit", size=14)#
+											<span>Edit in Form Builder</span>
+										</a>
+										<a href="#EncodeForHTMLAttribute(formItem.previewUrl)#" target="_blank" rel="noopener" role="menuitem" class="form-action-item">
+											#svgIcon(name="eye", size=14)#
+											<span>Preview Public Form</span>
+										</a>
+										<button type="button" role="menuitem" class="form-action-item btn-email-settings" data-id="#formItem.id#" data-title="#EncodeForHTMLAttribute(formItem.title)#">
+											#svgIcon(name="mail", size=14)#
+											<span>Email Notifications</span>
+										</button>
+										<button type="button" role="menuitem" class="form-action-item btn-share-modal" data-title="#EncodeForHTMLAttribute(formItem.title)#" data-url="#EncodeForHTMLAttribute(formItem.publicUrl)#" data-slug="#EncodeForHTMLAttribute(formItem.slug)#">
+											#svgIcon(name="share-2", size=14)#
+											<span>Share &amp; Embed</span>
+										</button>
+										<div class="form-action-divider"></div>
+										<button type="button" role="menuitem" class="form-action-item form-action-danger btn-delete-form" data-form-id="#formItem.id#" data-delete-url="#EncodeForHTMLAttribute(urlFor(route='formSoftDelete'))#" data-title="#EncodeForHTMLAttribute(formItem.title)#">
+											#svgIcon(name="trash", size=14)#
+											<span>Delete Form</span>
+										</button>
+									</div>
+								</div>
 							</td>
 						</tr>
 					</cfoutput>
@@ -1118,7 +1146,7 @@
       Interactive Recent Submissions Drawer / Modal
       ========================================================================= --->
 <div class="admin-modal-backdrop fb-modal" id="modalSubmissions" role="dialog" aria-modal="true" aria-labelledby="subsModalTitle" style="display:none;">
-	<div class="fb-modal-dialog" style="position:relative; background:var(--admin-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:780px; max-width:94%; max-height:90vh; overflow-y:auto; border:1px solid var(--admin-border); z-index:1001;">
+	<div class="fb-modal-dialog" style="position:relative; background:var(--admin-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:920px; max-width:96%; max-height:90vh; overflow-y:auto; border:1px solid var(--admin-border); z-index:1001;">
 		<div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--admin-border); display:flex; align-items:center; justify-content:space-between;">
 			<div style="display:flex; align-items:center; gap:0.6rem;">
 				<div style="width:32px; height:32px; border-radius:var(--radius-sm); background:var(--admin-success-light); color:var(--admin-success); display:flex; align-items:center; justify-content:center;">
@@ -1126,7 +1154,7 @@
 				</div>
 				<div>
 					<h3 id="subsModalTitle" style="margin:0; font-size:1.1rem; color:var(--admin-text-main);">Recent Form Submissions</h3>
-					<div id="subsModalSubtitle" style="font-size:0.75rem; color:var(--admin-text-muted);">Review incoming respondent records &bull; Verified Humans</div>
+					<div id="subsModalSubtitle" style="font-size:0.75rem; color:var(--admin-text-muted);">Review incoming respondent records &bull; Click "View Submitted Form" on any row to inspect all field values</div>
 				</div>
 			</div>
 			<button type="button" class="btn btn-outline btn-sm btn-icon-only modal-close-btn" style="border:none;" aria-label="Close modal">&times;</button>
@@ -1134,7 +1162,7 @@
 
 		<div style="padding:1.5rem;">
 			<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
-				<span style="font-size:0.825rem; color:var(--admin-text-muted);" id="subsRecordCount">Showing latest 5 received entries</span>
+				<span style="font-size:0.825rem; color:var(--admin-text-muted);" id="subsRecordCount">Showing latest received entries</span>
 				<button type="button" class="btn btn-outline btn-sm" id="btnExportCSV">
 					<cfoutput>#svgIcon(name="download", size=13)#</cfoutput>
 					<span>Export All to CSV</span>
@@ -1148,43 +1176,15 @@
 							<th>Reference ID</th>
 							<th>Respondent</th>
 							<th>Contact Info</th>
-							<th>Time Elapsed</th>
+							<th>Submitted At</th>
 							<th>Security Verification</th>
 							<th>Status</th>
+							<th style="text-align:right;">Submitted Form</th>
 						</tr>
 					</thead>
 					<tbody id="subsSampleTableBody">
 						<tr>
-							<td><code>SUB-94B82A1C</code></td>
-							<td><strong>Sarah Connor</strong></td>
-							<td>sarah.c@wenatchee.example.com</td>
-							<td>18s review time</td>
-							<td><span class="badge badge-success">&#10003; Human Verified</span></td>
-							<td><span class="badge badge-purple">Pending Review</span></td>
-						</tr>
-						<tr>
-							<td><code>SUB-E7104D99</code></td>
-							<td><strong>Marcus Vance</strong></td>
-							<td>m.vance@example.org</td>
-							<td>42s review time</td>
-							<td><span class="badge badge-success">&#10003; Human Verified</span></td>
-							<td><span class="badge badge-success">Processed</span></td>
-						</tr>
-						<tr>
-							<td><code>SUB-5A32B8C1</code></td>
-							<td><strong>Elena Rostova</strong></td>
-							<td>elena@chelandistrict.com</td>
-							<td>29s review time</td>
-							<td><span class="badge badge-success">&#10003; Human Verified</span></td>
-							<td><span class="badge badge-success">Processed</span></td>
-						</tr>
-						<tr>
-							<td><code>SUB-089FC214</code></td>
-							<td><strong>David Kim</strong></td>
-							<td>dkim@leavenworth.org</td>
-							<td>14s review time</td>
-							<td><span class="badge badge-success">&#10003; Human Verified</span></td>
-							<td><span class="badge badge-warning">Action Required</span></td>
+							<td colspan="7" style="text-align:center; padding:2rem; color:var(--admin-text-muted);">Select a form to view its submissions.</td>
 						</tr>
 					</tbody>
 				</table>
@@ -1617,6 +1617,59 @@
 	[id="emailUserEnabled"]:checked + .fb-toggle-slider:before {
 		transform: translateX(20px);
 	}
+	/* Form Row Actions Dropdown Menu (...) */
+	.form-actions-menu {
+		display: none;
+		position: fixed;
+		min-width: 215px;
+		background: var(--admin-surface, #ffffff);
+		border: 1px solid var(--admin-border, #e2e8f0);
+		border-radius: var(--radius-md, 8px);
+		box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.08);
+		padding: 0.35rem;
+		z-index: 2500;
+		text-align: left;
+	}
+	.form-actions-menu.is-open {
+		display: block;
+	}
+	.form-action-item {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		width: 100%;
+		padding: 0.5rem 0.7rem;
+		border: none;
+		background: transparent;
+		color: var(--admin-text-main, #0f172a);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		font-family: inherit;
+		text-decoration: none;
+		border-radius: var(--radius-sm, 6px);
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+		box-sizing: border-box;
+	}
+	.form-action-item:hover,
+	.form-action-item:focus-visible {
+		background: var(--admin-bg, #f1f5f9);
+		color: var(--admin-primary, #0073aa);
+		outline: none;
+	}
+	.form-action-item.form-action-danger {
+		color: var(--admin-danger, #dc2626);
+	}
+	.form-action-item.form-action-danger:hover,
+	.form-action-item.form-action-danger:focus-visible {
+		background: rgba(220, 38, 38, 0.08);
+		color: var(--admin-danger, #dc2626);
+	}
+	.form-action-divider {
+		height: 1px;
+		background: var(--admin-border, #e2e8f0);
+		margin: 0.3rem 0.25rem;
+	}
 </style>
 
 <script>
@@ -1890,6 +1943,9 @@
 							${row.querySelector("td:nth-child(3)")?.innerText || ""}
 						</div>
 						<div style="display:flex; gap:0.35rem;">
+							<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-view-subs" data-id="${escapeHTML(formId)}" data-title="${escapeHTML(title)}" title="View Submissions">
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+							</button>
 							<a href="${escapeHTML(editUrl)}" class="btn btn-outline btn-sm btn-icon-only" title="Edit in Builder">
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
 							</a>
@@ -1913,6 +1969,57 @@
 		}
 
 		filterRows();
+
+		// 3b. Form Row Actions Dropdown (...) Menu Handler
+		function closeAllFormActionMenus() {
+			document.querySelectorAll(".form-actions-menu.is-open").forEach(menu => {
+				menu.classList.remove("is-open");
+			});
+			document.querySelectorAll(".btn-form-actions-toggle[aria-expanded='true']").forEach(btn => {
+				btn.setAttribute("aria-expanded", "false");
+			});
+		}
+
+		document.addEventListener("click", function(e) {
+			const toggleBtn = e.target.closest(".btn-form-actions-toggle");
+			if (toggleBtn) {
+				e.preventDefault();
+				e.stopPropagation();
+				const wrapper = toggleBtn.closest(".form-actions-dropdown");
+				const menu = wrapper ? wrapper.querySelector(".form-actions-menu") : null;
+				if (!menu) return;
+
+				const wasOpen = menu.classList.contains("is-open");
+				closeAllFormActionMenus();
+				if (!wasOpen) {
+					menu.classList.add("is-open");
+					toggleBtn.setAttribute("aria-expanded", "true");
+					const rect = toggleBtn.getBoundingClientRect();
+					const menuRect = menu.getBoundingClientRect();
+					let topPos = rect.bottom + 6;
+					if (topPos + menuRect.height > window.innerHeight - 12 && rect.top - menuRect.height - 6 > 12) {
+						topPos = rect.top - menuRect.height - 6;
+					}
+					let leftPos = rect.right - menuRect.width;
+					if (leftPos < 12) leftPos = 12;
+					menu.style.top = topPos + "px";
+					menu.style.left = leftPos + "px";
+				}
+				return;
+			}
+
+			if (e.target.closest(".form-action-item")) {
+				closeAllFormActionMenus();
+				return;
+			}
+
+			if (!e.target.closest(".form-actions-menu")) {
+				closeAllFormActionMenus();
+			}
+		});
+
+		window.addEventListener("scroll", closeAllFormActionMenus, true);
+		window.addEventListener("resize", closeAllFormActionMenus);
 
 		// 4. Copy URL button interaction
 		document.querySelectorAll(".btn-copy-url").forEach(btn => {
@@ -2058,21 +2165,185 @@
 			});
 		});
 
-		// 6. Submissions Drawer Modal
+		// 6. Submissions Drawer Modal (Live Database Fetch + CSV Export)
+		let activeSubsFormId = 0;
+		function escSubsHtml(str) {
+			return String(str === null || str === undefined ? "" : str)
+				.replace(/&/g, "&amp;")
+				.replace(/</g, "&lt;")
+				.replace(/>/g, "&gt;")
+				.replace(/"/g, "&quot;")
+				.replace(/'/g, "&#39;");
+		}
+
+		async function loadFormSubmissions(formId, title) {
+			activeSubsFormId = parseInt(formId || 0, 10) || 0;
+			document.getElementById("subsModalTitle").innerText = title || "Form Submissions";
+			const tbody = document.getElementById("subsSampleTableBody");
+			const countEl = document.getElementById("subsRecordCount");
+			openAdminModal(subsModal);
+
+			if (!activeSubsFormId || !tbody) return;
+			tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--admin-text-muted);">Loading submissions...</td></tr>`;
+			if (countEl) countEl.innerText = "Loading respondent entries...";
+
+			try {
+				const res = await fetch("/forms/submissions?id=" + encodeURIComponent(activeSubsFormId), {
+					headers: { "Accept": "application/json" }
+				});
+				const data = await res.json();
+				if (!data || !data.success) {
+					tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--admin-danger);">${escSubsHtml((data && data.message) || "Unable to load submissions.")}</td></tr>`;
+					if (countEl) countEl.innerText = "0 entries";
+					return;
+				}
+				const subs = Array.isArray(data.submissions) ? data.submissions : [];
+				if (countEl) {
+					countEl.innerText = subs.length === 1 ? "Showing 1 received entry" : `Showing ${subs.length} received entries`;
+				}
+				if (subs.length === 0) {
+					tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2.25rem; color:var(--admin-text-muted);">No submissions have been received for this form yet.</td></tr>`;
+					return;
+				}
+				tbody.innerHTML = subs.map((s, idx) => {
+					const statusBadge = s.status === "processed" || s.status === "resolved"
+						? `<span class="badge badge-success">Processed</span>`
+						: `<span class="badge badge-purple">${escSubsHtml(s.status === "received" ? "Received" : (s.status || "Received"))}</span>`;
+					const secBadge = s.verified
+						? `<span class="badge badge-success">&#10003; Human Verified</span>`
+						: `<span class="badge badge-warning">Flagged</span>`;
+					const timeSub = (s.submittedAt ? escSubsHtml(s.submittedAt) : "") + (s.elapsedSeconds ? ` <span style="color:var(--admin-text-subtle);">(${escSubsHtml(s.elapsedSeconds)}s)</span>` : "");
+					const detailsHtml = (Array.isArray(s.values) && s.values.length > 0)
+						? s.values.map(v => {
+							const hasVal = v.value !== null && v.value !== undefined && String(v.value).trim() !== "" && String(v.value).trim() !== "\u2014";
+							const valMarkup = hasVal
+								? escSubsHtml(v.value)
+								: `<span style="color:var(--admin-text-subtle); font-weight:400; font-style:italic;">Not provided</span>`;
+							return `
+								<div style="padding:0.55rem 0.75rem; background:var(--admin-surface); border:1px solid var(--admin-border); border-radius:6px;">
+									<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--admin-text-muted); margin-bottom:3px;">${escSubsHtml(v.label || v.key)}</div>
+									<div style="font-size:0.85rem; color:var(--admin-text-main); white-space:pre-wrap; word-break:break-word; font-weight:500;">${valMarkup}</div>
+								</div>
+							`;
+						}).join("")
+						: `<div style="color:var(--admin-text-muted); font-size:0.8rem;">No field values recorded.</div>`;
+
+					const autoOpen = idx === 0;
+					const hasContact = s.contact && String(s.contact).trim() !== "" && String(s.contact).trim() !== "Not Provided" && String(s.contact).trim() !== "\u2014";
+					const contactMarkup = hasContact
+						? escSubsHtml(s.contact)
+						: `<span style="color:var(--admin-text-subtle); font-style:italic;">Not provided</span>`;
+					return `
+						<tr class="sub-summary-row" data-sub-idx="${idx}" style="cursor:pointer;" title="Click to view or hide submitted form fields">
+							<td><a href="javascript:void(0);" style="color:var(--admin-primary); text-decoration:underline; text-underline-offset:2px;"><code>${escSubsHtml(s.referenceId)}</code></a></td>
+							<td><a href="javascript:void(0);" style="color:var(--admin-primary); text-decoration:underline; text-underline-offset:2px;"><strong>${escSubsHtml(s.respondent || "Anonymous Respondent")}</strong></a></td>
+							<td>${contactMarkup}</td>
+							<td>${timeSub || "N/A"}</td>
+							<td>${secBadge}</td>
+							<td>${statusBadge}</td>
+							<td style="text-align:right; white-space:nowrap;">
+								<div style="display:inline-flex; align-items:center; gap:0.35rem;">
+									<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-toggle-sub-detail" data-sub-idx="${idx}" title="View / Hide Submitted Form">
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+									</button>
+									<button type="button" class="btn btn-outline btn-sm btn-icon-only btn-delete-sub" data-sub-id="${s.id}" data-ref-id="${escSubsHtml(s.referenceId)}" title="Delete Submission" style="color:var(--admin-danger);">
+										<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
+									</button>
+								</div>
+							</td>
+						</tr>
+						<tr id="subDetailRow_${idx}" style="display:${autoOpen ? "table-row" : "none"}; background:var(--admin-bg);">
+							<td colspan="7" style="padding:1rem 1.25rem; border-left:3px solid var(--admin-primary);">
+								<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.65rem;">
+									<div style="font-size:0.8rem; font-weight:700; color:var(--admin-text-main);">Submitted Form Response &bull; <code>${escSubsHtml(s.referenceId)}</code></div>
+									<div style="font-size:0.75rem; color:var(--admin-text-muted);">Submitted ${timeSub || "\u2014"}</div>
+								</div>
+								<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:0.6rem;">
+									${detailsHtml}
+								</div>
+							</td>
+						</tr>
+					`;
+				}).join("");
+
+				function toggleSubRow(idx) {
+					const detailRow = document.getElementById("subDetailRow_" + idx);
+					if (detailRow) {
+						const isHidden = detailRow.style.display === "none";
+						detailRow.style.display = isHidden ? "table-row" : "none";
+					}
+				}
+
+				tbody.querySelectorAll(".sub-summary-row").forEach(row => {
+					row.addEventListener("click", (ev) => {
+						if (ev.target.closest(".btn-toggle-sub-detail") || ev.target.closest(".btn-delete-sub")) return;
+						toggleSubRow(row.getAttribute("data-sub-idx"));
+					});
+				});
+				tbody.querySelectorAll(".btn-toggle-sub-detail").forEach(btn => {
+					btn.addEventListener("click", (ev) => {
+						ev.stopPropagation();
+						toggleSubRow(btn.getAttribute("data-sub-idx"));
+					});
+				});
+				tbody.querySelectorAll(".btn-delete-sub").forEach(btn => {
+					btn.addEventListener("click", async (ev) => {
+						ev.stopPropagation();
+						const subId = btn.getAttribute("data-sub-id");
+						const refId = btn.getAttribute("data-ref-id");
+						if (!await window.adminConfirm(`Delete submission ${refId}?`, { title: "Delete Submission?", acceptText: "Delete", destructive: true })) return;
+						const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+						const delRes = await fetch("/forms/submissions/delete", {
+							method: "POST",
+							credentials: "same-origin",
+							headers: {
+								"Content-Type": "application/json; charset=utf-8",
+								"X-Requested-With": "XMLHttpRequest",
+								...(csrfToken ? { "X-CSRF-Token": csrfToken } : {})
+							},
+							body: JSON.stringify({ submissionId: Number(subId) })
+						});
+						const delData = await delRes.json();
+						if (delData && delData.success) {
+							showToast(delData.message || "Submission deleted.", "success");
+							loadFormSubmissions(activeSubsFormId, document.getElementById("subsModalTitle").innerText);
+						} else {
+							showToast((delData && delData.message) || "Unable to delete submission.", "error");
+						}
+					});
+				});
+			} catch (err) {
+				tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--admin-danger);">Failed to fetch submissions from server.</td></tr>`;
+			}
+		}
+
 		document.addEventListener("click", function(e) {
 			const btn = e.target.closest(".btn-view-subs");
 			if (btn) {
+				const formId = btn.getAttribute("data-id") || (btn.closest(".form-row") ? btn.closest(".form-row").getAttribute("data-form-id") : "0");
 				const title = btn.getAttribute("data-title") || "Form Submissions";
-				document.getElementById("subsModalTitle").innerText = title;
-				openAdminModal(subsModal);
+				loadFormSubmissions(formId, title);
 			}
 		});
 
 		const btnExportCSV = document.getElementById("btnExportCSV");
 		if (btnExportCSV) {
 			btnExportCSV.addEventListener("click", function() {
+				if (!activeSubsFormId) {
+					showToast("Please select a form with submissions first.", "warning");
+					return;
+				}
 				showToast("Exporting respondent submissions to CSV...", "info");
+				window.location.href = "/forms/export-csv?id=" + encodeURIComponent(activeSubsFormId);
 			});
+		}
+
+		// Auto-open Submissions modal if ?viewSubmissions=<formId> is in the URL
+		const viewSubsParam = new URLSearchParams(window.location.search).get("viewSubmissions");
+		if (viewSubsParam) {
+			const targetRow = document.querySelector(`.form-row[data-form-id="${viewSubsParam}"]`);
+			const targetTitle = targetRow ? targetRow.getAttribute("data-title") : "Form Submissions";
+			loadFormSubmissions(viewSubsParam, targetTitle);
 		}
 
 		// 7. Starter Templates Modal

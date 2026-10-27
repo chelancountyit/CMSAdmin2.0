@@ -1,12 +1,28 @@
-<cfset pageTitle = "Content Manager">
+<cfset pageTitle = "Page Editor">
 <cfscript>
 	cntTotal = ArrayLen(pages);
 	cntPublished = 0; cntDraft = 0; cntMenu = 0; cntInactive = 0;
+	cntWcagPass = 0; cntWcagPerfect = 0; cntWcagWarn = 0; cntWcagError = 0;
 	for (p in pages) {
 		if (p.visibility eq "Published") cntPublished++;
 		if (p.visibility eq "Draft" or p.visibility eq "Scheduled") cntDraft++;
 		if (p.menuItem) cntMenu++;
 		if (p.status eq "Inactive") cntInactive++;
+		if (StructKeyExists(p, "wcag") && IsStruct(p.wcag)) {
+			if (p.wcag.errors eq 0) {
+				cntWcagPass++;
+				if (p.wcag.warnings eq 0) {
+					cntWcagPerfect++;
+				} else {
+					cntWcagWarn++;
+				}
+			} else {
+				cntWcagError++;
+			}
+		} else {
+			cntWcagPass++;
+			cntWcagPerfect++;
+		}
 	}
 	visBadge = { "Published": "badge-success", "Draft": "badge-neutral", "Scheduled": "badge-info", "Hidden": "badge-warning" };
 </cfscript>
@@ -217,15 +233,15 @@ form.admin-modal-dialog {
 }
 </style>
 
-<!--- CMS Admin 2.0 - Content Manager --->
+<!--- CMS Admin 2.0 - Page Editor --->
 <div class="page-header">
 	<div>
-		<h1 class="page-title" style="margin-bottom:0;">Content Manager</h1>
+		<h1 class="page-title" style="margin-bottom:0;">Page Editor</h1>
 		<nav aria-label="Breadcrumb">
 			<ol class="breadcrumb" style="margin-top:0.35rem;">
 				<li class="breadcrumb-item"><a href="#urlFor(controller='main', action='index')#">#svgIcon(name="dashboard", size=14)# Home</a></li>
 				<li class="breadcrumb-item">Content Management</li>
-				<li class="breadcrumb-item active" aria-current="page">Content Manager</li>
+				<li class="breadcrumb-item active" aria-current="page">Page Editor</li>
 			</ol>
 		</nav>
 	</div>
@@ -284,6 +300,22 @@ form.admin-modal-dialog {
 		</div>
 		<div class="stat-icon-wrapper stat-icon-info" aria-hidden="true">#svgIcon(name="menu", size=24)#</div>
 	</div>
+	<div class="stat-card" style="cursor:pointer;" onclick="var sel=document.getElementById('pagesWcag'); if(sel){sel.value = (sel.value === 'errors' ? '' : (#cntWcagError# > 0 ? 'errors' : 'warnings')); sel.dispatchEvent(new Event('change'));}" title="Click to filter pages needing WCAG attention">
+		<div class="stat-info">
+			<span class="stat-label">WCAG 2.1 AA</span>
+			<span class="stat-value" style="display:flex; align-items:baseline; gap:0.4rem;">
+				<span>#cntWcagPass# / #cntTotal#</span>
+				<cfif cntWcagError gt 0>
+					<span class="badge badge-danger" style="font-size:0.68rem;">#cntWcagError# Fix</span>
+				<cfelseif cntWcagWarn gt 0>
+					<span class="badge badge-warning" style="font-size:0.68rem;">#cntWcagWarn# Warn</span>
+				<cfelseif cntTotal gt 0>
+					<span class="badge badge-success" style="font-size:0.68rem;">100% AA</span>
+				</cfif>
+			</span>
+		</div>
+		<div class="stat-icon-wrapper #(cntWcagError gt 0 ? 'stat-icon-danger' : 'stat-icon-success')#" aria-hidden="true">#svgIcon(name="shield", size=24)#</div>
+	</div>
 </div>
 
 <!--- Filter bar --->
@@ -319,6 +351,16 @@ form.admin-modal-dialog {
 				<option value="no">Not in menu</option>
 			</select>
 		</div>
+		<div>
+			<label for="pagesWcag" class="form-label" style="font-size:0.775rem;">WCAG 2.1 AA</label>
+			<select id="pagesWcag" class="form-control" style="padding:0.5rem 0.75rem; font-size:0.85rem;">
+				<option value="">All pages</option>
+				<option value="pass">AA Passing (0 Errors)</option>
+				<option value="compliant">AA Perfect (0 Issues)</option>
+				<option value="warnings">Pass with Warnings (#cntWcagWarn#)</option>
+				<option value="errors">Needs Fix — Errors (#cntWcagError#)</option>
+			</select>
+		</div>
 		<div id="pagesCount" role="status" aria-live="polite" style="margin-left:auto; font-size:0.8rem; color:var(--admin-text-muted); padding-bottom:0.55rem;">
 			Showing #cntTotal# of #cntTotal# pages
 		</div>
@@ -333,6 +375,7 @@ form.admin-modal-dialog {
 				<tr>
 					<th scope="col" style="width:76px; text-align:center;"><span class="sr-only">Actions</span></th>
 					<th scope="col">Page Title</th>
+					<th scope="col" style="text-align:center;">WCAG 2.1 AA</th>
 					<th scope="col" style="text-align:center;">Menu Item</th>
 					<th scope="col" style="text-align:center;">Status</th>
 					<th scope="col" style="text-align:center;">Visibility</th>
@@ -341,11 +384,14 @@ form.admin-modal-dialog {
 			</thead>
 			<tbody>
 				<cfloop array="#pages#" index="p">
+				<cfset wInfo = (StructKeyExists(p, "wcag") && IsStruct(p.wcag)) ? p.wcag : { compliant: true, status: "compliant", label: "AA Compliant", badgeClass: "badge-success", errors: 0, warnings: 0, issues: [] }>
 				<tr class="page-row"
 					data-title="#EncodeForHTMLAttribute(LCase(p.title & ' ' & p.slug))#"
 					data-status="#p.status#"
 					data-visibility="#p.visibility#"
-					data-menu="#p.menuItem ? 'yes' : 'no'#">
+					data-menu="#p.menuItem ? 'yes' : 'no'#"
+					data-wcag="#wInfo.status#"
+					data-wcag-pass="#wInfo.errors eq 0 ? 'yes' : 'no'#">
 					<td>
 						<div style="display:flex; gap:0.25rem; align-items:center;">
 							<a href="#urlFor(controller='pages', action='edit', params='id=#p.id#')#" class="btn btn-sm btn-icon-only btn-outline" aria-label="Edit #EncodeForHTMLAttribute(p.title)#" title="Edit">
@@ -367,6 +413,28 @@ form.admin-modal-dialog {
 							<code>/#EncodeForHTML(p.slug)#</code>
 							<cfif Len(p.parent)> &bull; Parent: #EncodeForHTML(p.parent)#</cfif>
 						</div>
+					</td>
+					<td style="text-align:center; white-space:nowrap;">
+						<a href="#urlFor(controller='pages', action='edit', params='id=#p.id#&openA11y=1')#"
+						   class="badge #wInfo.badgeClass# wcag-list-badge"
+						   style="display:inline-flex; align-items:center; gap:0.3rem; text-decoration:none; font-weight:600; cursor:pointer;"
+						   data-page-title="#EncodeForHTMLAttribute(p.title)#"
+						   data-wcag-status="#wInfo.status#"
+						   data-wcag-errors="#wInfo.errors#"
+						   data-wcag-warnings="#wInfo.warnings#"
+						   data-wcag-issues="#EncodeForHTMLAttribute(SerializeJSON(wInfo.issues))#"
+						   aria-label="WCAG 2.1 AA Status for #EncodeForHTMLAttribute(p.title)#: #EncodeForHTMLAttribute(wInfo.label)#. Click to open Accessibility Check in Page Editor.">
+							<cfif wInfo.errors gt 0>
+								#svgIcon(name="alert-triangle", size=12)#
+								<span>#wInfo.errors# #(wInfo.errors eq 1 ? 'Error' : 'Errors')#<cfif wInfo.warnings gt 0> &middot; #wInfo.warnings# Warn</cfif></span>
+							<cfelseif wInfo.warnings gt 0>
+								#svgIcon(name="check-circle", size=12)#
+								<span>Pass &middot; #wInfo.warnings# Warn</span>
+							<cfelse>
+								#svgIcon(name="check-circle", size=12)#
+								<span>AA Compliant</span>
+							</cfif>
+						</a>
 					</td>
 					<td style="text-align:center;">
 						<cfif p.menuItem>
@@ -390,7 +458,7 @@ form.admin-modal-dialog {
 				</cfloop>
 				<cfif ArrayLen(pages) eq 0>
 				<tr id="pagesEmptyState">
-					<td colspan="6" style="text-align:center; padding:3.5rem 1.5rem; color:var(--admin-text-muted);">
+					<td colspan="7" style="text-align:center; padding:3.5rem 1.5rem; color:var(--admin-text-muted);">
 						<cfif not Len(currentWsId)>
 							<div style="font-size:1.1rem; font-weight:600; color:var(--admin-text-main); margin-bottom:0.5rem;">Please select a workspace</div>
 							<p style="margin:0 0 1.25rem 0; font-size:0.875rem;">Pages are scoped by workspace. Select a workspace from the header dropdown to view its pages.</p>
@@ -407,7 +475,7 @@ form.admin-modal-dialog {
 				</tr>
 				</cfif>
 				<tr id="pagesNoResults" style="display:none;">
-					<td colspan="6" style="text-align:center; padding:2rem; color:var(--admin-text-muted);">No pages match your filters.</td>
+					<td colspan="7" style="text-align:center; padding:2rem; color:var(--admin-text-muted);">No pages match your filters.</td>
 				</tr>
 			</tbody>
 		</table>
@@ -532,26 +600,107 @@ form.admin-modal-dialog {
 	var status = document.getElementById("pagesStatus");
 	var vis = document.getElementById("pagesVisibility");
 	var menu = document.getElementById("pagesMenu");
+	var wcag = document.getElementById("pagesWcag");
 	var rows = document.querySelectorAll("#pagesTable .page-row");
 	var countEl = document.getElementById("pagesCount");
 	var noRes = document.getElementById("pagesNoResults");
 
+	function matchWcag(r, val) {
+		if (!val) return true;
+		if (val === "pass") return r.dataset.wcagPass === "yes";
+		return r.dataset.wcag === val;
+	}
+
 	function apply() {
 		var q = search.value.trim().toLowerCase(), shown = 0;
+		var wcagVal = wcag ? wcag.value : "";
 		rows.forEach(function (r) {
 			var ok = (!q || r.dataset.title.indexOf(q) > -1)
 				&& (!status.value || r.dataset.status === status.value)
 				&& (!vis.value || r.dataset.visibility === vis.value)
-				&& (!menu.value || r.dataset.menu === menu.value);
+				&& (!menu.value || r.dataset.menu === menu.value)
+				&& matchWcag(r, wcagVal);
 			r.style.display = ok ? "" : "none";
 			if (ok) shown++;
 		});
 		noRes.style.display = shown ? "none" : "";
 		countEl.textContent = "Showing " + shown + " of " + rows.length + " pages";
 	}
-	[search, status, vis, menu].forEach(function (el) {
+	[search, status, vis, menu, wcag].forEach(function (el) {
+		if (!el) return;
 		el.addEventListener(el.tagName === "SELECT" ? "change" : "input", apply);
 	});
+
+	// Floating WCAG 2.1 AA Compliance Tooltip on Page Editor List
+	var tipEl = document.createElement("div");
+	tipEl.id = "pgListWcagTooltip";
+	tipEl.setAttribute("role", "tooltip");
+	tipEl.style.cssText = "position:fixed; z-index:100000; width:310px; background:#0f172a; color:#f8fafc; border:1px solid #334155; border-radius:0.5rem; padding:0.75rem 0.85rem; box-shadow:0 12px 28px -4px rgba(0,0,0,0.45); font-size:0.75rem; line-height:1.4; pointer-events:none; display:none;";
+	document.body.appendChild(tipEl);
+
+	function escHtml(s) {
+		return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+	}
+
+	function showWcagTip(badge) {
+		var errs = parseInt(badge.getAttribute("data-wcag-errors") || "0", 10);
+		var warns = parseInt(badge.getAttribute("data-wcag-warnings") || "0", 10);
+		var issues = [];
+		try {
+			issues = JSON.parse(badge.getAttribute("data-wcag-issues") || "[]");
+		} catch (e) {}
+
+		var hdrColor = errs > 0 ? "#fca5a5" : (warns > 0 ? "#fcd34d" : "#86efac");
+		var hdrText = errs > 0
+			? ("Needs Attention (" + errs + " Critical " + (errs === 1 ? "Error" : "Errors") + (warns > 0 ? ", " + warns + " Warn" : "") + ")")
+			: (warns > 0 ? ("Passes WCAG 2.1 AA (" + warns + " Best-Practice " + (warns === 1 ? "Warning" : "Warnings") + ")") : "100% WCAG 2.1 Level AA Compliant");
+
+		var html = '<div style="font-weight:700; color:' + hdrColor + '; margin-bottom:0.35rem; display:flex; align-items:center; justify-content:space-between; gap:0.4rem;">' +
+			'<span>' + escHtml(hdrText) + '</span>' +
+			'</div>';
+
+		if (issues && issues.length > 0) {
+			html += '<ul style="margin:0.35rem 0; padding-left:1rem; color:#e2e8f0; display:flex; flex-direction:column; gap:0.22rem;">';
+			for (var i = 0; i < Math.min(issues.length, 6); i++) {
+				var it = issues[i];
+				var sev = String(it.severity || it.SEVERITY || "warning").toLowerCase();
+				var code = it.code || it.CODE || "";
+				var msg = it.msg || it.MSG || "";
+				var dotColor = sev === "error" ? "#f87171" : "#fbbf24";
+				html += '<li style="color:#e2e8f0;"><span style="color:' + dotColor + '; font-weight:700;">[' + escHtml(code) + ']</span> ' + escHtml(msg) + '</li>';
+			}
+			html += '</ul>';
+		} else {
+			html += '<div style="color:#cbd5e1; margin-bottom:0.35rem;">All 6 automated ADA &amp; WCAG 2.1 Level AA checks passed (images, headings, links, tables, readability, and metadata).</div>';
+		}
+		html += '<div style="margin-top:0.45rem; padding-top:0.35rem; border-top:1px solid #1e293b; color:#94a3b8; font-size:0.68rem;">Click badge to open Accessibility Linter &amp; Quick Fix in Page Editor &rarr;</div>';
+
+		tipEl.innerHTML = html;
+		tipEl.style.display = "block";
+
+		var rect = badge.getBoundingClientRect();
+		var tipRect = tipEl.getBoundingClientRect();
+		var top = rect.bottom + 8;
+		if (top + tipRect.height > window.innerHeight - 12) {
+			top = Math.max(12, rect.top - tipRect.height - 8);
+		}
+		var left = rect.left + (rect.width / 2) - (tipRect.width / 2);
+		left = Math.max(12, Math.min(left, window.innerWidth - tipRect.width - 12));
+		tipEl.style.top = Math.round(top) + "px";
+		tipEl.style.left = Math.round(left) + "px";
+	}
+
+	function hideWcagTip() {
+		tipEl.style.display = "none";
+	}
+
+	document.querySelectorAll(".wcag-list-badge").forEach(function (b) {
+		b.addEventListener("mouseenter", function () { showWcagTip(b); });
+		b.addEventListener("mouseleave", hideWcagTip);
+		b.addEventListener("focus", function () { showWcagTip(b); });
+		b.addEventListener("blur", hideWcagTip);
+	});
+	window.addEventListener("scroll", hideWcagTip, true);
 })();
 
 (function () {
