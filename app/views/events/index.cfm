@@ -523,7 +523,18 @@
 				</select>
 			</div>
 
-			<input type="hidden" id="evWorkspaceFilter" value="#EncodeForHTMLAttribute(LCase(activeWsId eq 'all' or activeWsId eq 'global' ? '' : activeWsId))#">
+			<div>
+				<label for="evWorkspaceFilter" class="form-label" style="font-size:0.775rem;">Workspace</label>
+				<select id="evWorkspaceFilter" class="form-control" style="padding:0.5rem 0.75rem; font-size:0.85rem;">
+					<option value="" selected>All Workspaces (County-Wide)</option>
+					<option value="global">County-Wide / Global</option>
+					<cfloop array="#wsListArr#" index="wsOpt">
+						<cfif wsOpt.id neq "global">
+							<option value="#EncodeForHTMLAttribute(LCase(wsOpt.id))#">#EncodeForHTML(wsOpt.name)#</option>
+						</cfif>
+					</cfloop>
+				</select>
+			</div>
 
 			<div>
 				<label for="evStatusFilter" class="form-label" style="font-size:0.775rem;">Status</label>
@@ -1319,7 +1330,7 @@
 			if (blob.indexOf(q) === -1) return false;
 		}
 		if (catVal && String(ev.categoryId) !== String(catVal)) return false;
-		if (wsVal && ev.siteId.toLowerCase() !== wsVal) return false;
+		if (wsVal && ev.siteId.toLowerCase() !== wsVal && ev.siteId.toLowerCase().replace(/s$/, "") !== wsVal.replace(/s$/, "")) return false;
 		if (stVal && ev.status !== stVal) return false;
 
 		if (tfVal === "upcoming" && ev.endDate < todayStr) return false;

@@ -1339,7 +1339,13 @@
 			badge = document.createElement('div');
 			badge.id = 'upload-ocr-status-badge';
 			badge.hidden = true;
-			badge.style.cssText = 'margin-top:0.35rem; font-size:0.76rem; padding:0.35rem 0.65rem; border-radius:6px; display:flex; align-items:center; gap:0.4rem; line-height:1.35;';
+			badge.style.cssText = 'position:relative; overflow:hidden; margin-top:0.45rem; font-size:0.8rem; padding:0.6rem 0.85rem; border-radius:8px; display:flex; align-items:center; gap:0.6rem; line-height:1.38;';
+			if (!document.getElementById('fe-ocr-anim-styles')) {
+				var st = document.createElement('style');
+				st.id = 'fe-ocr-anim-styles';
+				st.textContent = '@keyframes feOcrSpin{to{transform:rotate(360deg)}}@keyframes feOcrPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.3),0 4px 12px rgba(220,38,38,.14);border-color:#ef4444}50%{box-shadow:0 0 0 5px rgba(220,38,38,.08),0 6px 16px rgba(220,38,38,.24);border-color:#dc2626}}@keyframes feOcrSweep{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}';
+				document.head.appendChild(st);
+			}
 			el.uploadAlt.parentNode.insertBefore(badge, el.uploadAlt.nextSibling);
 		}
 		return badge;
@@ -1353,7 +1359,20 @@
 			badge.style.background = '#f0f9ff';
 			badge.style.border = '1px solid #bae6fd';
 			badge.style.color = '#0369a1';
-			badge.innerHTML = '<span>Running OCR &amp; visual content detection to auto-fill Alt Text &amp; Title&hellip;</span>';
+			badge.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
+			badge.style.border = '1.5px solid #ef4444';
+			badge.style.color = '#991b1b';
+			badge.style.animation = 'feOcrPulse 1.5s infinite ease-in-out';
+			badge.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0; animation:feOcrSpin 0.85s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>' +
+				'<div style="display:flex; flex-direction:column; gap:1px;">' +
+					'<strong style="color:#dc2626; font-size:0.83rem;">Please wait &mdash; we are generating your text&hellip;</strong>' +
+					'<span style="color:#7f1d1d; font-size:0.76rem; font-weight:500;">Running OCR &amp; visual content detection to auto-fill Alt Text &amp; Title&hellip;</span>' +
+				'</div>' +
+				'<div style="position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(220,38,38,0.15); overflow:hidden;"><div style="width:42%; height:100%; background:linear-gradient(90deg,transparent,#dc2626,#ef4444,transparent); animation:feOcrSweep 1.25s infinite ease-in-out;"></div></div>';
+			if (el.uploadAlt) {
+				el.uploadAlt.style.borderColor = '#ef4444';
+				el.uploadAlt.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.14)';
+			}
 		}
 		try {
 			var p = state.path || state.ws || '';
@@ -1394,7 +1413,8 @@
 				badge.style.color = '#166534';
 				var ocrSnippet = data.ocrText ? (' &bull; OCR Text: <strong class="mono">&ldquo;' + esc(data.ocrText) + '&rdquo;</strong>') : '';
 				var toneSnippet = data.visualTone ? (' &bull; ' + esc((data.width && data.height ? data.width + '\u00d7' + data.height + ' ' : '') + data.visualTone)) : '';
-				badge.innerHTML = '<span><strong>Auto-filled via OCR &amp; Content Detection</strong>' + ocrSnippet + toneSnippet + '</span>';
+				badge.style.animation = 'none';
+				badge.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span><strong>Auto-filled via OCR &amp; Content Detection</strong>' + ocrSnippet + toneSnippet + '</span>';
 			}
 		} catch (err) {
 			if (badge) badge.hidden = true;

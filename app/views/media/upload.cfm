@@ -21,6 +21,65 @@
 	.hash-pill { display: inline-flex; align-items: center; gap: 0.35rem; font-family: monospace; font-size: 0.75rem; background: #f1f5f9; color: #475569; padding: 2px 7px; border-radius: 4px; border: 1px solid #cbd5e1; }
 	.table-thumb { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; background: #f1f5f9; border: 1px solid var(--admin-border); }
 	.table-thumb-placeholder { width: 44px; height: 44px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; background: #f1f5f9; color: var(--admin-text-muted); border: 1px solid var(--admin-border); }
+	@keyframes ocrSpin { to { transform: rotate(360deg); } }
+	@keyframes ocrPulseAlert {
+		0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.3), 0 4px 14px rgba(220, 38, 38, 0.14); border-color: #ef4444; }
+		50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.08), 0 6px 18px rgba(220, 38, 38, 0.24); border-color: #dc2626; }
+	}
+	@keyframes ocrProgressSweep {
+		0% { transform: translateX(-100%); }
+		100% { transform: translateX(260%); }
+	}
+	@keyframes ocrSuccessPop {
+		0% { transform: scale(0.98); opacity: 0.7; }
+		100% { transform: scale(1); opacity: 1; }
+	}
+	.ocr-notice-banner {
+		position: relative;
+		overflow: hidden;
+		border-radius: 8px;
+		padding: 0.65rem 0.9rem;
+		font-size: 0.82rem;
+		line-height: 1.4;
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		flex: 1;
+	}
+	.ocr-notice-banner.is-loading {
+		background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+		border: 1.5px solid #ef4444;
+		color: #991b1b;
+		animation: ocrPulseAlert 1.5s infinite ease-in-out;
+	}
+	.ocr-notice-banner.is-done {
+		background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+		border: 1.5px solid #86efac;
+		color: #166534;
+		animation: ocrSuccessPop 0.25s ease-out;
+	}
+	.ocr-spinner-icon {
+		width: 18px;
+		height: 18px;
+		flex-shrink: 0;
+		color: #dc2626;
+		animation: ocrSpin 0.85s linear infinite;
+	}
+	.ocr-progress-track {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 3px;
+		background: rgba(220, 38, 38, 0.15);
+		overflow: hidden;
+	}
+	.ocr-progress-bar {
+		width: 42%;
+		height: 100%;
+		background: linear-gradient(90deg, transparent, #dc2626, #ef4444, transparent);
+		animation: ocrProgressSweep 1.25s infinite ease-in-out;
+	}
 </style>
 
 <div class="page-header">
@@ -251,7 +310,7 @@
 					<input type="hidden" id="uploadOcrText" name="ocrText" value="">
 					<textarea id="uploadAlt" name="altText" class="form-control" rows="3" style="width:100%; transition:border-color 0.2s, box-shadow 0.2s;" placeholder="Describe the visual subjects, text, and context of this image for blind and low-vision users using screen readers..." oninput="updateAltCharCount(this.value)"></textarea>
 					<div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-top:0.25rem;">
-						<div id="uploadStudioOcrBadge" hidden style="font-size:0.78rem; padding:0.3rem 0.65rem; border-radius:6px;"></div>
+						<div id="uploadStudioOcrBadge" class="ocr-notice-banner" role="status" aria-live="polite" hidden></div>
 						<div id="uploadAltCharCount" style="text-align:right; font-size:0.75rem; color:var(--admin-text-muted); margin-left:auto;">0 / 150 rec.</div>
 					</div>
 					
@@ -569,7 +628,20 @@
 			ocrBadge.style.background = '#f0f9ff';
 			ocrBadge.style.border = '1px solid #bae6fd';
 			ocrBadge.style.color = '#0369a1';
-			ocrBadge.textContent = 'Running OCR & visual content detection to auto-fill Alt Text & Title...';
+			ocrBadge.className = 'ocr-notice-banner is-loading';
+			ocrBadge.removeAttribute('style');
+			ocrBadge.innerHTML = `
+				<svg class="ocr-spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+				<div style="display:flex; flex-direction:column; gap:1px;">
+					<strong style="color:#dc2626; font-size:0.84rem; letter-spacing:0.01em;">Please wait &mdash; we are generating your text&hellip;</strong>
+					<span style="color:#7f1d1d; font-size:0.77rem; font-weight:500;">Running OCR &amp; visual content detection to auto-fill Alt Text &amp; Title&hellip;</span>
+				</div>
+				<div class="ocr-progress-track"><div class="ocr-progress-bar"></div></div>
+			`;
+			if (altInput) {
+				altInput.style.borderColor = '#ef4444';
+				altInput.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.14)';
+			}
 		}
 
 		try {
@@ -610,7 +682,12 @@
 				ocrBadge.style.color = '#166534';
 				const ocrPart = data.ocrText ? ` • OCR Text: "${data.ocrText}"` : '';
 				const tonePart = data.visualTone ? ` • ${data.width && data.height ? data.width + '×' + data.height + ' ' : ''}${data.visualTone}` : '';
-				ocrBadge.textContent = `Auto-filled via OCR & Content Detection${ocrPart}${tonePart}`;
+				ocrBadge.className = 'ocr-notice-banner is-done';
+				ocrBadge.removeAttribute('style');
+				ocrBadge.innerHTML = `
+					<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+					<span><strong>Auto-filled via OCR &amp; Content Detection</strong>${ocrPart}${tonePart}</span>
+				`;
 			}
 		} catch (e) {
 			if (ocrBadge) ocrBadge.hidden = true;

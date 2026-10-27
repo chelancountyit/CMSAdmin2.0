@@ -306,7 +306,7 @@
 	</div>
 </div>
 
-<script src="/javascripts/filexplorer/explorer.js?v=5.1"></script>
+<script src="/javascripts/filexplorer/explorer.js?v=5.2"></script>
 </cfoutput>
 </body>
 </html>
